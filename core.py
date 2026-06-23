@@ -34,13 +34,21 @@ class Tool:
 
 
 # ── 工具实现 ──────────────────────────────────────────
+_WIKI_AVAILABLE = False
+try:
+    import wikipedia as _wikipedia
+    _WIKI_AVAILABLE = True
+except ImportError:
+    pass
+
 def _wiki(args):
+    if not _WIKI_AVAILABLE:
+        return "维基百科插件未安装。请在终端执行: pip install wikipedia"
     try:
-        import wikipedia
         out = []
-        for t in wikipedia.search(args["query"], results=3):
+        for t in _wikipedia.search(args["query"], results=3):
             try:
-                p = wikipedia.page(t, auto_suggest=False)
+                p = _wikipedia.page(t, auto_suggest=False)
                 out.append(f"**{t}**: {p.summary[:200]}")
             except: pass
         return "\n\n".join(out) or "未找到"

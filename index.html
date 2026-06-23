@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,user-scalable=no">
+<title>扣子 多Agent</title>
+<style>
+:root {
+  --bg: #0b0b12;
+  --surface: #151525;
+  --border: #252540;
+  --primary: #7c3aed;
+  --primary-glow: #a78bfa;
+  --text: #d4d4d8;
+  --text-dim: #71717a;
+  --radius: 12px;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  font-family: -apple-system,"SF Pro Text","PingFang SC","Microsoft YaHei",sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* ========== 布局 ========== */
+.app { display:flex; flex:1; overflow:hidden; }
+
+/* ── 主面板 ── */
+.main-panel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  transition: margin .3s ease;
+}
+
+/* ── 设置侧栏 ── */
+.settings-sidebar {
+  width: 0;
+  overflow: hidden;
+  background: var(--surface);
+  border-left: 1px solid var(--border);
+  transition: width .3s cubic-bezier(.22,.61,.36,1);
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+}
+.settings-sidebar.open { width: 300px; }
+.settings-sidebar .sidebar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px;
+  border-bottom: 1px solid var(--border);
+}
+.settings-sidebar .sidebar-header h3 {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--primary);
+}
+.settings-sidebar .sidebar-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.settings-sidebar .sidebar-body::-webkit-scrollbar { width: 3px; }
+.settings-sidebar .sidebar-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+/* ── 设置项 ── */
+.setting-group { display:flex; flex-direction:column; gap: 8px; }
+.setting-group .group-title {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--text-dim);
+  font-weight: 600;
+}
+
+/* 模型卡片 */
+.model-cards { display: flex; flex-direction: column; gap: 6px; }
+.model-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  cursor: pointer;
+  transition: all .15s;
+}
+.model-card:hover { border-color: var(--primary); }
+.model-card.active { border-color: var(--primary); background: rgba(124,58,237,.08); }
+.model-card .model-name { font-size: 13px; font-weight: 600; }
+.model-card .model-tag {
+  font-size: 10px;
+  color: var(--text-dim);
+  background: var(--bg);
+  padding: 2px 8px;
+  border-radius: 8px;
+}
+.model-card .check {
+  width: 18px; height: 18px;
+  border-radius: 50%;
+  border: 2px solid var(--border);
+  transition: all .15s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+}
+.model-card.active .check { border-color: var(--primary); background: var(--primary); color: #fff; }
+
+/* key 输入 */
+.key-input-wrap {
+  position: relative;
+}
+.key-input-wrap input {
+  width: 100%;
+  padding: 10px 40px 10px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  font-size: 13px;
+  font-family: monospace;
+  outline: none;
+  transition: border-color .2s;
+}
+.key-input-wrap input:focus { border-color: var(--primary); }
+.key-input-wrap .toggle-eye {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: var(--text-dim);
+  cursor: pointer;
+  font-size: 16px;
+}
+.key-hint {
+  font-size: 11px;
+  color: var(--primary-glow);
+  text-decoration: none;
+}
+.key-hint:hover { text-decoration: underline; }
+
+/* 连接状态 */
+.status-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: rgba(124,58,237,.05);
+  border: 1px solid var(--border);
+  font-size: 12px;
+}
+.status-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.status-dot.ok { background: #22c55e; }
+.status-dot.off { background: var(--text-dim); }
+.status-dot.err { background: #ef4444; }
+
+/* 按钮 */
+.sidebar-footer {
+  padding: 14px 16px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  gap: 8px;
+}
+.sidebar-footer button {
+  flex: 1;
+  padding: 10px;
+  border-radius: 10px;
+  border: none;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity .15s;
+}
+.btn-ghost { background: transparent; color: var(--text-dim); border: 1px solid var(--border) !important; }
+.btn-ghost:hover { color: var(--text); }
+.btn-primary { background: var(--primary); color: #fff; }
+.btn-primary:hover { opacity: .85; }
+
+/* ── 顶部工具栏 ── */
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.toolbar .brand { font-size:14px; font-weight:700; color:var(--primary); }
+.toolbar .pipe { color:var(--text-dim); }
+.toolbar .model-badge {
+  margin-left: auto;
+  font-size: 11px;
+  color: var(--text-dim);
+  background: rgba(124,58,237,.12);
+  padding: 3px 10px;
+  border-radius: 20px;
+  border: 1px solid rgba(124,58,237,.2);
+  cursor: pointer;
+  transition: color .2s;
+}
+.toolbar .model-badge:hover { color: var(--primary-glow); }
+
+/* ── 对话区 ── */
+.conversation {
+  flex: 1;
+  overflow-y: auto;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  scroll-behavior: smooth;
+}
+.conversation::-webkit-scrollbar { width: 4px; }
+.conversation::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+.bubble {
+  max-width: 88%;
+  padding: 10px 14px;
+  border-radius: var(--radius);
+  font-size: 13.5px;
+  line-height: 1.6;
+  word-break: break-word;
+  animation: slideIn .25s ease;
+}
+.bubble.user {
+  align-self: flex-end;
+  background: var(--primary);
+  color: #fff;
+  border-bottom-right-radius: 4px;
+}
+.bubble.agent {
+  align-self: flex-start;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-bottom-left-radius: 4px;
+}
+.bubble.system {
+  align-self: center;
+  background: transparent;
+  color: var(--text-dim);
+  font-size: 12px;
+  padding: 6px 10px;
+}
+.agent-label {
+  font-size: 10px;
+  color: var(--primary-glow);
+  font-weight: 600;
+  margin-bottom: 4px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.agent-label::before {
+  content: "";
+  width: 6px; height: 6px;
+  background: var(--primary);
+  border-radius: 50%;
+}
+
+.typing {
+  align-self: flex-start;
+  display: flex;
+  gap: 5px;
+  padding: 10px 14px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  border-bottom-left-radius: 4px;
+}
+.typing span {
+  width: 7px; height: 7px;
+  background: var(--primary);
+  border-radius: 50%;
+  animation: bounce 1.2s infinite ease-in-out;
+}
+.typing span:nth-child(2) { animation-delay: .15s; }
+.typing span:nth-child(3) { animation-delay: .3s; }
+
+/* ── 输入栏 ── */
+.input-bar {
+  display: flex;
+  gap: 8px;
+  padding: 10px 14px;
+  padding-bottom: max(10px, env(safe-area-inset-bottom));
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.input-bar input {
+  flex: 1;
+  padding: 10px 16px;
+  border-radius: 22px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  font-size: 14px;
+  outline: none;
+  transition: border-color .2s;
+}
+.input-bar input:focus { border-color: var(--primary); }
+.input-bar button {
+  padding: 10px 20px;
+  border-radius: 22px;
+  border: none;
+  background: var(--primary);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* ── Toast ── */
+.toast {
+  position: fixed;
+  top: 60px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  padding: 10px 22px;
+  border-radius: 20px;
+  font-size: 12px;
+  color: var(--text);
+  z-index: 300;
+  animation: fadeOut 2.5s ease forwards;
+}
+
+@keyframes slideIn { from { opacity:0; transform:translateY(8px); } }
+@keyframes bounce { 0%,80%,100% { transform:scale(0); } 40% { transform:scale(1); } }
+@keyframes fadeOut { 0%,70% { opacity:1; } 100% { opacity:0; } }
+
+/* ── 移动端覆盖 ── */
+@media (max-width: 500px) {
+  .settings-sidebar.open { width: 100%; position: fixed; inset:0; z-index:100; }
+}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- ===== 设置侧栏 ===== -->
+  <div class="settings-sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <h3>Agent 设置</h3>
+      <button class="btn-ghost" onclick="toggleSettings()" style="padding:4px 10px;font-size:18px;line-height:1;border:none;">×</button>
+    </div>
+    <div class="sidebar-body">
+      <!-- 连接状态 -->
+      <div class="status-bar" id="statusBar">
+        <span class="status-dot off" id="statusDot"></span>
+        <span id="statusText">本地模拟模式</span>
+      </div>
+
+      <!-- 模型选择 -->
+      <div class="setting-group">
+        <span class="group-title">选择模型</span>
+        <div class="model-cards" id="modelCards"></div>
+      </div>
+
+      <!-- API Key -->
+      <div class="setting-group">
+        <span class="group-title">API Key</span>
+        <div class="key-input-wrap">
+          <input id="keyInput" type="password" placeholder="sk-xxxxxxxx" autocomplete="off">
+          <button class="toggle-eye" onclick="toggleKeyEye()" id="eyeBtn">&#128065;</button>
+        </div>
+        <a class="key-hint" href="https://siliconflow.cn" target="_blank">没有 Key？去 SiliconFlow 免费注册 →</a>
+      </div>
+    </div>
+    <div class="sidebar-footer">
+      <button class="btn-ghost" onclick="resetKey()">重置为本地</button>
+      <button class="btn-primary" onclick="applySettings()">应用设置</button>
+    </div>
+  </div>
+
+  <!-- ===== 主面板 ===== -->
+  <div class="main-panel">
+    <div class="toolbar">
+      <span class="brand">父Bot</span>
+      <span class="pipe">→</span>
+      <span>子Agent 集群</span>
+      <span class="model-badge" id="modelBadge" onclick="toggleSettings()">本地模拟</span>
+    </div>
+    <div class="conversation" id="conv">
+      <div class="bubble system">/help 查看命令 &nbsp;|&nbsp; /agents 子Agent &nbsp;|&nbsp; 点右上角设置 Key</div>
+    </div>
+    <div class="input-bar">
+      <input id="input" placeholder="输入消息…" autofocus onkeydown="if(event.key==='Enter')send()">
+      <button onclick="send()">发送</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const API = (() => {
+  const u = new URL(window.location.href);
+  return u.protocol + '//' + u.hostname + ':8900';
+})();
+
+const conv   = document.getElementById('conv');
+const inp    = document.getElementById('input');
+const badge  = document.getElementById('modelBadge');
+const sidebar = document.getElementById('sidebar');
+
+// ── 模型列表 ──
+const MODELS = [
+  { key:'deepseek-v3',   name:'DeepSeek-V3',   tag: '推荐' },
+  { key:'deepseek-r1',   name:'DeepSeek-R1',   tag: '推理' },
+  { key:'qwen25-32b',    name:'Qwen2.5-32B',   tag: '通义' },
+  { key:'qwen25-7b',     name:'Qwen2.5-7B',    tag: '轻量' },
+  { key:'glm4-9b',       name:'GLM-4-9B',      tag: '智谱' },
+  { key:'llama3-8b',     name:'Llama3.1-8B',   tag: '开源' },
+];
+let currentModel = 'deepseek-v3';
+let hasKey = false;
+
+// 渲染模型卡片
+(function renderModels() {
+  const container = document.getElementById('modelCards');
+  MODELS.forEach(m => {
+    const card = document.createElement('div');
+    card.className = 'model-card' + (m.key === currentModel ? ' active' : '');
+    card.innerHTML = `
+      <div>
+        <div class="model-name">${m.name}</div>
+      </div>
+      <span class="model-tag">${m.tag}</span>
+      <span class="check">${m.key === currentModel ? '✓' : ''}</span>
+    `;
+    card.onclick = () => selectModel(m.key);
+    container.appendChild(card);
+  });
+})();
+
+function selectModel(key) {
+  currentModel = key;
+  document.querySelectorAll('.model-card').forEach((c, i) => {
+    const isActive = MODELS[i].key === key;
+    c.classList.toggle('active', isActive);
+    c.querySelector('.check').textContent = isActive ? '✓' : '';
+  });
+  if (hasKey) updateStatus(key);
+}
+
+// ── 设置面板开关 ──
+function toggleSettings() {
+  sidebar.classList.toggle('open');
+}
+
+// ── 密码可见 ──
+function toggleKeyEye() {
+  const inp = document.getElementById('keyInput');
+  const btn = document.getElementById('eyeBtn');
+  if (inp.type === 'password') {
+    inp.type = 'text';
+    btn.textContent = '🙈';
+  } else {
+    inp.type = 'password';
+    btn.textContent = '👁';
+  }
+}
+
+// ── 应用设置 ──
+async function applySettings() {
+  const key = document.getElementById('keyInput').value.trim();
+  const st = document.getElementById('statusText');
+  const dot = document.getElementById('statusDot');
+
+  if (!key) {
+    st.textContent = '请输入 API Key';
+    return;
+  }
+  st.textContent = '验证中…';
+  dot.className = 'status-dot off';
+
+  try {
+    const r = await fetch(API + '/set-key', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({key, model: currentModel})
+    });
+    const d = await r.json();
+    if (d.ok) {
+      hasKey = true;
+      updateStatus(currentModel);
+    } else {
+      st.textContent = '失败: ' + (d.error||'未知');
+      dot.className = 'status-dot err';
+    }
+  } catch(e) {
+    st.textContent = 'API 服务未启动';
+    dot.className = 'status-dot err';
+  }
+}
+
+async function resetKey() {
+  document.getElementById('keyInput').value = '';
+  hasKey = false;
+  currentModel = 'deepseek-v3';
+  selectModel('deepseek-v3');
+
+  await fetch(API + '/set-key', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({key: '', model: 'local'})
+  });
+
+  document.getElementById('statusText').textContent = '本地模拟模式';
+  document.getElementById('statusDot').className = 'status-dot off';
+  badge.textContent = '本地模拟';
+  sidebar.classList.remove('open');
+}
+
+function updateStatus(modelKey) {
+  const m = MODELS.find(x => x.key === modelKey);
+  const name = m ? m.name : modelKey;
+  document.getElementById('statusText').textContent = '已连接 ' + name;
+  document.getElementById('statusDot').className = 'status-dot ok';
+  badge.textContent = name;
+}
+
+// ── 对话 ──
+async function send() {
+  const text = inp.value.trim();
+  if (!text) return;
+  inp.value = '';
+  addBubble('user', text);
+  const typingEl = addTyping();
+  try {
+    const r = await fetch(API + '/chat', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({msg: text})
+    });
+    const d = await r.json();
+    typingEl.remove();
+    if (d.cmd) addBubble('system', d.reply.replace(/\n/g,'<br>'));
+    else addBubble('agent', d.reply, d.agent);
+    if (d.model) badge.textContent = d.model;
+  } catch(e) {
+    typingEl.remove();
+    addBubble('system', '请求失败，请确认 API 已启动 (' + API + ')');
+  }
+}
+
+function addBubble(role, content, agentName) {
+  const d = document.createElement('div');
+  d.className = 'bubble ' + role;
+  d.innerHTML = agentName
+    ? '<div class="agent-label">' + agentName + '</div>' + content
+    : content;
+  conv.appendChild(d);
+  d.scrollIntoView({behavior:'smooth'});
+}
+
+function addTyping() {
+  const d = document.createElement('div');
+  d.className = 'typing';
+  d.innerHTML = '<span></span><span></span><span></span>';
+  conv.appendChild(d);
+  d.scrollIntoView({behavior:'smooth'});
+  return d;
+}
+</script>
+</body>
+</html>

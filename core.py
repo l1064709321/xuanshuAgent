@@ -66,20 +66,33 @@ def _weather(args):
             return r.read().decode()
     except Exception as e: return f"天气查询失败: {e}"
 
+# 文件操作安全边界：工作目录
+_WS = os.path.dirname(os.path.abspath(__file__))
+
+def _safe_path(p: str) -> str:
+    """路径安全校验：只允许在工作目录内操作，拒绝 ../ 越界"""
+    real = os.path.realpath(os.path.join(_WS, p))
+    if not real.startswith(os.path.realpath(_WS) + os.sep) and real != os.path.realpath(_WS):
+        raise PermissionError(f"禁止访问工作目录外路径: {p}")
+    return real
+
 def _ls(args):
     try:
-        files = os.listdir(args["path"])
+        path = _safe_path(args["path"])
+        files = os.listdir(path)
         return f"共 {len(files)} 个: {', '.join(files[:20])}"
     except Exception as e: return f"错误: {e}"
 
 def _read(args):
     try:
-        with open(args["path"]) as f: return f.read()[:2000]
+        path = _safe_path(args["path"])
+        with open(path) as f: return f.read()[:2000]
     except Exception as e: return f"读取失败: {e}"
 
 def _write(args):
     try:
-        with open(args["path"], "w") as f: f.write(args["content"])
+        path = _safe_path(args["path"])
+        with open(path, "w") as f: f.write(args["content"])
         return f"已写入 {args['path']}"
     except Exception as e: return f"写入失败: {e}"
 

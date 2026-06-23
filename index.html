@@ -1,0 +1,1152 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,user-scalable=no,viewport-fit=cover">
+<title>悬殊点Agent</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* ========== 变量 ========== */
+:root {
+  --bg: #08080f;
+  --glass: rgba(18,18,40,0.72);
+  --glass-hover: rgba(28,28,55,0.85);
+  --glass-border: rgba(255,255,255,0.06);
+  --glass-active: rgba(99,102,241,0.14);
+  --primary: #6366f1;
+  --primary-glow: rgba(99,102,241,0.35);
+  --primary-text: #818cf8;
+  --success: #22c55e;
+  --warning: #f59e0b;
+  --danger: #ef4444;
+  --text: #e4e4e7;
+  --text-dim: #71717a;
+  --text-muted: #52525b;
+  --radius: 14px;
+  --radius-sm: 10px;
+  --font: 'Inter',-apple-system,'PingFang SC','Microsoft YaHei',sans-serif;
+  --mono: 'JetBrains Mono',monospace;
+  --transition: .28s cubic-bezier(.22,.61,.36,1);
+  --shadow: 0 8px 40px rgba(0,0,0,0.5);
+}
+
+* { margin:0; padding:0; box-sizing:border-box; }
+html,body {
+  height: 100dvh;
+  overflow: hidden;
+  font-family: var(--font);
+  background: var(--bg);
+  color: var(--text);
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* ========== 全局光晕 ========== */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 600px 400px at 20% 30%, rgba(99,102,241,0.08), transparent),
+    radial-gradient(ellipse 500px 500px at 80% 70%, rgba(99,102,241,0.05), transparent);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ========== 布局 ========== */
+.app {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  height: 100dvh;
+}
+
+/* ── 左侧边栏 ── */
+.left-sidebar {
+  width: 260px;
+  flex-shrink: 0;
+  background: var(--glass);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border-right: 1px solid var(--glass-border);
+  display: flex;
+  flex-direction: column;
+  transition: transform var(--transition);
+}
+.sidebar-header {
+  padding: 20px 18px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.sidebar-header .logo {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--primary-text);
+  letter-spacing: -0.3px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.sidebar-header .logo::before {
+  content: '';
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: var(--primary);
+  box-shadow: 0 0 12px var(--primary-glow);
+}
+
+.new-chat-btn {
+  width: 100%;
+  margin: 0 18px 12px;
+  padding: 10px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--glass-border);
+  background: transparent;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--transition);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: calc(100% - 36px);
+}
+.new-chat-btn:hover {
+  background: var(--glass-hover);
+  border-color: var(--primary);
+}
+
+.session-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0 10px;
+}
+.session-list::-webkit-scrollbar { width: 3px; }
+.session-list::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.06); border-radius: 3px; }
+
+.session-item {
+  padding: 10px 14px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--text-dim);
+  transition: all var(--transition);
+  margin-bottom: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.session-item:hover { background: var(--glass-hover); color: var(--text); }
+.session-item.active {
+  background: var(--glass-active);
+  color: var(--primary-text);
+  font-weight: 500;
+}
+
+.sidebar-footer {
+  padding: 14px 18px;
+  border-top: 1px solid var(--glass-border);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.status-indicator {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 11px;
+  color: var(--text-dim);
+  flex: 1;
+}
+.status-dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.status-dot.online { background: var(--success); box-shadow: 0 0 8px rgba(34,197,94,0.4); }
+.status-dot.offline { background: var(--text-muted); }
+.status-dot.error { background: var(--danger); }
+
+.settings-btn {
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--glass-border);
+  background: transparent;
+  color: var(--text-dim);
+  font-size: 16px;
+  cursor: pointer;
+  transition: all var(--transition);
+  line-height: 1;
+}
+.settings-btn:hover { color: var(--text); border-color: var(--primary); }
+
+/* ── 中间主区域 ── */
+.main-area {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 20px;
+  background: var(--glass);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border-bottom: 1px solid var(--glass-border);
+  flex-shrink: 0;
+}
+.toolbar .model-select {
+  appearance: none;
+  -webkit-appearance: none;
+  padding: 6px 32px 6px 12px;
+  border-radius: 20px;
+  border: 1px solid var(--glass-border);
+  background: transparent;
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 500;
+  font-family: var(--font);
+  cursor: pointer;
+  outline: none;
+  transition: border-color var(--transition);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' fill='%2371717a'%3E%3Cpath d='M0 0l5 6 5-6z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+}
+.toolbar .model-select:focus { border-color: var(--primary); }
+
+.toolbar .token-badge {
+  margin-left: auto;
+  font-size: 11px;
+  color: var(--text-dim);
+  font-family: var(--mono);
+  background: rgba(255,255,255,0.03);
+  padding: 4px 10px;
+  border-radius: 20px;
+  border: 1px solid var(--glass-border);
+  cursor: pointer;
+}
+.token-badge:hover { color: var(--text); }
+
+.conversation {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  scroll-behavior: smooth;
+}
+.conversation::-webkit-scrollbar { width: 4px; }
+.conversation::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.05); border-radius: 4px; }
+
+/* ── 气泡 ── */
+.bubble {
+  max-width: 82%;
+  padding: 12px 16px;
+  border-radius: 16px;
+  font-size: 14px;
+  line-height: 1.7;
+  word-break: break-word;
+  animation: slideUp .35s cubic-bezier(.2,.8,.2,1);
+}
+@keyframes slideUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+.bubble.user {
+  align-self: flex-end;
+  background: var(--primary);
+  color: #fff;
+  border-bottom-right-radius: 6px;
+}
+.bubble.agent {
+  align-self: flex-start;
+  background: var(--glass);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--glass-border);
+  border-bottom-left-radius: 6px;
+}
+.bubble.system {
+  align-self: center;
+  background: transparent;
+  color: var(--text-dim);
+  font-size: 12px;
+  padding: 6px 12px;
+  border: 1px solid var(--glass-border);
+  border-radius: 20px;
+}
+
+/* 对话容器滚动条 */
+.conversation::-webkit-scrollbar { width: 6px; }
+.conversation::-webkit-scrollbar-track { background: transparent; }
+.conversation::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 3px; }
+.conversation::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.15); }
+
+/* ── 工具卡片 ── */
+.tool-card {
+  background: rgba(99,102,241,0.06);
+  border: 1px solid rgba(99,102,241,0.15);
+  border-radius: var(--radius-sm);
+  padding: 10px 14px;
+  margin-top: 10px;
+  font-size: 12px;
+}
+.tool-card .tool-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--primary-text);
+  font-weight: 600;
+  margin-bottom: 6px;
+  font-family: var(--mono);
+  font-size: 11px;
+}
+.tool-card .tool-params {
+  color: var(--text-dim);
+  font-family: var(--mono);
+  font-size: 11px;
+  margin-bottom: 4px;
+  padding: 4px 8px;
+  background: rgba(0,0,0,0.3);
+  border-radius: 6px;
+  word-break: break-all;
+}
+.tool-card .tool-result {
+  color: var(--text-dim);
+  font-size: 12px;
+  max-height: 120px;
+  overflow-y: auto;
+  white-space: pre-wrap;
+}
+
+/* ── 打字动画 ── */
+.typing {
+  align-self: flex-start;
+  display: flex;
+  gap: 5px;
+  padding: 14px 18px;
+  background: var(--glass);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius);
+  border-bottom-left-radius: 6px;
+}
+.typing span {
+  width: 7px; height: 7px;
+  background: var(--primary);
+  border-radius: 50%;
+  animation: bounce 1.4s infinite ease-in-out;
+}
+.typing span:nth-child(2) { animation-delay: .18s; }
+.typing span:nth-child(3) { animation-delay: .36s; }
+
+/* ── 输入栏 ── */
+.input-area {
+  padding: 12px 20px;
+  padding-bottom: max(12px, env(safe-area-inset-bottom));
+  background: var(--glass);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border-top: 1px solid var(--glass-border);
+  flex-shrink: 0;
+}
+.input-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  max-width: 800px;
+  margin: 0 auto;
+}
+.input-row input {
+  flex: 1;
+  padding: 12px 18px;
+  border-radius: 28px;
+  border: 1px solid var(--glass-border);
+  background: rgba(0,0,0,0.3);
+  color: var(--text);
+  font-size: 14px;
+  font-family: var(--font);
+  outline: none;
+  transition: border-color var(--transition), box-shadow var(--transition);
+}
+.input-row input:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(99,102,241,0.15);
+}
+.input-row input::placeholder { color: var(--text-muted); }
+.send-btn {
+  width: 44px; height: 44px;
+  border-radius: 50%;
+  border: none;
+  background: var(--primary);
+  color: #fff;
+  font-size: 18px;
+  cursor: pointer;
+  transition: all var(--transition);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.send-btn:hover { background: #6366f1; transform: scale(1.05); }
+.send-btn:active { transform: scale(0.95); }
+.send-btn:disabled { background: var(--glass-border); color: var(--text-dim); cursor: not-allowed; transform: none; }
+
+/* ── 右侧面板 ── */
+.right-panel {
+  width: 320px;
+  flex-shrink: 0;
+  background: var(--glass);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border-left: 1px solid var(--glass-border);
+  display: flex;
+  flex-direction: column;
+  transition: transform var(--transition);
+}
+.panel-tabs {
+  display: flex;
+  border-bottom: 1px solid var(--glass-border);
+}
+.panel-tab {
+  flex: 1;
+  padding: 12px;
+  text-align: center;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-dim);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: all var(--transition);
+}
+.panel-tab.active {
+  color: var(--primary-text);
+  border-bottom-color: var(--primary);
+}
+.panel-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+}
+.panel-content::-webkit-scrollbar { width: 3px; }
+.panel-content::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.06); border-radius: 3px; }
+
+.panel-section {
+  margin-bottom: 20px;
+}
+.panel-section h3 {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--text-muted);
+  margin-bottom: 10px;
+  font-weight: 600;
+}
+
+/* ── 设置面板 ── */
+.setting-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+.setting-label {
+  font-size: 12px;
+  color: var(--text-dim);
+  font-weight: 500;
+}
+.setting-row input {
+  width: 100%;
+  padding: 10px 14px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--glass-border);
+  background: rgba(0,0,0,0.3);
+  color: var(--text);
+  font-size: 13px;
+  font-family: var(--mono);
+  outline: none;
+  transition: border-color var(--transition);
+}
+.setting-row input:focus { border-color: var(--primary); }
+
+.apply-btn {
+  width: 100%;
+  padding: 10px;
+  border-radius: var(--radius-sm);
+  border: none;
+  background: var(--primary);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition);
+  margin-top: 4px;
+}
+.apply-btn:hover { background: #4f46e5; }
+.apply-btn.ghost {
+  background: transparent;
+  border: 1px solid var(--glass-border);
+  color: var(--text-dim);
+}
+.apply-btn.ghost:hover { color: var(--text); border-color: var(--primary); }
+
+/* ── Toast ── */
+.toast {
+  position: fixed;
+  top: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--glass);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--glass-border);
+  padding: 10px 24px;
+  border-radius: 24px;
+  font-size: 12px;
+  color: var(--text);
+  z-index: 500;
+  animation: toastIn .3s ease, toastOut .3s ease 2.2s forwards;
+  box-shadow: var(--shadow);
+}
+
+/* ── 遮罩层 ── */
+.mobile-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.6);
+  z-index: 50;
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+
+/* ── 动画 ── */
+@keyframes slideUp { from { opacity:0; transform:translateY(10px); } }
+@keyframes bounce { 0%,80%,100% { transform:scale(0); } 40% { transform:scale(1); } }
+@keyframes toastIn { from { opacity:0; transform:translateX(-50%) translateY(-10px); } }
+@keyframes toastOut { to { opacity:0; transform:translateX(-50%) translateY(-10px); } }
+
+/* ========== 移动端适配 ========== */
+@media (max-width: 768px) {
+  .left-sidebar {
+    position: fixed;
+    left: 0; top: 0; bottom: 0;
+    z-index: 100;
+    transform: translateX(-100%);
+    box-shadow: var(--shadow);
+    width: 280px;
+  }
+  .left-sidebar.open { transform: translateX(0); }
+
+  .right-panel {
+    position: fixed;
+    right: 0; top: 0; bottom: 0;
+    z-index: 100;
+    transform: translateX(100%);
+    width: 300px;
+    box-shadow: var(--shadow);
+  }
+  .right-panel.open { transform: translateX(0); }
+
+  .mobile-overlay.active { display: block; }
+
+  .toolbar { padding: 8px 14px; }
+  .conversation { padding: 14px; }
+  .input-area { padding: 10px 14px; padding-bottom: max(10px, env(safe-area-inset-bottom)); }
+
+  .bubble { max-width: 90%; }
+
+  /* 底部导航 */
+  .bottom-nav {
+    display: flex;
+    background: var(--glass);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border-top: 1px solid var(--glass-border);
+    flex-shrink: 0;
+  }
+  .bottom-nav-item {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    padding: 8px 0;
+    padding-bottom: max(8px, env(safe-area-inset-bottom));
+    font-size: 10px;
+    color: var(--text-dim);
+    cursor: pointer;
+    transition: color var(--transition);
+    border: none;
+    background: none;
+    font-family: var(--font);
+  }
+  .bottom-nav-item.active { color: var(--primary-text); }
+  .bottom-nav-item .nav-icon { font-size: 18px; }
+
+  .main-area { order: 1; }
+  .bottom-nav { order: 2; }
+  .app { flex-direction: column; }
+}
+
+@media (min-width: 769px) {
+  .bottom-nav { display: none; }
+  .app { flex-direction: row; }
+}
+</style>
+</head>
+<body>
+
+<!-- 遮罩层 -->
+<div class="mobile-overlay" id="overlay" onclick="closeAllPanels()"></div>
+
+<div class="app">
+
+  <!-- ===== 左侧边栏 ===== -->
+  <aside class="left-sidebar" id="leftSidebar">
+    <div class="sidebar-header">
+      <span class="logo">悬殊点</span>
+      <button class="settings-btn" onclick="toggleLeft()" title="关闭侧栏">×</button>
+    </div>
+    <button class="new-chat-btn" onclick="newSession()">+ 新对话</button>
+    <div class="session-list" id="sessionList"></div>
+    <div class="sidebar-footer">
+      <div class="status-indicator">
+        <span class="status-dot offline" id="statusDot"></span>
+        <span id="statusLabel">未连接</span>
+      </div>
+      <span id="tokenCount" style="font-size:11px;color:var(--text-muted);font-family:var(--mono)">0 tk</span>
+    </div>
+  </aside>
+
+  <!-- ===== 主区域 ===== -->
+  <main class="main-area">
+    <div class="toolbar">
+      <button class="settings-btn" onclick="toggleLeft()" style="font-size:20px" title="会话列表">☰</button>
+      <select class="model-select" id="modelSelect" onchange="onModelChange(this.value)">
+        <option value="deepseek-v3">DeepSeek-V3</option>
+        <option value="deepseek-r1">DeepSeek-R1</option>
+        <option value="qwen25-32b">Qwen2.5-32B</option>
+        <option value="qwen25-7b">Qwen2.5-7B</option>
+        <option value="glm4-9b">GLM-4-9B</option>
+        <option value="llama3-8b">Llama3.1-8B</option>
+      </select>
+      <span class="token-badge" id="tokenBadge" title="Token用量">0 tk</span>
+      <button class="settings-btn" onclick="toggleRight()" title="设置 / 工具">⚙</button>
+    </div>
+
+    <div class="conversation" id="conv">
+      <div class="bubble system">
+        <div style="text-align:center;padding:20px 0">
+          <div style="font-size:28px;margin-bottom:10px">⚡</div>
+          <div style="font-size:16px;font-weight:600;margin-bottom:6px">悬殊点 Agent</div>
+          <div style="color:var(--text-dim);font-size:12px">填入 API Key 开始对话 · 支持36个模型</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="input-area">
+      <div class="input-row">
+        <input id="input" type="text" placeholder="输入消息…" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();send()}" autocomplete="off">
+        <button class="send-btn" onclick="send()">↑</button>
+      </div>
+    </div>
+  </main>
+
+  <!-- ===== 右侧面板 ===== -->
+  <aside class="right-panel" id="rightPanel">
+    <div class="panel-tabs">
+      <div class="panel-tab active" onclick="switchPanelTab(this,'settings')">设置</div>
+      <div class="panel-tab" onclick="switchPanelTab(this,'tools')">工具</div>
+      <div class="panel-tab" onclick="switchPanelTab(this,'agents')">Agent</div>
+    </div>
+
+    <!-- 设置标签 -->
+    <div class="panel-content" id="tab-settings">
+      <div class="panel-section">
+        <h3>连接状态</h3>
+        <div class="status-indicator" style="padding:10px 14px;border-radius:10px;border:1px solid var(--glass-border)">
+          <span class="status-dot offline" id="panelStatusDot"></span>
+          <span id="panelStatusLabel">未连接 API</span>
+        </div>
+      </div>
+
+      <div class="panel-section">
+        <h3>API Key</h3>
+        <div class="setting-row">
+          <input id="keyInput" type="password" placeholder="sk-xxxxxxxx" autocomplete="off">
+        </div>
+        <button class="apply-btn" onclick="applyKey()">应用 Key</button>
+        <button class="apply-btn ghost" onclick="resetKey()" style="margin-top:6px">重置为本地模式</button>
+      </div>
+
+      <div class="panel-section">
+        <h3>模型选择</h3>
+        <input id="modelSearch" type="text" placeholder="搜索模型…" oninput="filterModels()" style="width:100%;padding:10px 14px;border-radius:10px;border:1px solid var(--glass-border);background:var(--glass);color:var(--text);font-size:13px;margin-bottom:8px">
+        <select id="providerFilter" onchange="filterModels()" style="width:100%;padding:10px 14px;border-radius:10px;border:1px solid var(--glass-border);background:var(--glass);color:var(--text);font-size:13px;margin-bottom:8px">
+          <option value="">全部厂商</option>
+        </select>
+        <div id="modelList" style="max-height:280px;overflow-y:auto;display:flex;flex-direction:column;gap:4px"></div>
+        <button class="apply-btn ghost" onclick="showCustomModel()" style="margin-top:10px;width:100%">+ 自定义模型</button>
+      </div>
+
+      <div class="panel-section" id="customModelForm" style="display:none">
+        <h3>添加自定义模型</h3>
+        <input id="customName" placeholder="模型名称 (如 MyModel)" style="width:100%;padding:10px 14px;border-radius:10px;border:1px solid var(--glass-border);background:var(--glass);color:var(--text);font-size:13px;margin-bottom:6px">
+        <input id="customUrl" placeholder="API Base URL (如 https://api.xxx.com/v1)" oninput="autoDetectUrl()" style="width:100%;padding:10px 14px;border-radius:10px;border:1px solid var(--glass-border);background:var(--glass);color:var(--text);font-size:13px;margin-bottom:6px">
+        <input id="customModelId" placeholder="Model ID (如 gpt-4o，默认同名称)" style="width:100%;padding:10px 14px;border-radius:10px;border:1px solid var(--glass-border);background:var(--glass);color:var(--text);font-size:13px;margin-bottom:6px">
+        <div id="urlDetect" style="font-size:11px;color:var(--text-dim);margin-bottom:8px"></div>
+        <div style="display:flex;gap:8px">
+          <button class="apply-btn" onclick="addCustomModel()" style="flex:1">添加</button>
+          <button class="apply-btn ghost" onclick="document.getElementById('customModelForm').style.display='none'" style="flex:1">取消</button>
+        </div>
+      </div>
+
+      <div class="panel-section">
+        <h3>Token统计</h3>
+        <div style="font-size:13px;color:var(--text-dim)">累计: <span id="tokenCount">0 tk</span></div>
+        <div style="font-size:13px;color:var(--text-dim);margin-top:4px">模型: <span id="panelModel">本地模拟</span></div>
+      </div>
+    </div>
+
+    <!-- 工具标签 -->
+    <div class="panel-content" id="tab-tools" style="display:none">
+      <div class="panel-section">
+        <h3>搜索Agent</h3>
+        <div style="display:flex;flex-direction:column;gap:6px">
+          <div style="display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:8px;border:1px solid var(--glass-border);font-size:12px">
+            <span style="color:var(--success)">●</span> search_wikipedia
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:8px;border:1px solid var(--glass-border);font-size:12px">
+            <span style="color:var(--success)">●</span> get_weather
+          </div>
+        </div>
+      </div>
+      <div class="panel-section">
+        <h3>文件Agent</h3>
+        <div style="display:flex;flex-direction:column;gap:6px">
+          <div style="display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:8px;border:1px solid var(--glass-border);font-size:12px">
+            <span style="color:var(--success)">●</span> list_files
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:8px;border:1px solid var(--glass-border);font-size:12px">
+            <span style="color:var(--success)">●</span> read_file
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:8px;border:1px solid var(--glass-border);font-size:12px">
+            <span style="color:var(--success)">●</span> write_file
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Agent标签 -->
+    <div class="panel-content" id="tab-agents" style="display:none">
+      <div class="panel-section">
+        <h3>子Agent列表</h3>
+        <div id="agentList" style="display:flex;flex-direction:column;gap:8px">
+          <div style="padding:10px 14px;border-radius:10px;border:1px solid var(--glass-border);font-size:12px">
+            <div style="font-weight:600;color:var(--primary-text)">搜索Agent</div>
+            <div style="color:var(--text-dim);margin-top:4px">联网检索 / 百科 / 天气</div>
+          </div>
+          <div style="padding:10px 14px;border-radius:10px;border:1px solid var(--glass-border);font-size:12px">
+            <div style="font-weight:600;color:var(--primary-text)">代码Agent</div>
+            <div style="color:var(--text-dim);margin-top:4px">编程 / 调试 / 算法</div>
+          </div>
+          <div style="padding:10px 14px;border-radius:10px;border:1px solid var(--glass-border);font-size:12px">
+            <div style="font-weight:600;color:var(--primary-text)">文件Agent</div>
+            <div style="color:var(--text-dim);margin-top:4px">文件管理 / 读写</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ===== 底部导航（移动端） ===== -->
+  <nav class="bottom-nav">
+    <button class="bottom-nav-item active" onclick="toggleLeft()">
+      <span class="nav-icon">💬</span> 会话
+    </button>
+    <button class="bottom-nav-item" onclick="toggleRight()">
+      <span class="nav-icon">⚙</span> 设置
+    </button>
+  </nav>
+
+</div>
+
+<script>
+// ========== 状态 ==========
+const API = '';  // 同端口，无需跨域
+
+let currentModel = 'deepseek-v3';
+let hasKey = false;
+let totalTokens = 0;
+let sessions = [];
+let sessionId = 'sess_' + Date.now();
+const conv = document.getElementById('conv');
+const inp = document.getElementById('input');
+
+// ========== 面板控制 ==========
+function toggleLeft() {
+  const sidebar = document.getElementById('leftSidebar');
+  const overlay = document.getElementById('overlay');
+  sidebar.classList.toggle('open');
+  overlay.classList.toggle('active');
+}
+function toggleRight() {
+  const panel = document.getElementById('rightPanel');
+  const overlay = document.getElementById('overlay');
+  panel.classList.toggle('open');
+  overlay.classList.toggle('active');
+}
+function closeAllPanels() {
+  document.getElementById('leftSidebar').classList.remove('open');
+  document.getElementById('rightPanel').classList.remove('open');
+  document.getElementById('overlay').classList.remove('active');
+}
+function switchPanelTab(el, tab) {
+  document.querySelectorAll('.panel-tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  ['settings','tools','agents'].forEach(id => {
+    document.getElementById('tab-' + id).style.display = id === tab ? '' : 'none';
+  });
+}
+
+// ========== 连接状态 ==========
+function setStatus(state, label) {
+  const dot = document.getElementById('statusDot');
+  const labelEl = document.getElementById('statusLabel');
+  const pDot = document.getElementById('panelStatusDot');
+  const pLabel = document.getElementById('panelStatusLabel');
+  dot.className = 'status-dot ' + state;
+  labelEl.textContent = label;
+  pDot.className = 'status-dot ' + state;
+  pLabel.textContent = label;
+}
+
+// ========== API Key ==========
+async function applyKey() {
+  const key = document.getElementById('keyInput').value.trim();
+  if (!key) { showToast('请输入 API Key'); return; }
+  setStatus('offline', '验证中…');
+  try {
+    const r = await fetch(API + '/set-key', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({key, model: currentModel})
+    });
+    const d = await r.json();
+    if (d.ok) {
+      hasKey = true;
+      setStatus('online', '已连接 ' + d.model);
+      showToast('已连接 ' + d.model);
+      document.getElementById('modelSelect').value = currentModel;
+      closeAllPanels();
+    } else {
+      setStatus('error', d.error || '连接失败');
+      showToast('失败: ' + (d.error || '未知错误'));
+    }
+  } catch(e) {
+    setStatus('error', 'API 服务未启动');
+    showToast('API 服务未启动 (端口8900)');
+  }
+}
+
+async function resetKey() {
+  document.getElementById('keyInput').value = '';
+  hasKey = false;
+  try {
+    await fetch(API + '/set-key', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({key: '', model: 'local'})
+    });
+  } catch(e) {}
+  setStatus('offline', '本地模拟模式');
+  showToast('已切换为本地模拟');
+}
+
+function onModelChange(val) {
+  currentModel = val;
+  document.getElementById('panelModel').textContent = val;
+  if (hasKey) applyKey();
+}
+
+// ========== 模型管理 ==========
+let allModels = [];
+let allProviders = [];
+
+async function loadModels() {
+  try {
+    const r = await fetch(API + '/models');
+    const d = await r.json();
+    allModels = d.models;
+    allProviders = d.providers;
+    buildProviderFilter();
+    filterModels();
+    buildToolbarSelect();
+  } catch(e) { console.log('加载模型列表失败'); }
+}
+
+function buildProviderFilter() {
+  const sel = document.getElementById('providerFilter');
+  sel.innerHTML = '<option value="">全部厂商</option>';
+  allProviders.forEach(p => {
+    sel.innerHTML += '<option value="'+p+'">'+p+'</option>';
+  });
+}
+
+function buildToolbarSelect() {
+  const sel = document.getElementById('modelSelect');
+  sel.innerHTML = '';
+  allModels.forEach(m => {
+    const tag = m.custom ? ' [自定义]' : '';
+    sel.innerHTML += '<option value="'+m.key+'"'+(m.key===currentModel?' selected':'')+'>'+m.name+tag+'</option>';
+  });
+}
+
+function filterModels() {
+  const search = (document.getElementById('modelSearch').value || '').toLowerCase();
+  const provider = document.getElementById('providerFilter').value;
+  let filtered = allModels;
+  if (provider) filtered = filtered.filter(m => m.provider === provider);
+  if (search) filtered = filtered.filter(m =>
+    m.name.toLowerCase().includes(search) ||
+    m.provider.toLowerCase().includes(search) ||
+    m.model_id.toLowerCase().includes(search) ||
+    (m.description||'').toLowerCase().includes(search)
+  );
+  renderModelList(filtered);
+}
+
+function renderModelList(models) {
+  const list = document.getElementById('modelList');
+  if (!models.length) { list.innerHTML = '<div style="padding:12px;color:var(--text-muted);text-align:center">无匹配模型</div>'; return; }
+  // 按厂商分组
+  const groups = {};
+  models.forEach(m => {
+    if (!groups[m.provider]) groups[m.provider] = [];
+    groups[m.provider].push(m);
+  });
+  let html = '';
+  for (const [provider, items] of Object.entries(groups)) {
+    const count = items.length;
+    html += '<div style="display:flex;align-items:center;padding:8px 4px 4px;font-size:10px;color:var(--text-muted);font-weight:600;letter-spacing:0.5px;text-transform:uppercase">'+
+      provider+' <span style="font-weight:400;margin-left:4px">'+count+'个</span></div>';
+    html += items.map(m => {
+      const isActive = m.key === currentModel;
+      const style = isActive ? 'border-color:var(--primary)!important;background:var(--glass-active);box-shadow:0 0 12px var(--primary-glow)' : '';
+      const marker = isActive ? '<span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--primary);margin-right:6px;flex-shrink:0"></span>' : '<span style="display:inline-block;width:6px;height:6px;margin-right:6px;flex-shrink:0"></span>';
+      const desc = m.description ? '<span style="color:var(--text-muted)">'+m.description+'</span>' : '';
+      const delBtn = m.custom ? '<button onclick="event.stopPropagation();delModel(\''+m.key+'\')" title="删除" style="background:none;border:none;color:var(--danger);cursor:pointer;font-size:14px;padding:0 4px">×</button>' : '';
+      return '<div onclick="pickModel(\''+m.key+'\',\''+m.name+'\')" style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;border-radius:8px;border:1px solid var(--glass-border);cursor:pointer;font-size:12px;transition:all var(--transition);'+style+'">'+
+        '<div style="display:flex;align-items:center;flex:1;min-width:0">'+marker+
+        '<div style="min-width:0"><div style="font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+m.name+' '+desc+'</div>'+
+        '<div style="color:var(--text-dim);font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+m.base_url+'</div></div></div>'+delBtn+'</div>';
+    }).join('');
+  }
+  list.innerHTML = html;
+}
+
+function pickModel(key, name) {
+  currentModel = key;
+  document.getElementById('modelSelect').value = key;
+  document.getElementById('panelModel').textContent = name;
+  filterModels();
+  if (hasKey) {
+    hasKey = false;
+    showToast('已切换模型，请重新应用 Key');
+  }
+}
+
+function showCustomModel() {
+  document.getElementById('customModelForm').style.display = '';
+  document.getElementById('customName').value = '';
+  document.getElementById('customUrl').value = '';
+  document.getElementById('customModelId').value = '';
+  document.getElementById('urlDetect').textContent = '';
+}
+
+function autoDetectUrl() {
+  const url = document.getElementById('customUrl').value.trim();
+  if (!url) { document.getElementById('urlDetect').textContent = ''; return; }
+  // 从URL推断厂商
+  const map = {
+    'api.openai.com': 'OpenAI',
+    'api.anthropic.com': 'Anthropic',
+    'generativelanguage.googleapis.com': 'Google',
+    'api.deepseek.com': 'DeepSeek',
+    'dashscope.aliyuncs.com': '阿里通义',
+    'open.bigmodel.cn': '智谱',
+    'api.moonshot.cn': '月之暗面',
+    'ark.cn-beijing.volces.com': '字节豆包',
+    'api.baichuan-ai.com': '百川',
+    'api.minimax.chat': 'Minimax',
+    'api.lingyiwanwu.com': '零一万物',
+    'spark-api': '讯飞星火',
+    'hunyuan': '腾讯混元',
+    'api.mistral.ai': 'Mistral',
+    'api.llama.com': 'Meta',
+    'api.x.ai': 'xAI',
+    'api.cohere.ai': 'Cohere',
+    'api.siliconflow.cn': 'SiliconFlow',
+    'openrouter.ai': 'OpenRouter',
+    'api.together.xyz': 'Together AI',
+  };
+  for (const [host, name] of Object.entries(map)) {
+    if (url.includes(host)) {
+      document.getElementById('urlDetect').textContent = '检测到: ' + name;
+      if (!document.getElementById('customName').value)
+        document.getElementById('customName').placeholder = '如: ' + name + '-custom';
+      return;
+    }
+  }
+  document.getElementById('urlDetect').textContent = '未识别的API地址，将作为通用配置';
+}
+
+async function addCustomModel() {
+  const name = document.getElementById('customName').value.trim();
+  const base_url = document.getElementById('customUrl').value.trim();
+  const model_id = document.getElementById('customModelId').value.trim();
+  if (!name || !base_url) { showToast('名称和API地址不能为空'); return; }
+  try {
+    const r = await fetch(API + '/models', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({name, model_id: model_id||name, base_url, provider:'自定义'})
+    });
+    const d = await r.json();
+    if (d.ok) {
+      currentModel = d.model.key;
+      document.getElementById('customModelForm').style.display = 'none';
+      showToast('已添加: ' + name);
+      await loadModels();
+      document.getElementById('modelSelect').value = currentModel;
+    } else {
+      showToast('添加失败: ' + (d.error||'错误'));
+    }
+  } catch(e) { showToast('添加失败'); }
+}
+
+async function delModel(key) {
+  try {
+    await fetch(API + '/models/' + key, { method: 'DELETE' });
+    if (currentModel === key) currentModel = 'local';
+    await loadModels();
+    document.getElementById('modelSelect').value = currentModel;
+    showToast('已删除');
+  } catch(e) {}
+}
+
+// 初始化
+loadModels();
+
+// ========== 对话 ==========
+async function send() {
+  const text = inp.value.trim();
+  const btn = document.querySelector('.send-btn');
+  if (!text) return;
+  inp.value = '';
+  addBubble('user', text);
+  if (!hasKey) {
+    addBubble('system', '未配置 API Key，请先在设置面板中填写 Key');
+    return;
+  }
+  btn.disabled = true;
+  const typingEl = addTyping();
+  try {
+    const r = await fetch(API + '/chat', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({msg: text})
+    });
+    const d = await r.json();
+    typingEl.remove();
+    if (d.cmd) {
+      addBubble('system', d.reply);
+    } else {
+      addBubble('agent', d.reply, d.agent);
+    }
+    if (d.model) {
+      currentModel = d.model;
+      document.getElementById('modelSelect').value = currentModel;
+    }
+    totalTokens += text.length + (d.reply ? d.reply.length : 0);
+    updateTokenBadge();
+  } catch(e) {
+    typingEl.remove();
+    addBubble('system', '请求失败 — 请检查 API Key 或当前模型');
+  }
+  btn.disabled = false;
+  inp.focus();
+}
+
+function addBubble(role, content, agentName) {
+  const d = document.createElement('div');
+  d.className = 'bubble ' + role;
+  // 格式化 Markdown：**粗体**、`代码`、--- 分割线
+  let html = content
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/`([^`]+)`/g, '<code style="background:rgba(255,255,255,0.08);padding:2px 6px;border-radius:4px;font-family:var(--mono);font-size:12px">$1</code>')
+    .replace(/^---$/gm, '<hr style="border:none;border-top:1px solid var(--glass-border);margin:8px 0">')
+    .replace(/\n/g, '<br>');
+  if (agentName) {
+    d.innerHTML = '<div class="agent-label" style="display:flex;align-items:center;gap:6px;margin-bottom:8px">'+
+      '<span style="display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:6px;background:var(--primary);font-size:11px">⚡</span>'+
+      '<span style="font-weight:600;font-size:13px;color:var(--primary-text)">'+agentName+'</span></div>'+
+      '<div style="line-height:1.7">'+html+'</div>';
+  } else if (role==='system') {
+    d.innerHTML = '<div style="text-align:center">'+html+'</div>';
+  } else {
+    d.innerHTML = html;
+  }
+  conv.appendChild(d);
+  d.scrollIntoView({behavior:'smooth'});
+}
+
+function addTyping() {
+  const d = document.createElement('div');
+  d.className = 'typing';
+  d.innerHTML = '<span></span><span></span><span></span>';
+  conv.appendChild(d);
+  d.scrollIntoView({behavior:'smooth'});
+  return d;
+}
+
+function updateTokenBadge() {
+  const k = (totalTokens / 1000).toFixed(1);
+  document.getElementById('tokenBadge').textContent = k + 'k tk';
+  document.getElementById('tokenCount').textContent = k + 'k tk';
+}
+
+// ========== Toast ==========
+function showToast(msg) {
+  const t = document.createElement('div');
+  t.className = 'toast';
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 2500);
+}
+
+// ========== 会话 ==========
+function newSession() {
+  sessionId = 'sess_' + Date.now();
+  sessions.unshift({id: sessionId, title: '新对话', date: new Date().toLocaleString()});
+  conv.innerHTML = '<div class="bubble system">新对话已开始</div>';
+  renderSessions();
+  closeAllPanels();
+}
+
+function renderSessions() {
+  const list = document.getElementById('sessionList');
+  list.innerHTML = sessions.map(s =>
+    '<div class="session-item' + (s.id === sessionId ? ' active' : '') + '" onclick="loadSession(\'' + s.id + '\')">' +
+    s.title + '<br><span style="font-size:10px;color:var(--text-muted)">' + s.date + '</span></div>'
+  ).join('');
+}
+renderSessions();
+</script>
+</body>
+</html>

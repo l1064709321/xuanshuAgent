@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,user-scalable=no,viewport-fit=cover">
-<title>玄姝Agent</title>
+<title>悬殊点Agent</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
@@ -616,7 +616,7 @@ body::before {
   <!-- ===== 左侧边栏 ===== -->
   <aside class="left-sidebar" id="leftSidebar">
     <div class="sidebar-header">
-      <span class="logo">玄姝</span>
+      <span class="logo">悬殊点</span>
       <button class="settings-btn" onclick="toggleLeft()" title="关闭侧栏">×</button>
     </div>
     <button class="new-chat-btn" onclick="newSession()">+ 新对话</button>
@@ -648,7 +648,7 @@ body::before {
 
     <div class="conversation" id="conv">
       <div class="bubble system">
-        欢迎使用 玄姝Agent<br>
+        欢迎使用 悬殊点Agent<br>
         填入 API Key 即可开始对话
       </div>
     </div>
@@ -686,6 +686,34 @@ body::before {
         </div>
         <button class="apply-btn" onclick="applyKey()">应用 Key</button>
         <button class="apply-btn ghost" onclick="resetKey()" style="margin-top:6px">重置为本地模式</button>
+      </div>
+
+      <div class="panel-section">
+        <h3>模型选择</h3>
+        <input id="modelSearch" type="text" placeholder="搜索模型…" oninput="filterModels()" style="width:100%;padding:10px 14px;border-radius:10px;border:1px solid var(--glass-border);background:var(--glass);color:var(--text);font-size:13px;margin-bottom:8px">
+        <select id="providerFilter" onchange="filterModels()" style="width:100%;padding:10px 14px;border-radius:10px;border:1px solid var(--glass-border);background:var(--glass);color:var(--text);font-size:13px;margin-bottom:8px">
+          <option value="">全部厂商</option>
+        </select>
+        <div id="modelList" style="max-height:280px;overflow-y:auto;display:flex;flex-direction:column;gap:4px"></div>
+        <button class="apply-btn ghost" onclick="showCustomModel()" style="margin-top:10px;width:100%">+ 自定义模型</button>
+      </div>
+
+      <div class="panel-section" id="customModelForm" style="display:none">
+        <h3>添加自定义模型</h3>
+        <input id="customName" placeholder="模型名称 (如 MyModel)" style="width:100%;padding:10px 14px;border-radius:10px;border:1px solid var(--glass-border);background:var(--glass);color:var(--text);font-size:13px;margin-bottom:6px">
+        <input id="customUrl" placeholder="API Base URL (如 https://api.xxx.com/v1)" oninput="autoDetectUrl()" style="width:100%;padding:10px 14px;border-radius:10px;border:1px solid var(--glass-border);background:var(--glass);color:var(--text);font-size:13px;margin-bottom:6px">
+        <input id="customModelId" placeholder="Model ID (如 gpt-4o，默认同名称)" style="width:100%;padding:10px 14px;border-radius:10px;border:1px solid var(--glass-border);background:var(--glass);color:var(--text);font-size:13px;margin-bottom:6px">
+        <div id="urlDetect" style="font-size:11px;color:var(--text-dim);margin-bottom:8px"></div>
+        <div style="display:flex;gap:8px">
+          <button class="apply-btn" onclick="addCustomModel()" style="flex:1">添加</button>
+          <button class="apply-btn ghost" onclick="document.getElementById('customModelForm').style.display='none'" style="flex:1">取消</button>
+        </div>
+      </div>
+
+      <div class="panel-section">
+        <h3>Token统计</h3>
+        <div style="font-size:13px;color:var(--text-dim)">累计: <span id="tokenCount">0 tk</span></div>
+        <div style="font-size:13px;color:var(--text-dim);margin-top:4px">模型: <span id="panelModel">本地模拟</span></div>
       </div>
     </div>
 
@@ -754,10 +782,7 @@ body::before {
 
 <script>
 // ========== 状态 ==========
-const API = (() => {
-  const u = new URL(window.location.href);
-  return u.protocol + '//' + u.hostname + ':8900';
-})();
+const API = '';  // 同端口，无需跨域
 
 let currentModel = 'deepseek-v3';
 let hasKey = false;
@@ -847,8 +872,160 @@ async function resetKey() {
 
 function onModelChange(val) {
   currentModel = val;
+  document.getElementById('panelModel').textContent = val;
   if (hasKey) applyKey();
 }
+
+// ========== 模型管理 ==========
+let allModels = [];
+let allProviders = [];
+
+async function loadModels() {
+  try {
+    const r = await fetch(API + '/models');
+    const d = await r.json();
+    allModels = d.models;
+    allProviders = d.providers;
+    buildProviderFilter();
+    filterModels();
+    buildToolbarSelect();
+  } catch(e) { console.log('加载模型列表失败'); }
+}
+
+function buildProviderFilter() {
+  const sel = document.getElementById('providerFilter');
+  sel.innerHTML = '<option value="">全部厂商</option>';
+  allProviders.forEach(p => {
+    sel.innerHTML += '<option value="'+p+'">'+p+'</option>';
+  });
+}
+
+function buildToolbarSelect() {
+  const sel = document.getElementById('modelSelect');
+  sel.innerHTML = '';
+  allModels.forEach(m => {
+    const tag = m.custom ? ' [自定义]' : '';
+    sel.innerHTML += '<option value="'+m.key+'"'+(m.key===currentModel?' selected':'')+'>'+m.name+tag+'</option>';
+  });
+}
+
+function filterModels() {
+  const search = (document.getElementById('modelSearch').value || '').toLowerCase();
+  const provider = document.getElementById('providerFilter').value;
+  let filtered = allModels;
+  if (provider) filtered = filtered.filter(m => m.provider === provider);
+  if (search) filtered = filtered.filter(m =>
+    m.name.toLowerCase().includes(search) ||
+    m.provider.toLowerCase().includes(search) ||
+    m.model_id.toLowerCase().includes(search) ||
+    (m.description||'').toLowerCase().includes(search)
+  );
+  renderModelList(filtered);
+}
+
+function renderModelList(models) {
+  const list = document.getElementById('modelList');
+  if (!models.length) { list.innerHTML = '<div style="padding:12px;color:var(--text-muted);text-align:center">无匹配模型</div>'; return; }
+  list.innerHTML = models.map(m => {
+    const sel = m.key === currentModel ? 'border-color:var(--primary)!important;background:var(--glass-active)' : '';
+    const delBtn = m.custom ? '<button onclick="event.stopPropagation();delModel(\''+m.key+'\')" title="删除" style="background:none;border:none;color:var(--danger);cursor:pointer;font-size:14px">×</button>' : '';
+    return '<div onclick="pickModel(\''+m.key+'\',\''+m.name+'\')" style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;border-radius:10px;border:1px solid var(--glass-border);cursor:pointer;font-size:12px;'+sel+'">'+
+      '<div><div style="font-weight:600">'+m.name+' <span style="color:var(--text-muted);font-size:10px">'+m.provider+'</span></div>'+
+      '<div style="color:var(--text-dim);font-size:10px;margin-top:2px">'+m.base_url+'</div></div>'+delBtn+'</div>';
+  }).join('');
+}
+
+function pickModel(key, name) {
+  currentModel = key;
+  document.getElementById('modelSelect').value = key;
+  document.getElementById('panelModel').textContent = name;
+  filterModels();
+  if (hasKey) {
+    hasKey = false;
+    showToast('已切换模型，请重新应用 Key');
+  }
+}
+
+function showCustomModel() {
+  document.getElementById('customModelForm').style.display = '';
+  document.getElementById('customName').value = '';
+  document.getElementById('customUrl').value = '';
+  document.getElementById('customModelId').value = '';
+  document.getElementById('urlDetect').textContent = '';
+}
+
+function autoDetectUrl() {
+  const url = document.getElementById('customUrl').value.trim();
+  if (!url) { document.getElementById('urlDetect').textContent = ''; return; }
+  // 从URL推断厂商
+  const map = {
+    'api.openai.com': 'OpenAI',
+    'api.anthropic.com': 'Anthropic',
+    'generativelanguage.googleapis.com': 'Google',
+    'api.deepseek.com': 'DeepSeek',
+    'dashscope.aliyuncs.com': '阿里通义',
+    'open.bigmodel.cn': '智谱',
+    'api.moonshot.cn': '月之暗面',
+    'ark.cn-beijing.volces.com': '字节豆包',
+    'api.baichuan-ai.com': '百川',
+    'api.minimax.chat': 'Minimax',
+    'api.lingyiwanwu.com': '零一万物',
+    'spark-api': '讯飞星火',
+    'hunyuan': '腾讯混元',
+    'api.mistral.ai': 'Mistral',
+    'api.llama.com': 'Meta',
+    'api.x.ai': 'xAI',
+    'api.cohere.ai': 'Cohere',
+    'api.siliconflow.cn': 'SiliconFlow',
+    'openrouter.ai': 'OpenRouter',
+    'api.together.xyz': 'Together AI',
+  };
+  for (const [host, name] of Object.entries(map)) {
+    if (url.includes(host)) {
+      document.getElementById('urlDetect').textContent = '检测到: ' + name;
+      if (!document.getElementById('customName').value)
+        document.getElementById('customName').placeholder = '如: ' + name + '-custom';
+      return;
+    }
+  }
+  document.getElementById('urlDetect').textContent = '未识别的API地址，将作为通用配置';
+}
+
+async function addCustomModel() {
+  const name = document.getElementById('customName').value.trim();
+  const base_url = document.getElementById('customUrl').value.trim();
+  const model_id = document.getElementById('customModelId').value.trim();
+  if (!name || !base_url) { showToast('名称和API地址不能为空'); return; }
+  try {
+    const r = await fetch(API + '/models', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({name, model_id: model_id||name, base_url, provider:'自定义'})
+    });
+    const d = await r.json();
+    if (d.ok) {
+      currentModel = d.model.key;
+      document.getElementById('customModelForm').style.display = 'none';
+      showToast('已添加: ' + name);
+      await loadModels();
+      document.getElementById('modelSelect').value = currentModel;
+    } else {
+      showToast('添加失败: ' + (d.error||'错误'));
+    }
+  } catch(e) { showToast('添加失败'); }
+}
+
+async function delModel(key) {
+  try {
+    await fetch(API + '/models/' + key, { method: 'DELETE' });
+    if (currentModel === key) currentModel = 'local';
+    await loadModels();
+    document.getElementById('modelSelect').value = currentModel;
+    showToast('已删除');
+  } catch(e) {}
+}
+
+// 初始化
+loadModels();
 
 // ========== 对话 ==========
 async function send() {
@@ -856,6 +1033,10 @@ async function send() {
   if (!text) return;
   inp.value = '';
   addBubble('user', text);
+  if (!hasKey) {
+    addBubble('system', '未配置 API Key，请先在设置面板中填写 Key');
+    return;
+  }
   const typingEl = addTyping();
   try {
     const r = await fetch(API + '/chat', {

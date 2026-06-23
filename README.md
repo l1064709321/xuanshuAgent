@@ -77,7 +77,7 @@ chmod +x start.sh
 ./start.sh
 ```
 
-启动后浏览器打开 **http://localhost:8901**，在右侧面板填入 API Key 即可使用。
+启动后浏览器打开 **http://localhost:8900**，在右侧面板填入 API Key 即可使用。
 
 ### 方式二：手动启动
 
@@ -88,10 +88,10 @@ pip install flask flask-cors requests wikipedia
 # 2. 启动后端 API（终端1）
 python frontend.py
 
-# 3. 启动前端服务（终端2）
-python -m http.server 8901
+# 3. 启动（已合并到单端口）
+# 已合并到单端口，无需单独启动前端
 
-# 4. 浏览器打开 http://localhost:8901
+# 4. 浏览器打开 http://localhost:8900
 ```
 
 ### 方式三：终端模式

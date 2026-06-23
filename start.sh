@@ -8,7 +8,6 @@ if ! command -v python3 &>/dev/null; then
 fi
 echo "[1/3] 安装依赖..."
 pip3 install flask flask-cors requests -q
-pip3 install wikipedia -q 2>/dev/null || echo "  (wikipedia 安装跳过，维基搜索功能不可用)"
 if [ -z "$OPENAI_API_KEY" ]; then
     echo "[提示] 未设置 OPENAI_API_KEY，本地模拟模式运行"
 fi

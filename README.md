@@ -1,5 +1,6 @@
-# 玄姝Agent
-多Agent智能助手系统，采用 **父Bot路由 + 子Bot独立记忆 + 前后端分离** 架构。
+# 悬殊点Agent
+
+扣子风格多Agent智能助手系统，采用 **父Bot路由 + 子Bot独立记忆 + 前后端分离** 架构。
 
 ---
 
@@ -41,24 +42,7 @@
 | 工具插件 | 子Agent可注册自定义工具，LLM自动调用 |
 | 知识库 | 每个子Agent可注入专属知识，检索优先召回 |
 | 前后端分离 | Flask纯API后端 + 独立HTML/CSS/JS前端 |
-| 上下文共享 | 父Bot维护全局对话摘要，子Agent获取最近上下文 |
-
-## 子Agent能力
-
-### 搜索Agent
-- 维基百科检索
-- 实时天气查询
-- 联网信息搜索
-
-### 代码Agent
-- Python代码生成与调试
-- 算法问题解答
-- 技术方案输出
-
-### 文件Agent
-- 文件列表读取
-- 文件内容读取
-- 文件写入保存
+| 玻璃态UI | Hermes风格毛玻璃三栏布局，移动端原生体验 |
 
 ---
 
@@ -69,7 +53,7 @@
 | Python | ≥ 3.10 | 语言运行环境 |
 | pip | ≥ 23.0 | 包管理器 |
 
-### Python 依赖包
+### Python 依赖
 
 ```bash
 pip install flask flask-cors requests wikipedia
@@ -82,48 +66,53 @@ pip install flask flask-cors requests wikipedia
 | `requests` | HTTP 请求（调用LLM API） |
 | `wikipedia` | 维基百科检索（搜索Agent插件） |
 
-### LLM API 配置
-
-系统支持任何兼容 OpenAI API 格式的大模型服务。方式二选一：
-
-**方式一：环境变量**
-```bash
-export OPENAI_API_KEY="sk-xxx"
-export OPENAI_BASE_URL="https://api.openai.com/v1"  # 可选，默认OpenAI
-```
-
-**方式二：启动参数**
-```bash
-python main.py --key "sk-xxx"
-```
-
 ---
 
 ## 快速开始
 
-### 1. 安装依赖
+### 方式一：一键启动（推荐）
+
 ```bash
+chmod +x start.sh
+./start.sh
+```
+
+启动后浏览器打开 **http://localhost:8901**，在右侧面板填入 API Key 即可使用。
+
+### 方式二：手动启动
+
+```bash
+# 1. 安装依赖
 pip install flask flask-cors requests wikipedia
+
+# 2. 启动后端 API（终端1）
+python frontend.py
+
+# 3. 启动前端服务（终端2）
+python -m http.server 8901
+
+# 4. 浏览器打开 http://localhost:8901
 ```
 
-### 2. 配置 API Key
-```bash
-export OPENAI_API_KEY="sk-xxx"
-```
+### 方式三：终端模式
 
-### 3. 启动终端模式
 ```bash
 python main.py
 ```
 
-### 4. 启动 Web 服务（前后端分离）
-```bash
-# 终端1：启动后端
-python frontend.py
+---
 
-# 终端2：浏览器打开
-# http://localhost:5000
+## API Key 配置
+
+支持任何兼容 OpenAI API 格式的大模型服务（SiliconFlow / DeepSeek / OpenAI 等）。
+
+**方式一：环境变量**
+```bash
+export OPENAI_API_KEY="sk-xxx"
 ```
+
+**方式二：Web 页面设置**
+启动后在右侧面板 → 设置 → 填入 Key → 应用设置
 
 ---
 
@@ -149,10 +138,11 @@ python frontend.py
 
 | 文件 | 说明 |
 |------|------|
+| `start.sh` | 一键启动脚本 |
 | `main.py` | 终端交互入口，命令行解析与主循环 |
 | `core.py` | 核心引擎：父Bot路由、子Bot定义、对话流程、工具调用 |
 | `models.py` | 多模型池管理，支持多对多绑定（子Agent↔模型） |
 | `memory.py` | 独立记忆系统，基于关键词召回，分短/中/长期 |
 | `logger.py` | 日志系统，支持开关控制 |
 | `frontend.py` | Flask API 后端，暴露 JSON 接口，开启 CORS |
-| `index.html` | 前端页面，独立 HTML/CSS/JS，Ajax 调用后端 |
+| `index.html` | 前端页面，Hermes风格玻璃态UI，独立HTML/CSS/JS |

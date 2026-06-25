@@ -127,10 +127,20 @@ class ModelPool:
 
     def __init__(self, default_key: str = "local", api_key: str = ""):
         self.default_key = default_key
-        self.api_key = api_key
+        self._api_key = api_key
         self._clients: Dict[str, OpenAI] = {}
         self._bindings: Dict[str, str] = {}
         self._custom: Dict[str, ModelEntry] = {}  # 用户自定义模型
+
+    @property
+    def api_key(self) -> str:
+        return self._api_key
+
+    @api_key.setter
+    def api_key(self, value: str):
+        if self._api_key != value:
+            self._clients.clear()  # key 变了，清空旧缓存
+        self._api_key = value
 
     @property
     def all_models(self) -> Dict[str, ModelEntry]:

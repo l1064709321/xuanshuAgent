@@ -15,7 +15,7 @@ def cors(resp):
     return resp
 
 pool = ModelPool(default_key="local")
-bot = ParentBot(pool=pool, verbose=False)
+bot = ParentBot(pool=pool, verbose=False, coordinator_mode=True)
 
 @app.route("/")
 def index():
@@ -80,16 +80,42 @@ def chat():
 
     agent_name = bot._route(msg)
     reply = bot.chat(msg)
-    return jsonify({"reply": reply, "agent": agent_name, "model": _model()})
+    return jsonify({
+        "reply": reply,
+        "agent": agent_name,
+        "model": _model(),
+        "coordinator_mode": bot.coordinator_mode,
+    })
+
+# ── 协调者模式开关 ──
+@app.route("/coordinator-mode", methods=["POST", "OPTIONS"])
+def toggle_coordinator():
+    if request.method == "OPTIONS":
+        return jsonify({})
+    data = request.get_json()
+    enabled = data.get("enabled", True)
+    bot.coordinator_mode = enabled
+    return jsonify({"ok": True, "coordinator_mode": enabled})
+
+# ── 快照管理 ──
+@app.route("/snapshots/export", methods=["POST"])
+def export_snapshots():
+    success = bot.export_all_snapshots()
+    return jsonify({"ok": success})
+
+@app.route("/snapshots/import", methods=["POST"])
+def import_snapshots():
+    count = bot.import_all_snapshots()
+    return jsonify({"ok": True, "imported": count})
 
 # ── 命令 ──
 def _cmd(action, arg):
     cmds = {
-        "/help":   "命令: /model [编号|别名] | /new | /status | /agents | /mem | /kb",
+        "/help":   "命令: /model [编号|别名] | /new | /status | /agents | /mem | /kb | /coordinator | /snapshot",
         "/new":    (bot.reset(), "新对话已开始")[1],
         "/status": bot.status(),
         "/agents": "\n".join(
-            f"{n}: {pool.get_model(n).name} | 插件:{len(c.tools)} | 记忆:{c.memory.get_stats()['短期记忆']}短"
+            f"{n}: {pool.get_model(n).name} | 插件:{len(c.tools)} | 记忆:{c.memory.get_stats()['短期记忆']}短 | 自校验:{'开' if c.self_verify else '关'}"
             for n, c in bot.children.items()
         ),
         "/model":  _model_cmd(arg),
@@ -98,6 +124,8 @@ def _cmd(action, arg):
             f"[{n}]:\n" + "\n".join(f"  - {k[:80]}" for k in c.knowledge)
             for n, c in bot.children.items() if c.knowledge
         ) or "知识库为空",
+        "/coordinator": _coordinator_cmd(arg),
+        "/snapshot": _snapshot_cmd(arg),
     }
     return cmds.get(action, f"未知命令: {action}")
 
@@ -114,6 +142,26 @@ def _model_cmd(arg):
 
 def _model():
     return pool.get_model("搜索Agent").name
+
+
+def _coordinator_cmd(arg):
+    if arg == "off" or arg == "关":
+        bot.coordinator_mode = False
+        return "协调者模式已关闭"
+    elif arg == "on" or arg == "开":
+        bot.coordinator_mode = True
+        return "协调者模式已开启"
+    return f"协调者模式: {'开启' if bot.coordinator_mode else '关闭'} (开/关)"
+
+
+def _snapshot_cmd(arg):
+    if arg == "export" or arg == "导出":
+        success = bot.export_all_snapshots()
+        return "快照已导出" if success else "快照导出失败"
+    elif arg == "import" or arg == "导入":
+        count = bot.import_all_snapshots()
+        return f"快照导入完成，新增 {count} 条记忆" if count else "无需更新或导入失败"
+    return "用法: /snapshot export|import"
 
 
 if __name__ == "__main__":

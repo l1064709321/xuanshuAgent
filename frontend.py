@@ -1,11 +1,16 @@
 """玄姝多Agent API — Flask 后端 + 前端托管，单端口 8900"""
-import os, sys
+import os, sys, json, mimetypes, base64
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from flask import Flask, request, jsonify, send_file
 from core import ParentBot
 from models import ModelPool
 
 app = Flask(__name__, static_folder=".", static_url_path="")
+
+# ── 记忆文件夹路径 ──
+_MEMDIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".memdir")
+os.makedirs(_MEMDIR, exist_ok=True)
+_ALLOWED_BASE = os.path.dirname(os.path.abspath(__file__))
 
 @app.after_request
 def cors(resp):
@@ -107,6 +112,153 @@ def export_snapshots():
 def import_snapshots():
     count = bot.import_all_snapshots()
     return jsonify({"ok": True, "imported": count})
+
+# ── 本地文件夹浏览 ──
+@app.route("/browse", methods=["POST"])
+def browse_dir():
+    data = request.get_json()
+    path = (data.get("path") or _ALLOWED_BASE).strip()
+    if not os.path.exists(path):
+        path = _ALLOWED_BASE
+    real = os.path.realpath(path)
+    if not real.startswith(_ALLOWED_BASE):
+        return jsonify({"ok": False, "error": "禁止访问该路径"})
+    entries = []
+    try:
+        for name in sorted(os.listdir(real)):
+            full = os.path.join(real, name)
+            is_dir = os.path.isdir(full)
+            try:
+                size = os.path.getsize(full) if not is_dir else 0
+            except OSError:
+                size = 0
+            mtime = int(os.path.getmtime(full) * 1000)
+            entries.append({
+                "name": name, "path": full, "dir": is_dir,
+                "size": size, "mtime": mtime
+            })
+    except PermissionError:
+        return jsonify({"ok": False, "error": "无权限访问"})
+    parent = os.path.dirname(real)
+    if not os.path.realpath(parent).startswith(_ALLOWED_BASE):
+        parent = real
+    return jsonify({"ok": True, "path": real, "parent": parent, "entries": entries})
+
+@app.route("/file/read", methods=["POST"])
+def read_local_file():
+    data = request.get_json()
+    path = (data.get("path") or "").strip()
+    if not path:
+        return jsonify({"ok": False, "error": "路径不能为空"})
+    real = os.path.realpath(path)
+    if not real.startswith(_ALLOWED_BASE):
+        return jsonify({"ok": False, "error": "禁止访问该路径"})
+    if not os.path.isfile(real):
+        return jsonify({"ok": False, "error": "不是文件"})
+    mime, _ = mimetypes.guess_type(real)
+    is_text = mime and (mime.startswith("text/") or mime in (
+        "application/json", "application/javascript", "application/xml",
+        "application/x-yaml", "application/x-sh"))
+    if not is_text and mime is None:
+        ext = os.path.splitext(real)[1].lower()
+        text_exts = {".py", ".md", ".yaml", ".yml", ".toml", ".cfg", ".ini",
+                     ".txt", ".log", ".json", ".js", ".ts", ".jsx", ".tsx",
+                     ".css", ".html", ".xml", ".sh", ".bash", ".env", ".gitignore"}
+        is_text = ext in text_exts
+    size = os.path.getsize(real)
+    if is_text or size < 50 * 1024:
+        try:
+            with open(real, "r", encoding="utf-8", errors="replace") as f:
+                content = f.read(50000)
+            return jsonify({"ok": True, "path": real, "content": content, "size": size, "binary": False})
+        except Exception:
+            pass
+    # 二进制文件 → base64
+    try:
+        with open(real, "rb") as f:
+            raw = f.read(50000)
+        return jsonify({"ok": True, "path": real, "content": base64.b64encode(raw).decode(),
+                        "size": size, "binary": True, "mime": mime or "application/octet-stream"})
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)})
+
+# ── 记忆文件夹（.memdir）管理 ──
+@app.route("/memory/list", methods=["GET"])
+def list_memory():
+    entries = []
+    try:
+        for root, dirs, files in os.walk(_MEMDIR):
+            for f in files:
+                full = os.path.join(root, f)
+                rel = os.path.relpath(full, _MEMDIR)
+                try:
+                    size = os.path.getsize(full)
+                except OSError:
+                    size = 0
+                entries.append({
+                    "path": full, "rel": rel, "size": size,
+                    "mtime": int(os.path.getmtime(full) * 1000)
+                })
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)})
+    return jsonify({"ok": True, "memdir": _MEMDIR, "entries": entries})
+
+@app.route("/memory/read", methods=["POST"])
+def read_memory():
+    data = request.get_json()
+    rel = (data.get("rel") or "").strip()
+    if not rel:
+        return jsonify({"ok": False, "error": "文件路径不能为空"})
+    full = os.path.join(_MEMDIR, rel)
+    real = os.path.realpath(full)
+    if not real.startswith(os.path.realpath(_MEMDIR)):
+        return jsonify({"ok": False, "error": "禁止访问"})
+    if not os.path.isfile(real):
+        return jsonify({"ok": False, "error": "文件不存在"})
+    try:
+        with open(real, "r", encoding="utf-8", errors="replace") as f:
+            content = f.read(100000)
+        return jsonify({"ok": True, "path": real, "content": content})
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)})
+
+@app.route("/memory/write", methods=["POST"])
+def write_memory():
+    data = request.get_json()
+    filename = (data.get("filename") or "").strip()
+    content = data.get("content", "")
+    if not filename:
+        return jsonify({"ok": False, "error": "文件名不能为空"})
+    full = os.path.join(_MEMDIR, filename)
+    real = os.path.realpath(full)
+    if not real.startswith(os.path.realpath(_MEMDIR)):
+        return jsonify({"ok": False, "error": "禁止写入该路径"})
+    os.makedirs(os.path.dirname(real), exist_ok=True)
+    try:
+        with open(real, "w", encoding="utf-8") as f:
+            f.write(content)
+        return jsonify({"ok": True, "path": real})
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)})
+
+@app.route("/memory/delete", methods=["POST"])
+def delete_memory():
+    data = request.get_json()
+    rel = (data.get("rel") or "").strip()
+    if not rel:
+        return jsonify({"ok": False, "error": "文件路径不能为空"})
+    full = os.path.join(_MEMDIR, rel)
+    real = os.path.realpath(full)
+    if not real.startswith(os.path.realpath(_MEMDIR)):
+        return jsonify({"ok": False, "error": "禁止删除"})
+    try:
+        if os.path.isfile(real):
+            os.remove(real)
+        elif os.path.isdir(real):
+            os.rmdir(real)
+        return jsonify({"ok": True})
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)})
 
 # ── 命令 ──
 def _cmd(action, arg):

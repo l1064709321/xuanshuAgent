@@ -72,7 +72,14 @@ body::before {
   border-right: 1px solid var(--glass-border);
   display: flex;
   flex-direction: column;
-  transition: transform var(--transition);
+  transition: width 0.3s ease;
+  overflow: hidden;
+  white-space: nowrap;
+}
+.left-sidebar.collapsed {
+  width: 0;
+  min-width: 0;
+  border-right: none;
 }
 .sidebar-header {
   padding: 20px 18px 14px;
@@ -95,29 +102,6 @@ body::before {
   border-radius: 50%;
   background: var(--primary);
   box-shadow: 0 0 12px var(--primary-glow);
-}
-
-.new-chat-btn {
-  width: 100%;
-  margin: 0 18px 12px;
-  padding: 10px;
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--glass-border);
-  background: transparent;
-  color: var(--text);
-  font-size: 13px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all var(--transition);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  width: calc(100% - 36px);
-}
-.new-chat-btn:hover {
-  background: var(--glass-hover);
-  border-color: var(--primary);
 }
 
 .session-list {
@@ -535,14 +519,10 @@ body::before {
 /* ========== 移动端适配 ========== */
 @media (max-width: 768px) {
   .left-sidebar {
-    position: fixed;
-    left: 0; top: 0; bottom: 0;
-    z-index: 100;
-    transform: translateX(-100%);
-    box-shadow: var(--shadow);
-    width: 280px;
+    width: 260px;
+    transition: width 0.3s ease;
   }
-  .left-sidebar.open { transform: translateX(0); }
+  .left-sidebar.collapsed { width: 0; min-width: 0; }
 
   .right-panel {
     position: fixed;
@@ -610,13 +590,12 @@ body::before {
 <div class="app">
 
   <!-- ===== 左侧边栏 ===== -->
-  <aside class="left-sidebar" id="leftSidebar">
+  <aside class="left-sidebar collapsed" id="leftSidebar">
     <div class="sidebar-header">
       <span class="logo">玄姝</span>
-      <button class="settings-btn" onclick="toggleLeft()" title="关闭侧栏">×</button>
+      <button class="settings-btn" onclick="collapseLeft()" title="收起侧栏">×</button>
     </div>
-    <button class="new-chat-btn" onclick="newSession()">+ 新对话</button>
-    <div class="session-list" id="sessionList"></div>
+    <div class="session-list" id="sessionList"><div class="session-item active">当前对话</div></div>
     <div class="sidebar-footer">
       <div class="status-indicator">
         <span class="status-dot offline" id="statusDot"></span>
@@ -664,6 +643,7 @@ body::before {
   <aside class="right-panel" id="rightPanel">
     <div class="panel-tabs">
       <div class="panel-tab active" onclick="switchPanelTab(this,'settings')">设置</div>
+      <div class="panel-tab" onclick="switchPanelTab(this,'browser')">文件</div>
       <div class="panel-tab" onclick="switchPanelTab(this,'tools')">工具</div>
       <div class="panel-tab" onclick="switchPanelTab(this,'agents')">Agent</div>
     </div>
@@ -713,6 +693,52 @@ body::before {
         <h3>Token统计</h3>
         <div style="font-size:13px;color:var(--text-dim)">累计: <span id="tokenCount">0 tk</span></div>
         <div style="font-size:13px;color:var(--text-dim);margin-top:4px">模型: <span id="panelModel">本地模拟</span></div>
+      </div>
+    </div>
+
+    <!-- 文件浏览器标签 -->
+    <div class="panel-content" id="tab-browser" style="display:none">
+      <div class="panel-section">
+        <h3>本地文件夹</h3>
+        <div style="display:flex;gap:6px;margin-bottom:8px">
+          <input id="browsePath" placeholder="起始路径（留空=项目根目录）" style="flex:1;padding:8px 12px;border-radius:8px;border:1px solid var(--glass-border);background:var(--glass);color:var(--text);font-size:12px">
+          <button class="apply-btn" onclick="browseDir()" style="padding:8px 12px;font-size:12px">浏览</button>
+        </div>
+        <div id="breadcrumb" style="font-size:11px;color:var(--text-dim);margin-bottom:8px;word-break:break-all"></div>
+        <div id="fileList" style="max-height:240px;overflow-y:auto;display:flex;flex-direction:column;gap:2px"></div>
+        <div id="fileViewer" style="display:none;margin-top:10px">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+            <span id="viewerPath" style="font-size:11px;color:var(--primary-text);word-break:break-all"></span>
+            <button class="apply-btn ghost" onclick="closeViewer()" style="padding:4px 10px;font-size:11px">X</button>
+          </div>
+          <pre id="viewerContent" style="max-height:280px;overflow:auto;padding:10px;border-radius:8px;border:1px solid var(--glass-border);background:rgba(0,0,0,0.2);font-size:11px;font-family:var(--mono);white-space:pre-wrap;word-break:break-all;color:var(--text)"></pre>
+        </div>
+      </div>
+
+      <div class="panel-section">
+        <h3>记忆文件夹 <span style="font-size:10px;color:var(--text-muted)">（.memdir）</span></h3>
+        <div style="display:flex;gap:6px;margin-bottom:8px">
+          <button class="apply-btn" onclick="refreshMemdir()" style="font-size:11px;padding:6px 12px">刷新</button>
+          <button class="apply-btn ghost" onclick="showMemWrite()" style="font-size:11px;padding:6px 12px">+ 写入</button>
+        </div>
+        <div id="memWriteForm" style="display:none;margin-bottom:8px">
+          <input id="memFilename" placeholder="文件名 (如 context/item.md)" style="width:100%;padding:8px 12px;border-radius:8px;border:1px solid var(--glass-border);background:var(--glass);color:var(--text);font-size:12px;margin-bottom:6px">
+          <textarea id="memContent" placeholder="内容" rows="5" style="width:100%;padding:8px 12px;border-radius:8px;border:1px solid var(--glass-border);background:var(--glass);color:var(--text);font-size:12px;font-family:var(--mono);resize:vertical;margin-bottom:6px"></textarea>
+          <div style="display:flex;gap:6px">
+            <button class="apply-btn" onclick="writeMemdir()" style="flex:1;font-size:12px">保存</button>
+            <button class="apply-btn ghost" onclick="document.getElementById('memWriteForm').style.display='none'" style="flex:1;font-size:12px">取消</button>
+          </div>
+        </div>
+        <div id="memList" style="max-height:220px;overflow-y:auto;display:flex;flex-direction:column;gap:2px">
+          <div style="font-size:12px;color:var(--text-dim);text-align:center;padding:12px">点击刷新加载</div>
+        </div>
+        <div id="memViewer" style="display:none;margin-top:10px">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+            <span id="memViewerPath" style="font-size:11px;color:var(--primary-text);word-break:break-all"></span>
+            <button class="apply-btn ghost" onclick="document.getElementById('memViewer').style.display='none'" style="padding:4px 10px;font-size:11px">X</button>
+          </div>
+          <pre id="memViewerContent" style="max-height:280px;overflow:auto;padding:10px;border-radius:8px;border:1px solid var(--glass-border);background:rgba(0,0,0,0.2);font-size:11px;font-family:var(--mono);white-space:pre-wrap;word-break:break-all;color:var(--text)"></pre>
+        </div>
       </div>
     </div>
 
@@ -786,17 +812,17 @@ const API = '';  // 同端口，无需跨域
 let currentModel = 'deepseek-v3';
 let hasKey = false;
 let totalTokens = 0;
-let sessions = [];
-let sessionId = 'sess_' + Date.now();
+let currentSessionId = 'sess_' + Date.now();
 const conv = document.getElementById('conv');
 const inp = document.getElementById('input');
 
 // ========== 面板控制 ==========
+function collapseLeft() {
+  document.getElementById('leftSidebar').classList.add('collapsed');
+}
+
 function toggleLeft() {
-  const sidebar = document.getElementById('leftSidebar');
-  const overlay = document.getElementById('overlay');
-  sidebar.classList.toggle('open');
-  overlay.classList.toggle('active');
+  document.getElementById('leftSidebar').classList.toggle('collapsed');
 }
 function toggleRight() {
   const panel = document.getElementById('rightPanel');
@@ -805,14 +831,13 @@ function toggleRight() {
   overlay.classList.toggle('active');
 }
 function closeAllPanels() {
-  document.getElementById('leftSidebar').classList.remove('open');
   document.getElementById('rightPanel').classList.remove('open');
   document.getElementById('overlay').classList.remove('active');
 }
 function switchPanelTab(el, tab) {
   document.querySelectorAll('.panel-tab').forEach(t => t.classList.remove('active'));
   el.classList.add('active');
-  ['settings','tools','agents'].forEach(id => {
+  ['settings','browser','tools','agents'].forEach(id => {
     document.getElementById('tab-' + id).style.display = id === tab ? '' : 'none';
   });
 }
@@ -1121,6 +1146,152 @@ function updateTokenBadge() {
   document.getElementById('tokenCount').textContent = k + 'k tk';
 }
 
+// ========== 文件浏览器 ==========
+let currentBrowsePath = '';
+
+async function browseDir(path) {
+  const input = document.getElementById('browsePath');
+  path = path || input.value.trim() || '';
+  try {
+    const r = await fetch(API + '/browse', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({path})
+    });
+    const d = await r.json();
+    if (!d.ok) { showToast(d.error); return; }
+    currentBrowsePath = d.path;
+    document.getElementById('browsePath').value = d.path;
+    document.getElementById('breadcrumb').textContent = '📁 ' + d.path;
+    input.value = d.path;
+    renderFileList(d.entries, d.parent);
+  } catch(e) { showToast('浏览失败: 服务未启动'); }
+}
+
+function renderFileList(entries, parent) {
+  const list = document.getElementById('fileList');
+  if (!entries.length) {
+    list.innerHTML = '<div style="padding:12px;color:var(--text-muted);text-align:center">空文件夹</div>';
+    return;
+  }
+  let html = '';
+  if (parent) {
+    html += '<div onclick="browseDir(\'' + parent.replace(/'/g, "\\'") + '\')" style="display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:8px;border:1px solid var(--glass-border);cursor:pointer;font-size:12px;color:var(--primary-text)">📂 ..</div>';
+  }
+  entries.forEach(e => {
+    const icon = e.dir ? '📁' : '📄';
+    const size = formatSize(e.size);
+    const date = new Date(e.mtime).toLocaleString();
+    html += '<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 10px;border-radius:8px;border:1px solid var(--glass-border);cursor:pointer;font-size:12px;transition:all var(--transition)"' +
+      ' onmouseover="this.style.background=\'var(--glass-hover)\'" onmouseout="this.style.background=\'\'"' +
+      ' onclick="' + (e.dir ? 'browseDir(' : 'viewFile(') + '\'' + e.path.replace(/'/g, "\\'") + '\')" title="' + date + '">' +
+      '<div style="display:flex;align-items:center;gap:8px;flex:1;min-width:0"><span>'+icon+'</span><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+e.name+'</span></div>' +
+      '<span style="color:var(--text-muted);font-size:10px;margin-left:8px;flex-shrink:0">'+size+'</span></div>';
+  });
+  list.innerHTML = html;
+}
+
+async function viewFile(path) {
+  try {
+    const r = await fetch(API + '/file/read', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({path})
+    });
+    const d = await r.json();
+    if (!d.ok) { showToast(d.error); return; }
+    document.getElementById('fileViewer').style.display = '';
+    document.getElementById('viewerPath').textContent = path;
+    const pre = document.getElementById('viewerContent');
+    if (d.binary) {
+      pre.textContent = '[二进制文件] ' + formatSize(d.size) + ' — ' + (d.mime || 'unknown');
+    } else {
+      pre.textContent = d.content;
+    }
+  } catch(e) { showToast('读取失败'); }
+}
+
+function closeViewer() {
+  document.getElementById('fileViewer').style.display = 'none';
+}
+
+function formatSize(bytes) {
+  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1024*1024) return (bytes/1024).toFixed(1) + ' KB';
+  return (bytes/(1024*1024)).toFixed(1) + ' MB';
+}
+
+// ========== 记忆文件夹管理 ==========
+async function refreshMemdir() {
+  try {
+    const r = await fetch(API + '/memory/list');
+    const d = await r.json();
+    if (!d.ok) { showToast(d.error); return; }
+    const list = document.getElementById('memList');
+    if (!d.entries.length) {
+      list.innerHTML = '<div style="font-size:12px;color:var(--text-dim);text-align:center;padding:12px">记忆文件夹为空</div>';
+      return;
+    }
+    let html = '';
+    d.entries.forEach(e => {
+      html += '<div style="display:flex;align-items:center;justify-content:space-between;padding:6px 10px;border-radius:8px;border:1px solid var(--glass-border);font-size:12px">' +
+        '<div style="display:flex;align-items:center;gap:6px;flex:1;min-width:0;cursor:pointer" onclick="readMemdir(\'' + e.rel.replace(/'/g, "\\'") + '\')">📄 <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+e.rel+'</span></div>' +
+        '<span style="color:var(--text-muted);font-size:10px;margin:0 8px;flex-shrink:0">'+formatSize(e.size)+'</span>' +
+        '<button onclick="event.stopPropagation();deleteMemdir(\'' + e.rel.replace(/'/g, "\\'") + '\')" style="background:none;border:none;color:var(--danger);cursor:pointer;font-size:14px;padding:0 4px">×</button></div>';
+    });
+    list.innerHTML = html;
+  } catch(e) { showToast('加载失败'); }
+}
+
+async function readMemdir(rel) {
+  try {
+    const r = await fetch(API + '/memory/read', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({rel})
+    });
+    const d = await r.json();
+    if (!d.ok) { showToast(d.error); return; }
+    document.getElementById('memViewer').style.display = '';
+    document.getElementById('memViewerPath').textContent = rel;
+    document.getElementById('memViewerContent').textContent = d.content;
+  } catch(e) { showToast('读取失败'); }
+}
+
+async function writeMemdir() {
+  const filename = document.getElementById('memFilename').value.trim();
+  const content = document.getElementById('memContent').value;
+  if (!filename) { showToast('文件名不能为空'); return; }
+  try {
+    const r = await fetch(API + '/memory/write', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({filename, content})
+    });
+    const d = await r.json();
+    if (d.ok) {
+      showToast('已保存: ' + filename);
+      document.getElementById('memWriteForm').style.display = 'none';
+      document.getElementById('memFilename').value = '';
+      document.getElementById('memContent').value = '';
+      refreshMemdir();
+    } else { showToast('失败: ' + (d.error || '错误')); }
+  } catch(e) { showToast('保存失败'); }
+}
+
+async function deleteMemdir(rel) {
+  if (!confirm('删除 ' + rel + ' ？')) return;
+  try {
+    const r = await fetch(API + '/memory/delete', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({rel})
+    });
+    const d = await r.json();
+    if (d.ok) { showToast('已删除'); refreshMemdir(); }
+    else { showToast('失败: ' + (d.error || '错误')); }
+  } catch(e) { showToast('删除失败'); }
+}
+
+function showMemWrite() {
+  document.getElementById('memWriteForm').style.display = '';
+}
+
 // ========== Toast ==========
 function showToast(msg) {
   const t = document.createElement('div');
@@ -1130,23 +1301,7 @@ function showToast(msg) {
   setTimeout(() => t.remove(), 2500);
 }
 
-// ========== 会话 ==========
-function newSession() {
-  sessionId = 'sess_' + Date.now();
-  sessions.unshift({id: sessionId, title: '新对话', date: new Date().toLocaleString()});
-  conv.innerHTML = '<div class="bubble system">新对话已开始</div>';
-  renderSessions();
-  closeAllPanels();
-}
-
-function renderSessions() {
-  const list = document.getElementById('sessionList');
-  list.innerHTML = sessions.map(s =>
-    '<div class="session-item' + (s.id === sessionId ? ' active' : '') + '" onclick="loadSession(\'' + s.id + '\')">' +
-    s.title + '<br><span style="font-size:10px;color:var(--text-muted)">' + s.date + '</span></div>'
-  ).join('');
-}
-renderSessions();
+// ========== 会话（已禁用多对话切换）==========
 </script>
 </body>
 </html>

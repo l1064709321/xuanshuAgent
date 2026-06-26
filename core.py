@@ -13,6 +13,94 @@ from memory import AgentMemory
 from logger import Logger
 from models import ModelPool
 
+# ── 共享记忆文件夹（文件级持久化）──
+_MEMDIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".memdir")
+os.makedirs(_MEMDIR, exist_ok=True)
+
+
+class MemdirStore:
+    """共享记忆文件夹 — 任意格式文件读写，解决跨 Agent 记忆不连贯"""
+
+    def __init__(self, root: str = _MEMDIR):
+        self.root = os.path.realpath(root)
+        os.makedirs(self.root, exist_ok=True)
+
+    def _safe_path(self, rel: str) -> str:
+        full = os.path.realpath(os.path.join(self.root, rel))
+        if not full.startswith(self.root):
+            raise PermissionError(f"禁止访问: {rel}")
+        return full
+
+    def list(self) -> list:
+        entries = []
+        for root, dirs, files in os.walk(self.root):
+            for f in files:
+                full = os.path.join(root, f)
+                rel = os.path.relpath(full, self.root)
+                entries.append({"rel": rel, "size": os.path.getsize(full)})
+        return entries
+
+    def read(self, rel: str) -> str:
+        path = self._safe_path(rel)
+        if not os.path.isfile(path):
+            return ""
+        with open(path, "r", encoding="utf-8", errors="replace") as f:
+            return f.read(50000)
+
+    def write(self, rel: str, content: str):
+        path = self._safe_path(rel)
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        with open(path, "w", encoding="utf-8") as f:
+            f.write(content)
+
+    def delete(self, rel: str) -> bool:
+        path = self._safe_path(rel)
+        if os.path.isfile(path):
+            os.remove(path)
+            return True
+        return False
+
+    def search(self, keyword: str) -> list:
+        results = []
+        for entry in self.list():
+            try:
+                content = self.read(entry["rel"])
+                if keyword.lower() in content.lower():
+                    results.append({"rel": entry["rel"], "preview": content[:200]})
+            except Exception:
+                pass
+        return results
+
+    def snapshot(self):
+        """将当前各 Agent 的 JSON 记忆合并写为 Markdown 便于人类/Agent 阅读"""
+        import glob, json as _json
+        mem_json_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".memory")
+        lines = [f"# 玄姝记忆快照 {time.strftime('%Y-%m-%d %H:%M')}\n"]
+        for fname in sorted(glob.glob(os.path.join(mem_json_dir, "*.json"))):
+            name = os.path.splitext(os.path.basename(fname))[0]
+            try:
+                with open(fname, "r", encoding="utf-8") as f:
+                    data = _json.load(f)
+                st = data.get("short_term", [])
+                mt = data.get("medium_term", [])
+                lt = data.get("long_term", [])
+                all_items = st + mt + lt
+                if not all_items:
+                    continue
+                lines.append(f"## {name}\n")
+                for item in all_items:
+                    c = item.get("content", "")
+                    imp = item.get("importance", 0.5)
+                    lines.append(f"- [重要性:{imp:.1f}] {c}")
+                lines.append("")
+            except Exception:
+                continue
+        self.write("snapshots/memory-snapshot.md", "\n".join(lines))
+
+
+# 全局记忆文件夹实例
+memdir = MemdirStore(_MEMDIR)
+
 
 # ── 工具（插件）────────────────────────────────────────
 @dataclass
@@ -228,6 +316,20 @@ Spec:"""
         self._init_children()
 
     def _init_children(self):
+        # ── 共享记忆文件夹工具 ──
+        _mem_list = lambda a: "\n".join(f"  {e['rel']} ({e['size']}B)" for e in memdir.list()) or "记忆文件夹为空"
+        _mem_read = lambda a: memdir.read(a.get("rel", "")) or "(空)"
+        _mem_write = (lambda a: memdir.write(a.get("rel", ""), a.get("content", "")) or f"已写入 {a.get('rel','')}")
+        _mem_search = lambda a: "\n".join(f"  {r['rel']}: {r['preview'][:80]}" for r in memdir.search(a.get("keyword", ""))) or "未找到"
+        _mem_snapshot = lambda a: (memdir.snapshot() or "快照已生成")
+        mem_tools = [
+            Tool("memdir_list", "列出记忆文件夹中所有文件", {}, _mem_list),
+            Tool("memdir_read", "读取记忆文件夹中的文件", {"rel": {"type": "string", "description": "文件相对路径"}}, _mem_read),
+            Tool("memdir_write", "写入文件到记忆文件夹", {"rel": {"type": "string", "description": "文件相对路径"}, "content": {"type": "string", "description": "内容"}}, _mem_write),
+            Tool("memdir_search", "搜索记忆文件夹", {"keyword": {"type": "string", "description": "关键词"}}, _mem_search),
+            Tool("memdir_snapshot", "生成记忆快照（汇总文件到报告）", {}, _mem_snapshot),
+        ]
+
         self.children = {
             "搜索Agent": ChildBot(
                 name="搜索Agent",
@@ -236,7 +338,7 @@ Spec:"""
                 tools=[
                     Tool("search_wikipedia", "搜维基百科", {"query": {"type": "string", "description": "关键词"}}, _wiki),
                     Tool("get_weather", "查天气", {"city": {"type": "string", "description": "城市名"}}, _weather),
-                ],
+                ] + mem_tools,
             ),
             "代码Agent": ChildBot(
                 name="代码Agent",
@@ -250,7 +352,7 @@ Spec:"""
                 tools=[
                     Tool("run_code", "执行Python代码并返回结果", 
                          {"code": {"type": "string", "description": "Python代码"}}, _run_code),
-                ],
+                ] + mem_tools,
                 self_verify=True,
             ),
             "文件Agent": ChildBot(
@@ -261,7 +363,7 @@ Spec:"""
                     Tool("list_files", "列出文件", {"path": {"type": "string", "description": "路径"}}, _ls),
                     Tool("read_file", "读文件", {"path": {"type": "string", "description": "路径"}}, _read),
                     Tool("write_file", "写文件", {"path": {"type": "string", "description": "路径"}, "content": {"type": "string", "description": "内容"}}, _write),
-                ],
+                ] + mem_tools,
             ),
         }
 
@@ -576,6 +678,13 @@ Spec:"""
                 for m in recent
             )
             messages.append({"role": "system", "content": f"[上下文摘要]\n{ctx}"})
+        # ── 注入记忆文件夹上下文 ──
+        mem_results = memdir.search(user_input)
+        if mem_results:
+            mem_lines = ["[记忆文件夹 - 匹配记录]"]
+            for r in mem_results[:5]:
+                mem_lines.append(f"### {r['rel']}\n{r['preview'][:500]}")
+            messages.append({"role": "system", "content": "\n".join(mem_lines)})
         content = f"{extra_context}\n---\n{user_input}" if extra_context else user_input
         messages.append({"role": "user", "content": content})
         return messages

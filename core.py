@@ -17,6 +17,7 @@ from memory import AgentMemory
 from logger import Logger
 from models import ModelPool
 from decompile import Decompiler, detect_format, get_supported_formats
+from screen_reader import capture, to_base64
 
 # ── 共享记忆文件夹（文件级持久化）──
 _MEMDIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".memdir")
@@ -668,6 +669,8 @@ Spec:"""
         self.children: Dict[str, ChildBot] = {}
         self.shared_msgs: List[dict] = []
         self.coordinator_mode = coordinator_mode
+        self.permissions: Dict[str, bool] = {}  # 通用权限（对话级）
+        self._perm_pending: Optional[tuple] = None  # (user_input, image) 授权后自动重试
         # 追踪活跃的 agent 上下文（用于 Continue 决策）
         self._agent_contexts: Dict[str, dict] = {}  # agent_name → {last_task, last_output, files_accessed}
         self._init_children()
@@ -1115,24 +1118,114 @@ Spec:"""
 
     # ═══════════ 对话 ═══════════
     def chat(self, user_input: str, image: str = None) -> str:
+        import re
+        stripped = user_input.strip()
+
+        # ── 通用权限命令：/screencap allow, /root deny, /screen allow(兼容) ──
+        perm_cmd = re.match(r'^/(\w+) (allow|deny)$', stripped)
+        if perm_cmd:
+            ptype = perm_cmd.group(1)
+            action = perm_cmd.group(2)
+            # 兼容 /screen → screencap
+            if ptype == 'screen':
+                ptype = 'screencap'
+            self.permissions[ptype] = (action == 'allow')
+            self.log.sys(f"权限 {ptype} → {action}")
+            msg = f"已{'授予' if action == 'allow' else '拒绝'}「{ptype}」权限。"
+            # 授权后自动重试挂起的请求
+            if action == 'allow' and self._perm_pending:
+                retry_input, retry_image = self._perm_pending
+                self._perm_pending = None
+                return msg + "\n\n" + self.chat(retry_input, retry_image)
+            return msg
+
+        # ── 屏幕截图触发词 ──
+        if stripped in ("/screen", "截图", "截屏", "看屏幕", "看看屏幕"):
+            return self._handle_screen(stripped)
+
         # ── 父Bot直接拦截文件操作 ──
         if self._is_file_op(user_input):
             result = self._handle_file_op(user_input)
             if result is not None:
                 self.log.sys("父Bot直接处理文件操作")
                 self._update_shared_history(user_input, result)
-                return result
+                return self._intercept_permission(result, user_input, image)
 
         # Fork模式: 可并行拆解的任务
         if self._is_forkable(user_input):
-            return self._forked_chat(user_input)
+            return self._intercept_permission(self._forked_chat(user_input), user_input, image)
 
         # 协调者模式: 复杂任务走四阶段
         if self.coordinator_mode and self._is_complex_task(user_input):
-            return self._coordinator_chat(user_input)
+            return self._intercept_permission(self._coordinator_chat(user_input), user_input, image)
 
         # 普通模式: 单阶段路由
-        return self._simple_chat(user_input, image)
+        return self._intercept_permission(self._simple_chat(user_input, image), user_input, image)
+
+    # ═══════════ 通用权限拦截 ═══════════
+    PERM_RE = None  # lazy compiled
+
+    def _intercept_permission(self, reply: str, user_input: str, image: str = None) -> str:
+        """子Agent 响应中检测 [PERM:type]描述 并挂起原请求，授权后自动重试。"""
+        if not reply.startswith('[PERM:'):
+            return reply
+        # 解析权限类型
+        if ParentBot.PERM_RE is None:
+            ParentBot.PERM_RE = __import__('re').compile(r'^\[PERM:(\w+)\]')
+        m = ParentBot.PERM_RE.match(reply)
+        if not m:
+            return reply
+        perm_type = m.group(1)
+        desc = reply[m.end():].strip()
+        if not desc:
+            desc = f"继续执行当前任务"
+        # 子Agent描述中若不含 ||，尝试提取路径作为目标
+        if '||' not in desc:
+            import re as _re
+            path_m = _re.search(r'(/[^\s,，]+|~[^\s,，/]+)', desc)
+            if path_m:
+                target = path_m.group(1).rstrip('.。')
+                before = desc[:path_m.start()].strip().rstrip('，,。. ').rstrip('，, 。.')
+                after  = desc[path_m.end():].strip().lstrip('，,。. ')
+                reason = f"{before}；{after}" if before and after else (before or after or '需要此权限以继续操作。')
+                desc = f"{target}||{reason}"
+            else:
+                desc = f"—||{desc}"
+        self._perm_pending = (user_input, image)
+        self.log.sys(f"子Agent请求权限: {perm_type}")
+        return f"[PERM:{perm_type}]{desc}"
+
+    # ═══════════ 屏幕命令 ═══════════
+    def _handle_screen(self, trigger: str = "") -> str:
+        """Agent 自主权限判断 + 截图分析。权限是对话级内部状态，随 reset() 清空。"""
+        if not self.permissions.get('screencap'):
+            self._perm_pending = (trigger, None)  # 挂起原请求，授权后自动重试
+            return (
+                "[PERM:screencap]"
+                "当前屏幕"
+                "||"
+                "可获取当前屏幕上显示的全部内容（窗口布局、文字信息、图片等），用于视觉分析与辅助操作。"
+            )
+        self.log.sys("截图中...")
+        try:
+            path = capture()
+            if not path:
+                return "截图失败：未找到可用截图工具。"
+            b64 = to_base64(path)
+            messages = [{
+                "role": "user",
+                "content": [
+                    {"type": "text", "text": "描述这张截图中屏幕上的内容。用中文简要回答。"},
+                    {"type": "image_url", "image_url": {"url": b64}},
+                ]
+            }]
+            resp = self.pool.call_llm("搜索Agent", messages)
+            return resp.get("choices", [{}])[0].get("message", {}).get("content", "截图分析失败")
+        except ImportError:
+            return "屏幕截图功能不可用（本地环境缺少 screen_reader 依赖）。"
+        except Exception as e:
+            self.log.error(f"截图失败: {e}")
+            return f"截图失败: {e}"
 
     def _simple_chat(self, user_input: str, image: str = None) -> str:
         """单阶段路由模式"""
@@ -1469,6 +1562,8 @@ Spec:"""
     def reset(self):
         self.shared_msgs = []
         self._agent_contexts = {}
+        self.permissions = {}
+        self._perm_pending = None
         for child in self.children.values():
             child.memory = AgentMemory()
         self.log.sys("对话已重置")

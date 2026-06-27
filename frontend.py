@@ -22,6 +22,9 @@ def cors(resp):
 pool = ModelPool(default_key="local")
 bot = ParentBot(pool=pool, verbose=False, coordinator_mode=True)
 
+# ── 屏幕权限（会话级，重启清空）──
+_screen_granted = False
+
 @app.route("/")
 def index():
     return send_file("index.html")
@@ -84,6 +87,20 @@ def chat():
         arg = parts[1] if len(parts) > 1 else ""
         # ── /screen 主动截图走视觉分析 ──
         if action == "/screen":
+            global _screen_granted
+            if arg == "allow":
+                _screen_granted = True
+                return jsonify({"reply": "屏幕权限已授权，现在可以看屏幕了。输入 /screen 开始。", "cmd": True, "model": _model()})
+            if arg == "deny" or arg == "revoke":
+                _screen_granted = False
+                return jsonify({"reply": "已撤销屏幕权限。" if arg == "revoke" else "已拒绝屏幕权限。", "cmd": True, "model": _model()})
+            if not _screen_granted:
+                return jsonify({
+                    "reply": "需要获取屏幕阅读权限才能查看你的屏幕内容。回复 /screen allow 授权，或 /screen deny 拒绝。",
+                    "need_screen_permission": True,
+                    "cmd": True,
+                    "model": _model()
+                })
             from screen_reader import capture, to_base64
             path = capture()
             if not path:

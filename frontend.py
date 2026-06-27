@@ -22,9 +22,6 @@ def cors(resp):
 pool = ModelPool(default_key="local")
 bot = ParentBot(pool=pool, verbose=False, coordinator_mode=True)
 
-# ── 屏幕权限（会话级，重启清空）──
-_screen_granted = False
-
 @app.route("/")
 def index():
     return send_file("index.html")
@@ -85,37 +82,10 @@ def chat():
         parts = msg.split(maxsplit=1)
         action = parts[0].lower()
         arg = parts[1] if len(parts) > 1 else ""
-        # ── /screen 主动截图走视觉分析 ──
-        if action == "/screen":
-            global _screen_granted
-            if arg == "allow":
-                _screen_granted = True
-                return jsonify({"reply": "屏幕权限已授权，现在可以看屏幕了。输入 /screen 开始。", "cmd": True, "model": _model()})
-            if arg == "deny" or arg == "revoke":
-                _screen_granted = False
-                return jsonify({"reply": "已撤销屏幕权限。" if arg == "revoke" else "已拒绝屏幕权限。", "cmd": True, "model": _model()})
-            if not _screen_granted:
-                return jsonify({
-                    "reply": "需要获取屏幕阅读权限才能查看你的屏幕内容。回复 /screen allow 授权，或 /screen deny 拒绝。",
-                    "need_screen_permission": True,
-                    "cmd": True,
-                    "model": _model()
-                })
-            from screen_reader import capture, to_base64
-            path = capture()
-            if not path:
-                return jsonify({"reply": "截图失败：未找到可用截图工具", "cmd": True, "model": _model()})
-            image = to_base64(path)
-            prompt = arg if arg else "请描述屏幕上显示的内容"
-            agent_name = bot._route(prompt)
-            reply = bot.chat(prompt, image)
-            return jsonify({
-                "reply": reply,
-                "agent": agent_name,
-                "model": _model(),
-                "screen_path": path,
-                "coordinator_mode": bot.coordinator_mode,
-            })
+        # /screen 及所有权限命令交给 core 层处理（Agent 自主权限判断），不走 _cmd 路由
+        if action == "/screen" or arg in ("allow", "deny"):
+            reply = bot.chat(msg)
+            return jsonify({"reply": reply, "cmd": True, "model": _model()})
         return jsonify({"reply": _cmd(action, arg), "cmd": True, "model": _model()})
 
     agent_name = bot._route(msg)
@@ -295,16 +265,6 @@ def delete_memory():
     except Exception as e:
         return jsonify({"ok": False, "error": str(e)})
 
-@app.route("/screen", methods=["POST"])
-def api_screen():
-    from screen_reader import read_screen, read_and_analyze
-    data = request.get_json() or {}
-    if data.get("analyze"):
-        result = read_and_analyze()
-        return jsonify({"ok": True, "result": result})
-    result = read_screen()
-    return jsonify(result)
-
 # ── 命令 ──
 def _cmd(action, arg):
     cmds = {
@@ -323,7 +283,6 @@ def _cmd(action, arg):
         ) or "知识库为空",
         "/coordinator": _coordinator_cmd(arg),
         "/snapshot": _snapshot_cmd(arg),
-        "/screen": _screen_cmd(arg),
     }
     return cmds.get(action, f"未知命令: {action}")
 
@@ -342,15 +301,6 @@ def _model_cmd(arg):
 def _model():
     return pool.get_model("搜索Agent").name
 
-
-def _screen_cmd(arg):
-    from screen_reader import read_screen, read_and_analyze
-    if arg == "analyze" or arg == "分析":
-        return read_and_analyze()
-    result = read_screen()
-    if result["ok"]:
-        return f"截图成功: {result['path']} ({result['size']} bytes)"
-    return result["error"]
 
 
 def _coordinator_cmd(arg):

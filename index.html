@@ -631,9 +631,103 @@ body::before {
   .bottom-nav { display: none; }
   .app { flex-direction: row; }
 }
+
+/* ── 权限弹窗 ── */
+.permission-overlay {
+  display: none;
+  position: fixed; inset: 0; z-index: 9999;
+  background: rgba(0,0,0,0.55);
+  backdrop-filter: blur(4px);
+  align-items: center; justify-content: center;
+}
+.permission-overlay.show { display: flex; }
+.permission-dialog {
+  background: var(--glass);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius);
+  padding: 28px 32px;
+  max-width: 380px; width: 90%;
+  text-align: center;
+  box-shadow: var(--shadow);
+  animation: permFadeIn .3s ease;
+}
+@keyframes permFadeIn {
+  from { opacity: 0; transform: scale(0.92) translateY(12px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+.permission-dialog .perm-icon {
+  font-size: 40px; margin-bottom: 12px;
+}
+.permission-dialog h3 {
+  font-size: 16px; font-weight: 600; margin: 0 0 8px 0; color: var(--text);
+}
+.permission-dialog p {
+  font-size: 13px; color: var(--text-dim); margin: 0 0 24px 0; line-height: 1.6;
+}
+.perm-detail {
+  width: 100%; margin: 0 0 12px 0;
+  border: 1px solid var(--glass-border); border-radius: var(--radius-sm);
+  background: var(--glass-bg); overflow: hidden;
+}
+.perm-row {
+  display: flex; padding: 8px 12px; font-size: 13px;
+}
+.perm-row + .perm-row { border-top: 1px solid var(--glass-border); }
+.perm-label {
+  color: var(--text-dim); min-width: 64px; flex-shrink: 0; font-weight: 500;
+}
+.perm-value {
+  color: var(--text); word-break: break-all;
+}
+.perm-path {
+  font-family: 'SF Mono', 'Cascadia Code', 'Consolas', monospace;
+  font-size: 12px; background: var(--glass-hover); padding: 1px 6px; border-radius: 3px;
+}
+.perm-reason {
+  font-size: 12px; color: var(--text-dim); margin: 0 0 20px 0; line-height: 1.5;
+}
+.perm-btns {
+  display: flex; gap: 10px; justify-content: center;
+}
+.perm-btns button {
+  padding: 10px 28px; border-radius: var(--radius-sm);
+  font-size: 14px; font-weight: 500; cursor: pointer; border: 1px solid var(--glass-border);
+  transition: var(--transition);
+}
+.perm-allow {
+  background: var(--primary); color: #fff; border-color: var(--primary) !important;
+}
+.perm-allow:hover { background: #5b21b6; }
+.perm-deny {
+  background: transparent; color: var(--text-dim);
+}
+.perm-deny:hover { background: var(--glass-hover); color: var(--text); }
 </style>
 </head>
 <body>
+
+<!-- 权限弹窗 -->
+<div class="permission-overlay" id="permOverlay">
+  <div class="permission-dialog">
+    <div class="perm-icon" id="permIcon">🖥️</div>
+    <h3 id="permTitle">权限请求</h3>
+    <div class="perm-detail">
+      <div class="perm-row">
+        <span class="perm-label">权限类型</span>
+        <span class="perm-value" id="permTypeVal">—</span>
+      </div>
+      <div class="perm-row">
+        <span class="perm-label">操作目标</span>
+        <span class="perm-value perm-path" id="permTargetVal">—</span>
+      </div>
+    </div>
+    <p class="perm-reason" id="permReason"></p>
+    <div class="perm-btns">
+      <button class="perm-deny" onclick="permitReply('deny')">拒绝</button>
+      <button class="perm-allow" onclick="permitReply('allow')">允许</button>
+    </div>
+  </div>
+</div>
 
 <!-- 遮罩层 -->
 <div class="mobile-overlay" id="overlay" onclick="closeAllPanels()"></div>
@@ -1192,6 +1286,15 @@ async function send() {
     });
     const d = await r.json();
     typingEl.remove();
+
+    // 权限请求拦截：[PERM:type]description
+    if (d.reply && d.reply.startsWith('[PERM:')) {
+      const m = d.reply.match(/^\[PERM:(\w+)\]([\s\S]*)/);
+      if (m) { showPermission(m[1], m[2].trim()); }
+      btn.disabled = false; inp.focus();
+      return;
+    }
+
     if (d.cmd) {
       addBubble('system', d.reply);
     } else {
@@ -1515,6 +1618,42 @@ async function deleteProfileMemdir(rel) {
     if (d.ok) { showToast('已删除'); refreshProfileMemdir(); }
     else { showToast('失败: ' + (d.error || '错误')); }
   } catch(e) { showToast('删除失败'); }
+}
+
+// ========== 权限弹窗 ==========
+const PERM_INFO = {
+  screencap: { icon: '🖥️', title: '屏幕读取权限' },
+  root:      { icon: '🛡️', title: '系统级权限' },
+  file_sensitive: { icon: '🔑', title: '敏感文件访问' },
+  file_write:     { icon: '📝', title: '文件写入权限' },
+  net_outbound:   { icon: '🌐', title: '外部网络访问' },
+  default:  { icon: '🔐', title: '权限请求' }
+};
+function showPermission(permType, desc) {
+  const info = PERM_INFO[permType] || PERM_INFO.default;
+  document.getElementById('permIcon').textContent = info.icon;
+  document.getElementById('permTitle').textContent = info.title;
+  document.getElementById('permTypeVal').textContent = permType;
+  // 解析 target||reason 格式
+  const sep = desc.indexOf('||');
+  const target = sep !== -1 ? desc.slice(0, sep).trim() : '—';
+  const reason = sep !== -1 ? desc.slice(sep + 2).trim() : desc;
+  document.getElementById('permTargetVal').textContent = target;
+  document.getElementById('permReason').textContent = reason;
+  document.getElementById('permOverlay').setAttribute('data-perm', permType);
+  document.getElementById('permOverlay').classList.add('show');
+}
+function hidePermission() {
+  document.getElementById('permOverlay').classList.remove('show');
+}
+function permitReply(action) {
+  const permType = document.getElementById('permOverlay').getAttribute('data-perm') || 'screencap';
+  hidePermission();
+  const cmd = '/' + permType + ' ' + action;
+  fetch(API + '/chat', {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({msg: cmd})
+  }).then(r => r.json()).then(d => addBubble('system', d.reply));
 }
 
 // ========== Toast ==========

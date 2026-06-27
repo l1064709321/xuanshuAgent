@@ -1,3 +1,6 @@
 __pycache__/
 .memory/
 *.pyc
+.github_token
+.github_remote
+push.py

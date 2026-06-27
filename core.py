@@ -1,5 +1,5 @@
 """
-扣子风格多Agent系统 v0.1.1 — 父Bot路由 + 协调者模式 + 子Bot执行 + 独立记忆
+玄姝多Agent系统 v0.1.1 — 父Bot路由 + 协调者模式 + 子Bot执行 + 独立记忆
 v4 新增:
   - Constitution 人格宪法: 每个 Agent 有自己的价值观、行为边界和表达风格
   - Tool-loop 思维链: 工具调用前后输出自然语言思考过程
@@ -1114,7 +1114,7 @@ Spec:"""
             return self._simple_chat(user_input)
 
     # ═══════════ 对话 ═══════════
-    def chat(self, user_input: str) -> str:
+    def chat(self, user_input: str, image: str = None) -> str:
         # ── 父Bot直接拦截文件操作 ──
         if self._is_file_op(user_input):
             result = self._handle_file_op(user_input)
@@ -1132,9 +1132,9 @@ Spec:"""
             return self._coordinator_chat(user_input)
 
         # 普通模式: 单阶段路由
-        return self._simple_chat(user_input)
+        return self._simple_chat(user_input, image)
 
-    def _simple_chat(self, user_input: str) -> str:
+    def _simple_chat(self, user_input: str, image: str = None) -> str:
         """单阶段路由模式"""
         child_name = self._route(user_input)
         child = self.children[child_name]
@@ -1157,7 +1157,7 @@ Spec:"""
                     mem_text = f"[上一次输出]\n{prev_ctx['last_output'][:300]}\n---\n{mem_text}"
             self.log.memory(f"{child_name}", f"命中{len(recalled)}条")
 
-        messages = self._build_child_msgs(child, user_input, mem_text)
+        messages = self._build_child_msgs(child, user_input, mem_text, image)
         child_reply, rounds = self._run_child(child, messages)
 
         # 自校验
@@ -1173,7 +1173,7 @@ Spec:"""
         # 记忆落盘
         self._child_memorize(child, user_input, child_reply)
         self._update_context(child_name, user_input, child_reply)
-        self._update_shared_history(user_input, child_reply)
+        self._update_shared_history(user_input, child_reply, image)
         return child_reply
 
     def _coordinator_chat(self, user_input: str) -> str:
@@ -1213,7 +1213,7 @@ Spec:"""
 
     # ═══════════ 子Agent执行循环 ═══════════
     def _build_child_msgs(self, child: ChildBot, user_input: str,
-                          extra_context: str = "") -> list:
+                          extra_context: str = "", image: str = None) -> list:
         """构建子Agent消息列表 — v4: 指向 memdir/MEMORY.md 自举"""
         boot_prompt = (
             f"{child.system_prompt}\n\n"
@@ -1252,6 +1252,12 @@ Spec:"""
         if skill_text:
             messages.append({"role": "system", "content": skill_text})
         content = f"{extra_context}\n---\n{user_input}" if extra_context else user_input
+        if image:
+            # OpenAI vision 格式：content 为数组，文本 + 图片
+            content = [
+                {"type": "text", "text": content},
+                {"type": "image_url", "image_url": {"url": image}}
+            ]
         messages.append({"role": "user", "content": content})
         return messages
 
@@ -1397,8 +1403,9 @@ Spec:"""
             "timestamp": time.time(),
         }
 
-    def _update_shared_history(self, user_input: str, reply: str):
-        self.shared_msgs.append({"role": "user", "content": user_input})
+    def _update_shared_history(self, user_input: str, reply: str, image: str = None):
+        content = f"{user_input} [图片]" if image else user_input
+        self.shared_msgs.append({"role": "user", "content": content})
         self.shared_msgs.append({"role": "assistant", "content": reply})
         if len(self.shared_msgs) > 40:
             self.shared_msgs = self.shared_msgs[-40:]

@@ -1,5 +1,5 @@
 """
-扣子风格多Agent系统 v4 — 父Bot路由 + 协调者模式 + 子Bot执行 + 独立记忆
+扣子风格多Agent系统 v0.1.1 — 父Bot路由 + 协调者模式 + 子Bot执行 + 独立记忆
 v4 新增:
   - Constitution 人格宪法: 每个 Agent 有自己的价值观、行为边界和表达风格
   - Tool-loop 思维链: 工具调用前后输出自然语言思考过程
@@ -10,6 +10,7 @@ v3:
   - 自校验: 代码类Agent执行后自动验证
 """
 import json, time, os, threading
+from pathlib import Path
 from typing import List, Dict, Optional, Tuple
 from dataclasses import dataclass, field
 from memory import AgentMemory
@@ -249,6 +250,51 @@ def _weather(args):
         with urllib.request.urlopen(req, timeout=8) as r:
             return r.read().decode()
     except Exception as e: return f"天气查询失败: {e}"
+
+def _web_search(args):
+    """真实联网搜索 — DuckDuckGo Lite"""
+    import urllib.request, urllib.parse, re
+    try:
+        q = urllib.parse.quote(args["query"])
+        req = urllib.request.Request(
+            f"https://lite.duckduckgo.com/lite/?q={q}",
+            headers={"User-Agent": "Mozilla/5.0"}
+        )
+        with urllib.request.urlopen(req, timeout=10) as r:
+            html = r.read().decode("utf-8", errors="replace")
+        # 解析结果
+        results = re.findall(r'<a[^>]*rel="nofollow"[^>]*href="([^"]+)"[^>]*class="result-link"[^>]*>(.*?)</a>.*?<td[^>]*class="result-snippet"[^>]*>(.*?)</td>', html, re.DOTALL)
+        if not results:
+            # 备选: 正则宽松匹配
+            results = re.findall(r'<a[^>]*href="(https?://[^"]+)"[^>]*class="result-link"[^>]*>(.*?)</a>.*?class="result-snippet"[^>]*>(.*?)</td>', html, re.DOTALL)
+        if not results:
+            return f"未找到相关结果。\n(搜索词: {args['query']})"
+        lines = []
+        for i, (url, title, snippet) in enumerate(results[:5], 1):
+            t = re.sub(r'<[^>]+>', '', title).strip()
+            s = re.sub(r'<[^>]+>', '', snippet).strip()[:300]
+            lines.append(f"{i}. **{t}**\n   {url}\n   {s}")
+        return "\n\n".join(lines) or "未找到结果"
+    except Exception as e: return f"搜索失败: {e}"
+
+def _web_fetch(args):
+    """抓取网页正文"""
+    import urllib.request, re
+    try:
+        req = urllib.request.Request(
+            args["url"],
+            headers={"User-Agent": "Mozilla/5.0"}
+        )
+        with urllib.request.urlopen(req, timeout=15) as r:
+            html = r.read().decode("utf-8", errors="replace")
+        # 去标签取纯文本
+        text = re.sub(r'<script[^>]*>.*?</script>', '', html, flags=re.DOTALL)
+        text = re.sub(r'<style[^>]*>.*?</style>', '', text, flags=re.DOTALL)
+        text = re.sub(r'<[^>]+>', ' ', text)
+        text = re.sub(r'\s+', ' ', text).strip()
+        max_len = int(args.get("max_chars", 3000))
+        return text[:max_len] if len(text) > max_len else text
+    except Exception as e: return f"抓取失败: {e}"
 
 _WS = os.path.dirname(os.path.abspath(__file__))
 
@@ -542,6 +588,8 @@ class ChildBot:
         self.memory = AgentMemory(persist_path=persist)
         if self.memory.load():
             pass
+        # memdir 用于 Skill 学习闭环等场景
+        self.memdir: Path = Path(memdir.root)
 
     def tool_schemas(self) -> list:
         return [t.schema() for t in self.tools]
@@ -643,8 +691,12 @@ Spec:"""
             "搜索Agent": ChildBot(
                 name="搜索Agent",
                 description="联网搜索、查实时信息、天气、百科",
-                system_prompt="你是信息检索专家。收到查询后调用插件获取数据，整理结果并注明来源。语气简洁专业。\n注意：你只有只读权限，如需创建/修改/删除文件，请明确告知父Bot处理。",
+                system_prompt="你是信息检索专家。收到查询后调用插件获取数据，整理结果并注明来源。语气简洁专业。\n注意：你只有只读权限，如需创建/修改/删除文件，请明确告知父Bot处理。\n联网搜索用 web_search，阅读具体网页用 web_fetch。",
                 tools=[
+                    Tool("web_search", "联网搜索(DuckDuckGo)，返回标题+链接+摘要",
+                         {"query": {"type": "string", "description": "搜索关键词"}}, _web_search),
+                    Tool("web_fetch", "抓取网页正文内容",
+                         {"url": {"type": "string", "description": "网页URL"}}, _web_fetch),
                     Tool("search_wikipedia", "搜维基百科", {"query": {"type": "string", "description": "关键词"}}, _wiki),
                     Tool("get_weather", "查天气", {"city": {"type": "string", "description": "城市名"}}, _weather),
                 ] + mem_tools,
@@ -694,11 +746,11 @@ Spec:"""
     # ═══════════ 父Bot直接文件操作 ═══════════
     _FILE_OP_KEYWORDS = [
         "创建文件夹", "新建文件夹", "建个文件夹", "mkdir",
-        "写入文件", "写文件", "保存文件", "创建文件",
+        "写入文件", "写文件", "保存文件", "创建文件", "写入",
         "修改文件", "编辑文件", "替换",
         "删除文件", "删除文件夹", "删掉", "移除",
         "复制文件", "移动文件", "重命名",
-        "列出文件", "列出目录", "读取文件", "读文件",
+        "列出文件", "列出目录", "读取文件", "读文件", "读取",
     ]
 
     def _is_file_op(self, query: str) -> bool:
@@ -916,7 +968,9 @@ Spec:"""
 
 要求: 报告文件路径、关键结构、行号位置。不修改任何文件。"""
         self.log.sys(f"📋 研究阶段 → {child_name}")
-        return self._run_child(child, self._build_child_msgs(child, research_prompt))
+        reply, rounds = self._run_child(child, self._build_child_msgs(child, research_prompt))
+        self._curate_skill(child, research_prompt, reply, rounds)
+        return reply
 
     def _synthesize(self, original_query: str, research_result: str) -> str:
         """阶段2: 合成 — 协调者亲自理解并生成 spec"""
@@ -941,7 +995,9 @@ Spec:"""
         impl_prompt = f"""[实施任务] 按以下规格执行修改，完成后验证。
 {spec}"""
         self.log.sys(f"🔨 实施阶段 → {child_name}")
-        return self._run_child(child, self._build_child_msgs(child, impl_prompt))
+        reply, rounds = self._run_child(child, self._build_child_msgs(child, impl_prompt))
+        self._curate_skill(child, impl_prompt, reply, rounds)
+        return reply
 
     def _verification_phase(self, original_query: str, impl_result: str) -> str:
         """阶段4: 验证 — 对比原始需求"""
@@ -993,6 +1049,70 @@ Spec:"""
         if name in self.children and not name.endswith("Agent"):
             del self.children[name]
 
+    def _run_forked_child(self, source_name: str, task: str) -> str:
+        """用 Fork 子代理执行任务（隔离上下文，继承父Bot共享记忆）"""
+        fork_name = f"fork_{source_name}_{int(time.time())}"
+        forked = self._fork_child(source_name, fork_name, task)
+        if not forked:
+            return f"Fork失败: 无法创建 {source_name} 的副本"
+
+        self.log.sys(f"Fork执行: {fork_name}")
+        messages = self._build_child_msgs(forked, task)
+        reply, rounds = self._run_child(forked, messages)
+
+        self._cleanup_fork(fork_name)
+        return reply
+
+    def _is_forkable(self, query: str) -> bool:
+        """检测是否可以并行拆解为多个子任务"""
+        q = query.lower()
+        parallel_signals = ["同时", "并行", "一边", "分别", "各自", "parallel", "以及", "两件事", "都查", "都搜"]
+        return any(s in q for s in parallel_signals) and len(query) > 15
+
+    def _forked_chat(self, user_input: str) -> str:
+        """Fork模式: 将任务拆解为并行子任务，各自用 Fork 执行"""
+        # 用 LLM 拆解任务
+        split_prompt = f"""将以下任务拆解为2-3个可并行执行的子任务。每个子任务一行，用"|||"分隔。只输出子任务列表，不要其他文字。
+
+任务: {user_input}
+
+子任务列表(用 ||| 分隔):"""
+        try:
+            msgs = [{"role": "user", "content": split_prompt}]
+            resp = self.pool.call_llm("__fork_split__", msgs)
+            tasks_text = resp["choices"][0]["message"]["content"].strip()
+            sub_tasks = [t.strip() for t in tasks_text.split("|||") if t.strip()]
+            if len(sub_tasks) < 2:
+                # 拆解失败，回退普通模式
+                return self._simple_chat(user_input)
+
+            self.log.sys(f"Fork模式: 拆解为{len(sub_tasks)}个子任务")
+            results = []
+            for i, task in enumerate(sub_tasks):
+                # 路由决定用哪个 Agent 类型
+                child_name = self._route(task)
+                self.log.sys(f"  Fork-{i+1}: {child_name} → {task[:50]}")
+                result = self._run_forked_child(child_name, task)
+                results.append(f"[子任务{i+1} — {child_name}]\n{result[:800]}")
+
+            final = "\n\n---\n\n".join(results)
+            # 汇总结果
+            summary_prompt = f"""用户原始需求: {user_input}
+
+各子任务执行结果:
+{final}
+
+请汇总各子任务结果，给出一个整合的最终回复。"""
+            msgs2 = [{"role": "user", "content": summary_prompt}]
+            resp2 = self.pool.call_llm("__fork_merge__", msgs2)
+            merged = resp2["choices"][0]["message"]["content"].strip()
+
+            self._update_shared_history(user_input, merged)
+            return merged
+        except Exception as e:
+            self.log.error(f"Fork模式失败: {e}")
+            return self._simple_chat(user_input)
+
     # ═══════════ 对话 ═══════════
     def chat(self, user_input: str) -> str:
         # ── 父Bot直接拦截文件操作 ──
@@ -1002,6 +1122,10 @@ Spec:"""
                 self.log.sys("父Bot直接处理文件操作")
                 self._update_shared_history(user_input, result)
                 return result
+
+        # Fork模式: 可并行拆解的任务
+        if self._is_forkable(user_input):
+            return self._forked_chat(user_input)
 
         # 协调者模式: 复杂任务走四阶段
         if self.coordinator_mode and self._is_complex_task(user_input):
@@ -1034,7 +1158,7 @@ Spec:"""
             self.log.memory(f"{child_name}", f"命中{len(recalled)}条")
 
         messages = self._build_child_msgs(child, user_input, mem_text)
-        child_reply = self._run_child(child, messages)
+        child_reply, rounds = self._run_child(child, messages)
 
         # 自校验
         if child.self_verify and "代码" in child_name:
@@ -1042,6 +1166,9 @@ Spec:"""
             self.log.sys(f"自校验: {'PASS' if 'PASS' in verify_result else '需要检查'}")
             if "PASS" not in verify_result:
                 child_reply = f"{child_reply}\n\n[自校验]\n{verify_result[:300]}"
+
+        # Skill 学习闭环 — 借鉴 Hermes Agent Curator
+        self._curate_skill(child, user_input, child_reply, rounds)
 
         # 记忆落盘
         self._child_memorize(child, user_input, child_reply)
@@ -1120,12 +1247,16 @@ Spec:"""
             for r in mem_results[:5]:
                 mem_lines.append(f"### {r['rel']}\n{r['preview'][:500]}")
             messages.append({"role": "system", "content": "\n".join(mem_lines)})
+        # ── 注入学习到的 Skill ──
+        skill_text = self._inject_skills(child, user_input)
+        if skill_text:
+            messages.append({"role": "system", "content": skill_text})
         content = f"{extra_context}\n---\n{user_input}" if extra_context else user_input
         messages.append({"role": "user", "content": content})
         return messages
 
-    def _run_child(self, child: ChildBot, messages: list) -> str:
-        """子Agent工具调用循环 — v4: 思维链注入"""
+    def _run_child(self, child: ChildBot, messages: list) -> tuple:
+        """子Agent工具调用循环 — v4: 思维链注入。返回 (reply, tool_rounds)"""
         tools = child.tool_schemas()
         for loop in range(5):
             t0 = time.time()
@@ -1143,7 +1274,7 @@ Spec:"""
                 reply = msg.get("content", "")
                 if loop > 0:
                     self.log.sys(f"工具完成({loop}轮)")
-                return reply
+                return reply, loop
 
             messages.append(msg)
             tool_results = []
@@ -1173,7 +1304,74 @@ Spec:"""
             )
             messages.append({"role": "system", "content": cot_prompt})
 
-        return "[子Agent] 工具调用轮数超限"
+        return "[子Agent] 工具调用轮数超限", 5
+
+    # ═══════════ Skill 学习闭环 ═══════════
+    # 借鉴 Hermes Agent Curator: 复杂任务完成后自动提炼经验 → 生成 Skill 文档
+    def _curate_skill(self, child: ChildBot, user_input: str, reply: str, tool_rounds: int):
+        """Curator: 任务完成后判断是否值得生成 Skill。
+        Hermes 阈值: tool_rounds >= 5 触发学习。"""
+        if tool_rounds < 5:
+            return
+        skill_dir = child.memdir / "skills"
+        skill_dir.mkdir(exist_ok=True)
+
+        # 关键词提取
+        kw_resp = self.pool.call_llm(
+            child.name,
+            [{"role": "user", "content": f"从以下任务描述提取3-5个英文关键词(逗号分隔,只输出关键词):\n{user_input[:300]}"}],
+            []
+        )
+        keywords = kw_resp["choices"][0]["message"]["content"]
+        kws = [kw.strip().lower().replace(" ", "-") for kw in keywords.split(",") if kw.strip()]
+
+        # 技能提炼
+        skill_prompt = f"""从以下任务经验中提炼一个可复用的 Skill 文档(Markdown格式)。
+格式要求: 标题、一句话解决什么问题、分步骤操作指南(每步带关键注意事项)、陷阱与教训。
+任务: {user_input[:200]}
+输出: {reply[:500]}
+提炼要点: 哪些操作容易出错? 什么顺序最有效? 有没有可复用的模式?"""
+        sc_resp = self.pool.call_llm(
+            child.name,
+            [{"role": "user", "content": skill_prompt}],
+            []
+        )
+        skill_content = sc_resp["choices"][0]["message"]["content"]
+
+        # 写入 skill 文件
+        skill_name = f"{kws[0]}-{kws[1] if len(kws) > 1 else 'skill'}.md" if kws else "auto-skill.md"
+        skill_path = skill_dir / skill_name
+        skill_path.write_text(skill_content, encoding="utf-8")
+        self.log.memory(f"{child.name}", f"Skill落盘: {skill_path.name}")
+        self.log.sys(f"Skill已学习({tool_rounds}轮工具调用)")
+
+    def _inject_skills(self, child: ChildBot, user_input: str) -> str:
+        """在 _build_child_msgs 前调用: 搜索相关 Skill 注入系统消息。
+        关键词匹配 + 全文搜索，返回要注入的 Skill 文本。"""
+        skill_dir = child.memdir / "skills"
+        if not skill_dir.exists():
+            return ""
+
+        matched = []
+        for sf in sorted(skill_dir.glob("*.md")):
+            content = sf.read_text(encoding="utf-8")
+            # 关键词匹配: user_input 和 skill 文件名/标题交叉命中
+            fname_lower = sf.stem.lower().replace("-", " ")
+            inp_lower = user_input.lower()
+            if any(w in inp_lower for w in fname_lower.split()):
+                matched.append(content)
+            elif len(content[:200].split()) > 5:  # 备选: 标题行模糊匹配
+                title = content.split("\n")[0].lower()
+                if any(w in inp_lower for w in title.split() if len(w) > 2):
+                    matched.append(content)
+
+        if not matched:
+            return ""
+
+        # 最多注入 2 个 Skill
+        joined = "\n---\n".join(matched[:2])
+        self.log.memory(f"{child.name}", f"Skill命中 {len(matched[:2])} 条")
+        return f"\n[相关技能经验 - 来自历史学习]\n{joined}"
 
     # ═══════════ 记忆 & 上下文管理 ═══════════
     def _child_memorize(self, child: ChildBot, user_input: str, reply: str):

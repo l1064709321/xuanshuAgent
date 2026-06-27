@@ -1,4 +1,4 @@
-# 玄姝 (Xuanshu) — 多 Agent 协作系统 v3
+# 玄姝 (Xuanshu) — 多 Agent 协作系统 v0.1.1
 
 > 扣子风格多 Agent 系统：父 Bot 路由 + 协调者模式 + 子 Bot 独立记忆 + Fork 子代理
 
@@ -15,7 +15,7 @@
 
 ## 支持的模型
 
-内置 36 个主流大模型，包括 GPT-4o、Claude 3.5 Sonnet、Gemini 2.0、Qwen2.5、DeepSeek-V3 等。通过 `models.py` 可自定义添加。
+内置 39 个主流大模型，包括 GPT-4o、Claude 3.5 Sonnet、Gemini 2.0、Qwen2.5、DeepSeek-V3 等。通过 `models.py` 可自定义添加。
 
 ## 环境要求
 
@@ -59,8 +59,17 @@ python main.py --quiet
 | `/` | GET | Web 前端界面 |
 | `/chat` | POST | 发送消息 `{"message":"..."}` |
 | `/coordinator-mode` | POST | 切换协调者模式 `{"enabled":true/false}` |
-| `/snapshots/export` | GET | 导出所有子 Agent 记忆快照 |
+| `/models` | GET/POST | 查看/添加模型配置 |
+| `/models/<key>` | DELETE | 删除自定义模型 |
+| `/set-key` | POST | 设置 API Key `{"key":"sk-xxx"}` |
+| `/snapshots/export` | POST | 导出所有子 Agent 记忆快照 |
 | `/snapshots/import` | POST | 导入记忆快照 |
+| `/browse` | POST | 浏览文件目录 `{"path":"..."}` |
+| `/file/read` | POST | 读取文件内容 `{"path":"..."}` |
+| `/memory/list` | GET | 列出共享记忆文件 |
+| `/memory/read` | POST | 读取记忆文件 `{"path":"..."}` |
+| `/memory/write` | POST | 写入记忆文件 `{"path":"...","content":"..."}` |
+| `/memory/delete` | POST | 删除记忆文件 `{"path":"..."}` |
 
 ## 项目结构
 
@@ -68,10 +77,13 @@ python main.py --quiet
 xuanshuAgent/
 ├── frontend.py      # Flask 后端 + API + 静态文件托管
 ├── core.py          # 父 Bot + 协调者 + 子 Agent 系统核心
-├── models.py        # 36 模型池定义
+├── models.py        # 39 模型池定义
 ├── memory.py        # 子 Agent 独立记忆 + 快照
+├── web_search.py    # 联网搜索 + 域名信誉过滤
 ├── logger.py        # 日志模块
-├── main.py          # 命令行入口
+├── main.py          # 命令行入口（含 /search 命令）
+├── push.py          # Git 推送辅助脚本
+├── demo_cloud_agent.py  # 云端 Agent 演示
 ├── index.html       # Web 前端界面
 └── start.sh         # 快速启动脚本
 ```

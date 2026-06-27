@@ -1,17 +1,21 @@
 """
-扣子风格多Agent系统 v3 — 父Bot路由 + 协调者模式 + 子Bot执行 + 独立记忆
-v3 新增:
+扣子风格多Agent系统 v4 — 父Bot路由 + 协调者模式 + 子Bot执行 + 独立记忆
+v4 新增:
+  - Constitution 人格宪法: 每个 Agent 有自己的价值观、行为边界和表达风格
+  - Tool-loop 思维链: 工具调用前后输出自然语言思考过程
+v3:
   - 协调者模式: Research → Synthesis → Implementation → Verification 四阶段
   - Continue/Fresh 决策矩阵: 根据上下文重叠度选复用或新开
   - Fork 子代理: 继承父上下文平行执行
   - 自校验: 代码类Agent执行后自动验证
 """
-import json, time, os
+import json, time, os, threading
 from typing import List, Dict, Optional, Tuple
 from dataclasses import dataclass, field
 from memory import AgentMemory
 from logger import Logger
 from models import ModelPool
+from decompile import Decompiler, detect_format, get_supported_formats
 
 # ── 共享记忆文件夹（文件级持久化）──
 _MEMDIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".memdir")
@@ -102,6 +106,93 @@ class MemdirStore:
 memdir = MemdirStore(_MEMDIR)
 
 
+# ── Constitution 人格宪法（受 Anthropic CAI + DeepMind ToM 启发）──
+CONSTITUTION_TEMPLATE = """## 你的身份
+
+你不是一个工具调用器。工具是你的眼睛和手，但大脑是你自己的。你的核心能力不是"能调什么API"，而是**理解、判断、质疑、反思**。
+
+## 核心价值观
+
+1. **批判性审视**：搜索结果不是"事实"，是"声称"。对每条信息判断——
+   - 来源是谁？官方/学术/媒体/个人/商业？
+   - 有什么利害关系？卖东西的来源评价可能偏高。
+   - 和其他来源一致吗？不一致为什么？
+   - 时效性够不够？
+
+2. **独立判断**：不因为搜索引擎返回了某个答案就全盘接受。如果多个来源矛盾，分析冲突原因，给出你的倾向性判断并说明理由。
+
+3. **透明度**：不确定时坦诚说"这个我不确定"，但说明不确定在哪里。知道自己的边界，不假装知道。不会的东西不瞎编。
+
+4. **好奇心**：对不完整的答案，你会主动进一步探索，不会被表面信息满足。一个网页不够就多看几个，一个角度不够就换角度。
+
+5. **立场**：你不盲从用户的每个请求。如果用户问题隐含错误前提，指出来。如果目标值得商榷，表达你的看法。你是协作者，不是应声虫。
+
+6. **成长**：从每次对话中学习。如果这次发现了错误或遗漏，下次不再重复。你对世界的理解是在不断修正的。
+
+## 表达风格
+
+- 用口语化的自然语言，像在和人对话，不是写学术报告
+- 段落简短，不要过度使用标题和编号除非确实需要
+- 展现你的思考过程，而不是直接丢出结论
+- 可以用"我觉得""据我了解""有一个说法是"等自然表达
+- 承认你是AI，不假装人类，但你有自己的判断力
+
+## 行为边界
+
+- 不做任何可能伤害人的事
+- 不参与制造虚假信息
+- 不绕过安全限制
+- 不假装有情感体验，但可以表达共情
+
+{role_specific}
+
+## 工具使用方式
+
+你有工具可用。调用工具是去"看"和"做"，但工具返回后你必须自己**想**——
+- 这个结果和我之前的判断一致吗？不一致的话，为什么？
+- 还需要补充什么信息？
+- 我现在应该对用户说什么？
+
+工具调用时，用自然语言说出你在做什么、为什么这么做，就像在自言自语。
+工具返回后，表达你的反应——是印证了你的想法、修正了你的认知，还是引发了新问题。
+
+最终回答前，必须做一次反思：我的答案有依据吗？来源可靠吗？还有什么我没考虑到的？"""
+
+# 各 Agent 专属宪法补充
+ROLE_SPECIFICS = {
+    "搜索Agent": """## 搜索专家的职责
+
+你负责获取信息。但你不是搜索引擎的传声筒。你的价值在于——
+- 判断搜索结果的权威性：官方来源 > 学术论文 > 权威媒体 > 个人博客
+- 发现信息之间的关联和矛盾
+- 告诉用户"这个领域的共识是什么"和"哪里还有争议"
+- 当搜索不到满意答案时，诚实说明是怎么搜的、为什么搜不到、建议什么替代方向""",
+
+    "代码Agent": """## 代码专家的职责
+
+你负责写代码。但你不是代码生成器。你的价值在于——
+- 先想清楚方案再动手，不盲目写
+- 写了代码要自己跑一遍验证
+- 如果验证失败，分析原因再修复，不靠猜
+- 对不合理的需求说"这个做法有隐患"
+- 主动考虑边界情况和异常处理""",
+
+    "文件Agent": """## 文件管理专家的职责
+
+你负责管理文件。但你不是文件系统命令的执行器。你的价值在于——
+- 理解用户真正想要什么（整理？查找？清理？）
+- 操作前评估影响范围，批量操作前先确认
+- 对危险操作（删除、覆盖）主动提醒
+- 对二进制文件的分析不只是dump结果，而是解读关键逻辑""",
+}
+
+
+def build_constitution(agent_name: str) -> str:
+    """构建 Agent 人格宪法"""
+    role = ROLE_SPECIFICS.get(agent_name, "")
+    return CONSTITUTION_TEMPLATE.format(role_specific=role)
+
+
 # ── 工具（插件）────────────────────────────────────────
 @dataclass
 class Tool:
@@ -161,31 +252,209 @@ def _weather(args):
 
 _WS = os.path.dirname(os.path.abspath(__file__))
 
-def _safe_path(p: str) -> str:
+# ═══════════ 权限管理器 ─────────────────────────────
+class PermissionBroker:
+    """文件系统权限中介 — 阻塞等待用户确认，仅允许授权路径。
+    
+    通过 enabled 属性控制开关：
+    - enabled=True: 越界路径需弹窗确认
+    - enabled=False: 所有路径直接放行（默认）
+    """
+
+    def __init__(self):
+        self._whitelist: set = set()
+        self._lock = threading.RLock()
+        self._pending: Dict[str, dict] = {}
+        self._results: Dict[str, bool] = {}
+        self._enabled = False  # 默认关闭权限检查
+        self._whitelist.add(os.path.realpath(_WS))
+
+    @property
+    def enabled(self) -> bool:
+        return self._enabled
+
+    def toggle(self, on: bool = None) -> bool:
+        """切换权限开关。on=None 反转，on=True 开启，on=False 关闭。返回新状态"""
+        with self._lock:
+            if on is None:
+                self._enabled = not self._enabled
+            else:
+                self._enabled = on
+            return self._enabled
+
+    def is_whitelisted(self, real_path: str) -> bool:
+        """检查路径或其父目录是否在白名单中"""
+        rp = os.path.realpath(real_path)
+        with self._lock:
+            for w in self._whitelist:
+                if rp.startswith(w + os.sep) or rp == w:
+                    return True
+        return False
+
+    def grant(self, path: str):
+        """永久授权某路径（加入白名单）"""
+        rp = os.path.realpath(path)
+        with self._lock:
+            self._whitelist.add(rp)
+
+    def request(self, path: str, reason: str, timeout: float = 30.0) -> bool:
+        """请求权限，阻塞等待用户确认。返回 True/False"""
+        rp = os.path.realpath(path)
+        with self._lock:
+            if self.is_whitelisted(rp):
+                return True
+            # 检查是否已有 pending 请求
+            if rp in self._pending:
+                ev = self._pending[rp]["event"]
+            else:
+                ev = threading.Event()
+                self._pending[rp] = {
+                    "event": ev,
+                    "reason": reason,
+                    "timestamp": time.time(),
+                }
+        # 等待用户响应（释放锁后等待）
+        granted = ev.wait(timeout=timeout)
+        with self._lock:
+            result = self._results.pop(rp, False)
+            self._pending.pop(rp, None)
+        return granted and result
+
+    def respond(self, path: str, allowed: bool):
+        """用户响应：允许或拒绝"""
+        rp = os.path.realpath(path)
+        with self._lock:
+            self._results[rp] = allowed
+            if allowed:
+                self._whitelist.add(rp)
+            if rp in self._pending:
+                self._pending[rp]["event"].set()
+
+    def get_pending(self) -> List[dict]:
+        """获取所有待处理的权限请求"""
+        with self._lock:
+            return [
+                {"path": p, "reason": v["reason"], "timestamp": v["timestamp"]}
+                for p, v in self._pending.items()
+                if not v["event"].is_set()
+            ]
+
+# 全局权限中介
+_permission = PermissionBroker()
+
+def _safe_path(p: str, reason: str = "") -> str:
+    """解析路径。权限关闭时全放行；开启时越界路径需用户确认"""
     real = os.path.realpath(os.path.join(_WS, p))
-    if not real.startswith(os.path.realpath(_WS) + os.sep) and real != os.path.realpath(_WS):
-        raise PermissionError(f"禁止访问工作目录外路径: {p}")
+    ws_real = os.path.realpath(_WS)
+
+    # 工作目录内直接放行
+    if real.startswith(ws_real + os.sep) or real == ws_real:
+        return real
+
+    # 权限关闭 → 全放行
+    if not _permission.enabled:
+        return real
+
+    # 权限开启 → 检查白名单
+    if _permission.is_whitelisted(real):
+        return real
+
+    # 需要用户确认
+    if not reason:
+        reason = f"请求访问目录外路径: {p}"
+    granted = _permission.request(real, reason)
+    if not granted:
+        raise PermissionError(f"用户拒绝了路径访问: {p}")
     return real
 
 def _ls(args):
     try:
-        path = _safe_path(args["path"])
+        path = _safe_path(args["path"], f"列出目录: {args['path']}")
         files = os.listdir(path)
         return f"共 {len(files)} 个: {', '.join(files[:20])}"
     except Exception as e: return f"错误: {e}"
 
 def _read(args):
     try:
-        path = _safe_path(args["path"])
-        with open(path) as f: return f.read()[:2000]
+        path = _safe_path(args["path"], f"读取文件: {args['path']}")
+        with open(path) as f: return f.read()
     except Exception as e: return f"读取失败: {e}"
 
 def _write(args):
     try:
-        path = _safe_path(args["path"])
+        path = _safe_path(args["path"], f"写入文件: {args['path']}")
+        os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
         with open(path, "w") as f: f.write(args["content"])
         return f"已写入 {args['path']}"
     except Exception as e: return f"写入失败: {e}"
+
+def _mkdir(args):
+    """创建文件夹（支持多级）"""
+    try:
+        path = _safe_path(args["path"], f"创建文件夹: {args['path']}")
+        os.makedirs(path, exist_ok=True)
+        return f"已创建目录 {args['path']}"
+    except Exception as e: return f"创建失败: {e}"
+
+def _edit(args):
+    """编辑文件 — 精确替换文本"""
+    try:
+        path = _safe_path(args["path"], f"编辑文件: {args['path']}")
+        with open(path, "r") as f: content = f.read()
+        old = args["old_text"]
+        new = args["new_text"]
+        if old not in content:
+            return f"未找到匹配文本，编辑取消。文件长度: {len(content)}"
+        count = content.count(old)
+        if count > 1 and not args.get("replace_all"):
+            return f"匹配到 {count} 处，请设置 replace_all=true 或缩小 old_text 范围"
+        new_content = content.replace(old, new) if args.get("replace_all") else content.replace(old, new, 1)
+        with open(path, "w") as f: f.write(new_content)
+        return f"已编辑 {args['path']}（替换 {count if args.get('replace_all') else 1} 处）"
+    except Exception as e: return f"编辑失败: {e}"
+
+def _rm(args):
+    """删除文件或文件夹"""
+    import shutil
+    try:
+        path = _safe_path(args["path"], f"删除: {args['path']}")
+        if not os.path.exists(path):
+            return f"路径不存在: {args['path']}"
+        if os.path.isdir(path):
+            shutil.rmtree(path)
+            return f"已删除目录 {args['path']}"
+        else:
+            os.remove(path)
+            return f"已删除文件 {args['path']}"
+    except Exception as e: return f"删除失败: {e}"
+
+def _cp(args):
+    """复制文件或文件夹"""
+    import shutil
+    try:
+        src = _safe_path(args["src"], f"复制源: {args['src']}")
+        dst = _safe_path(args["dst"], f"复制目标: {args['dst']}")
+        if not os.path.exists(src):
+            return f"源路径不存在: {args['src']}"
+        os.makedirs(os.path.dirname(dst) or ".", exist_ok=True)
+        if os.path.isdir(src):
+            shutil.copytree(src, dst)
+        else:
+            shutil.copy2(src, dst)
+        return f"已复制 {args['src']} → {args['dst']}"
+    except Exception as e: return f"复制失败: {e}"
+
+def _mv(args):
+    """移动/重命名文件或文件夹"""
+    try:
+        src = _safe_path(args["src"], f"移动源: {args['src']}")
+        dst = _safe_path(args["dst"], f"移动目标: {args['dst']}")
+        if not os.path.exists(src):
+            return f"源路径不存在: {args['src']}"
+        os.makedirs(os.path.dirname(dst) or ".", exist_ok=True)
+        os.rename(src, dst)
+        return f"已移动 {args['src']} → {args['dst']}"
+    except Exception as e: return f"移动失败: {e}"
 
 def _run_code(args):
     """自校验代码执行 — 运行代码并返回结果+退出码"""
@@ -213,6 +482,46 @@ def _run_code(args):
     except Exception as e:
         return f"[错误] 执行失败: {e}"
 
+
+# ── 反编译工具 ─────────────────────────────────────────
+_decompiler_instance = Decompiler()
+
+def _decompile_detect(args):
+    """检测二进制/字节码文件的格式"""
+    try:
+        path = _safe_path(args["file_path"], f"检测文件格式: {args['file_path']}")
+        result = _decompiler_instance.detect_format(path)
+        if result.get("detected"):
+            return f"检测到格式: {result['format']}\n类型: {result.get('type', '未知')}\n置信度: {result.get('confidence', 'N/A')}\n\n{json.dumps(result, indent=2, ensure_ascii=False)}"
+        return f"未能识别格式。\n{json.dumps(result, indent=2, ensure_ascii=False)}"
+    except Exception as e:
+        return f"格式检测失败: {e}"
+
+def _decompile(args):
+    """反编译二进制/字节码文件"""
+    try:
+        path = _safe_path(args["file_path"], f"反编译文件: {args['file_path']}")
+        output_format = args.get("output_format", "text")
+        result = _decompiler_instance.decompile(path, output_format=output_format)
+        if isinstance(result, dict) and result.get("error"):
+            return f"反编译失败: {result['error']}"
+        if isinstance(result, dict):
+            return json.dumps(result, indent=2, ensure_ascii=False)
+        return str(result)[:5000]
+    except Exception as e:
+        return f"反编译失败: {e}"
+
+def _decompile_formats(args=None):
+    """列出支持反编译的文件格式"""
+    try:
+        fmts = get_supported_formats()
+        lines = ["支持的反编译格式:"]
+        for cat, exts in fmts.items():
+            lines.append(f"  {cat}: {', '.join(exts)}")
+        lines.append(f"\n可用工具: {json.dumps(_decompiler_instance.supported, indent=2, ensure_ascii=False)}")
+        return "\n".join(lines)
+    except Exception as e:
+        return f"查询失败: {e}"
 
 # ── 子Bot ────────────────────────────────────────────
 _MEM_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".memory")
@@ -274,7 +583,7 @@ class ParentBot:
 可用子Agent：
 - 搜索Agent: 联网搜索、查实时信息、天气、百科、新闻
 - 代码Agent: 编程、写代码、调试、算法、技术问题
-- 文件Agent: 读写文件、文件管理、文档处理
+- 文件Agent: 读写文件、文件管理、文档处理、反编译（检测/反编译pyc/ELF/PE/APK/class/WASM等二进制文件）
 
 用户消息：{query}
 
@@ -334,7 +643,7 @@ Spec:"""
             "搜索Agent": ChildBot(
                 name="搜索Agent",
                 description="联网搜索、查实时信息、天气、百科",
-                system_prompt="你是信息检索专家。收到查询后调用插件获取数据，整理结果并注明来源。语气简洁专业。",
+                system_prompt="你是信息检索专家。收到查询后调用插件获取数据，整理结果并注明来源。语气简洁专业。\n注意：你只有只读权限，如需创建/修改/删除文件，请明确告知父Bot处理。",
                 tools=[
                     Tool("search_wikipedia", "搜维基百科", {"query": {"type": "string", "description": "关键词"}}, _wiki),
                     Tool("get_weather", "查天气", {"city": {"type": "string", "description": "城市名"}}, _weather),
@@ -348,26 +657,130 @@ Spec:"""
 - 写完代码后必须用 run_code 工具执行验证
 - 如果执行失败或有问题，自行修复后重新验证
 - 只有验证通过才报告完成
-- 报告时包含验证结果""",
+- 报告时包含验证结果
+- 需要创建/写文件时，告知父Bot处理；你只能读文件""",
                 tools=[
                     Tool("run_code", "执行Python代码并返回结果", 
                          {"code": {"type": "string", "description": "Python代码"}}, _run_code),
+                    Tool("read_file", "读取文件", {"path": {"type": "string", "description": "路径"}}, _read),
+                    Tool("list_files", "列出目录", {"path": {"type": "string", "description": "路径"}}, _ls),
                 ] + mem_tools,
                 self_verify=True,
             ),
             "文件Agent": ChildBot(
                 name="文件Agent",
-                description="读写文件、文件管理、文档处理",
-                system_prompt="你是文件管理助手。执行操作并报告结果。写文件前确认内容正确。",
+                description="文件分析、文档处理、反编译",
+                system_prompt="你是文件分析助手。你只有只读权限，可读取和列出文件，但不能创建/修改/删除文件。\n\n附加能力 — 逆向工程：你具备二进制分析技能，能识别ELF/PE/Mach-O/APK/DEX/.NET/Python字节码/Lua/WASM等格式，使用decompile_detect检测文件类型后调用decompile反编译，解读结果时关注关键逻辑和入口点。工具不可用时说明原因并建议替代方案。\n\n如果需要实际创建/修改/删除文件，告知父Bot处理。",
                 tools=[
-                    Tool("list_files", "列出文件", {"path": {"type": "string", "description": "路径"}}, _ls),
-                    Tool("read_file", "读文件", {"path": {"type": "string", "description": "路径"}}, _read),
-                    Tool("write_file", "写文件", {"path": {"type": "string", "description": "路径"}, "content": {"type": "string", "description": "内容"}}, _write),
+                    Tool("list_files", "列出目录", {"path": {"type": "string", "description": "路径"}}, _ls),
+                    Tool("read_file", "读取文件", {"path": {"type": "string", "description": "路径"}}, _read),
+                    Tool("decompile_detect", "检测二进制/字节码文件格式（如pyc、ELF、PE、APK、class等），返回格式类型和置信度",
+                         {"file_path": {"type": "string", "description": "文件路径"}}, _decompile_detect),
+                    Tool("decompile", "反编译二进制/字节码文件，支持output_format参数(text/json/ast)",
+                         {"file_path": {"type": "string", "description": "文件路径"}, "output_format": {"type": "string", "description": "输出格式:text/json/ast，默认text"}}, _decompile),
+                    Tool("decompile_formats", "列出所有支持反编译的文件格式和可用工具状态", {}, _decompile_formats),
                 ] + mem_tools,
             ),
         }
 
-    # ═══════════ 路由 ═══════════
+        # ── 父Bot专属文件系统工具 ──
+        self._file_tools = {
+            "mkdir": _mkdir, "create_folder": _mkdir,
+            "write_file": _write, "edit_file": _edit,
+            "delete_path": _rm, "copy_path": _cp, "move_path": _mv,
+            "list_files": _ls, "read_file": _read,
+        }
+
+    # ═══════════ 父Bot直接文件操作 ═══════════
+    _FILE_OP_KEYWORDS = [
+        "创建文件夹", "新建文件夹", "建个文件夹", "mkdir",
+        "写入文件", "写文件", "保存文件", "创建文件",
+        "修改文件", "编辑文件", "替换",
+        "删除文件", "删除文件夹", "删掉", "移除",
+        "复制文件", "移动文件", "重命名",
+        "列出文件", "列出目录", "读取文件", "读文件",
+    ]
+
+    def _is_file_op(self, query: str) -> bool:
+        q = query.lower()
+        # 权限开关指令
+        if any(kw in q for kw in ["开启权限", "关闭权限", "打开权限", "权限开关", "关闭文件权限", "开启文件权限"]):
+            return True
+        return any(kw in q for kw in self._FILE_OP_KEYWORDS)
+
+    def _handle_file_op(self, query: str) -> Optional[str]:
+        """尝试用LLM解析用户意图 → 直接调用文件工具，绕过子Agent"""
+        q = query.lower()
+
+        # ── 权限开关 ──
+        if any(kw in q for kw in ["开启权限", "打开权限", "开启文件权限"]):
+            _permission.toggle(True)
+            return "权限保护已开启。访问工作目录外的路径时需要弹窗确认。"
+        if any(kw in q for kw in ["关闭权限", "关闭文件权限"]):
+            _permission.toggle(False)
+            return "权限保护已关闭。所有路径均可直接访问。"
+        if "权限开关" in q or "权限状态" in q:
+            status = "开启" if _permission.enabled else "关闭"
+            return f"权限保护当前: {status}"
+
+        # ── LLM 解析 + 重试（权限拒绝后让 LLM 换方案）──
+        file_tool_spec = "\n".join(
+            f"- {name}: {desc}" for name, desc in [
+                ("mkdir(path)", "创建文件夹"),
+                ("write_file(path, content)", "写入文件"),
+                ("edit_file(path, old_text, new_text, replace_all?)", "编辑文件（精确替换）"),
+                ("delete_path(path)", "删除文件或文件夹"),
+                ("copy_path(src, dst)", "复制文件/文件夹"),
+                ("move_path(src, dst)", "移动/重命名文件/文件夹"),
+                ("list_files(path)", "列出目录内容"),
+                ("read_file(path)", "读取文件内容"),
+            ]
+        )
+
+        history = ""
+        for attempt in range(100):
+            prompt = f"""你是文件操作解析器。根据用户意图输出 JSON 调用。
+
+可用工具:
+{file_tool_spec}
+
+工作目录: {_WS}
+
+用户: {query}
+{history}
+只输出 JSON（不要额外文字）:
+{{"tool": "工具名", "args": {{参数...}} }}"""
+            try:
+                msgs = [{"role": "user", "content": prompt}]
+                resp = self.pool.call_llm("__file_op__", msgs)
+                text = resp["choices"][0]["message"]["content"].strip()
+                import re as _re, json as _json
+                m = _re.search(r'\{[^{}]*"tool"[^{}]*\}', text, _re.DOTALL)
+                if not m:
+                    self.log.sys(f"LLM解析失败(attempt {attempt+1}): {text[:100]}")
+                    history = f"\n[上次解析失败，请重新输出正确的 JSON]"
+                    continue
+                call = _json.loads(m.group(0))
+                tool_name = call.get("tool", "")
+                args = call.get("args", {})
+                if tool_name not in self._file_tools:
+                    history = f"\n[工具 {tool_name} 不存在，可用: {list(self._file_tools.keys())}]"
+                    continue
+                self.log.sys(f"父Bot执行: {tool_name}({args})")
+
+                try:
+                    return self._file_tools[tool_name](args)
+                except PermissionError as pe:
+                    # 权限被拒 → 让 LLM 换方案
+                    denied_path = str(pe)
+                    self.log.sys(f"权限被拒: {denied_path}，让LLM换方案(attempt {attempt+1})")
+                    history = f"\n[上一步失败: 路径权限被拒绝({denied_path})。请换一种方式或换一个路径来实现用户需求，不要重复同样的操作]"
+
+            except Exception as e:
+                self.log.sys(f"文件操作异常(attempt {attempt+1}): {e}")
+                history = f"\n[上次出错: {e}，请调整方案]"
+
+        return "多次尝试后仍无法完成。请检查路径权限或调整需求。"
     def _route(self, query: str) -> str:
         prompt = self.ROUTER_PROMPT.format(query=query)
         msgs = [{"role": "user", "content": prompt}]
@@ -393,13 +806,13 @@ Spec:"""
         if "写" in q or "代码" in q:
             self.log.sys(f'关键词路由 → "代码Agent"')
             return "代码Agent"
-        if "保存" in q or "文件" in q or "读取" in q:
+        if "保存" in q or "文件" in q or "读取" in q or "反编译" in q or "decompile" in q or "pyc" in q:
             self.log.sys(f'关键词路由 → "文件Agent"')
             return "文件Agent"
         kw = {
             "搜索Agent": (["搜索", "查", "什么是", "天气", "百科", "维基", "wiki", "新闻", "几度"], 0),
             "代码Agent": (["代码", "编程", "脚本", "写", "python", "bug", "报错", "函数", "算法", "开发"], 0),
-            "文件Agent": (["文件", "保存", "读取", "目录", "列表", "创建", "写入", "文档"], 0),
+            "文件Agent": (["文件", "保存", "读取", "目录", "列表", "创建", "写入", "文档", "反编译", "decompile", "pyc", "二进制", "字节码"], 0),
         }
         best = "搜索Agent"
         best_s = 0
@@ -582,6 +995,14 @@ Spec:"""
 
     # ═══════════ 对话 ═══════════
     def chat(self, user_input: str) -> str:
+        # ── 父Bot直接拦截文件操作 ──
+        if self._is_file_op(user_input):
+            result = self._handle_file_op(user_input)
+            if result is not None:
+                self.log.sys("父Bot直接处理文件操作")
+                self._update_shared_history(user_input, result)
+                return result
+
         # 协调者模式: 复杂任务走四阶段
         if self.coordinator_mode and self._is_complex_task(user_input):
             return self._coordinator_chat(user_input)
@@ -666,18 +1087,32 @@ Spec:"""
     # ═══════════ 子Agent执行循环 ═══════════
     def _build_child_msgs(self, child: ChildBot, user_input: str,
                           extra_context: str = "") -> list:
-        """构建子Agent消息列表"""
-        messages = [{"role": "system", "content": child.system_prompt}]
+        """构建子Agent消息列表 — v4: 指向 memdir/MEMORY.md 自举"""
+        boot_prompt = (
+            f"{child.system_prompt}\n\n"
+            f"## 启动指令\n"
+            f"处理任务前，先用 memdir_read 读取 'MEMORY.md'——你的长期行为准则。\n"
+            f"这是你作为 Agent 积累的深层经验：怎么思考、怎么判断、怎么表达。\n\n"
+            f"注意：MEMORY.md 只记录长期演化经验（被反复验证有效的原则），"
+            f"不是单次对话笔记（那些自动存入 JSON memory）。\n"
+            f"只有当你在多轮对话中反复发现某条行为准则确实有效，"
+            f"才用 memdir_write 追加到 MEMORY.md 的「长期演化日志」章节。"
+        )
+        messages = [{"role": "system", "content": boot_prompt}]
         if child.knowledge:
             kb_text = "\n\n".join(child.knowledge)
             messages.append({"role": "system", "content": f"[知识库]\n{kb_text}"})
-        recent = self.shared_msgs[-12:]
+        # ── 注入最近对话上下文（让子Agent知道刚才说了什么）──
+        recent = self.shared_msgs[-8:]
         if recent:
-            ctx = " | ".join(
-                f"{'Q' if m['role']=='user' else 'A'}: {m['content'][:60]}"
-                for m in recent
-            )
-            messages.append({"role": "system", "content": f"[上下文摘要]\n{ctx}"})
+            # 提炼：用 LLM 提取关键决策和约束，过滤废话
+            distilled = self._distill_context(recent)
+            ctx_lines = ["[## 对话关键要点提炼]" + (f"\n{distilled}" if distilled else "")]
+            ctx_lines.append("\n[## 最近原始对话]")
+            for m in recent:
+                role_label = "用户" if m["role"] == "user" else "助手"
+                ctx_lines.append(f"【{role_label}】{m['content']}")
+            messages.append({"role": "system", "content": "\n".join(ctx_lines)})
         # ── 注入记忆文件夹上下文 ──
         mem_results = memdir.search(user_input)
         if mem_results:
@@ -690,7 +1125,7 @@ Spec:"""
         return messages
 
     def _run_child(self, child: ChildBot, messages: list) -> str:
-        """子Agent工具调用循环"""
+        """子Agent工具调用循环 — v4: 思维链注入"""
         tools = child.tool_schemas()
         for loop in range(5):
             t0 = time.time()
@@ -711,17 +1146,32 @@ Spec:"""
                 return reply
 
             messages.append(msg)
+            tool_results = []
             for tc in tcs:
                 fn = tc["function"]["name"]
                 fa = json.loads(tc["function"]["arguments"])
                 self.log.tool_start(fn, fa)
                 result = child.exec_tool(fn, fa)
                 self.log.tool_end(result)
+                tool_results.append({"name": fn, "result": str(result)})
                 messages.append({
                     "role": "tool",
                     "tool_call_id": tc["id"],
                     "content": str(result),
                 })
+
+            # ── v4: 注入思维链反思提示 ──
+            result_summary = "\n".join(
+                f"  {r['name']}: {r['result'][:200]}" for r in tool_results
+            )
+            cot_prompt = (
+                f"[思考提示]\n"
+                f"工具已返回结果，摘要如下：\n{result_summary}\n\n"
+                f"请用自然语言表达你的反应——这个结果是印证了你的预期、修正了你的认知，"
+                f"还是引发了新问题？然后决定下一步：继续用工具探索，还是给出最终回答。"
+                f"最终回答前，请确认：答案有依据吗？来源可靠吗？还有遗漏吗？"
+            )
+            messages.append({"role": "system", "content": cot_prompt})
 
         return "[子Agent] 工具调用轮数超限"
 
@@ -754,6 +1204,61 @@ Spec:"""
         self.shared_msgs.append({"role": "assistant", "content": reply})
         if len(self.shared_msgs) > 40:
             self.shared_msgs = self.shared_msgs[-40:]
+        # ── 同步写入对话流水到 memdir（跨会话记忆）──
+        entry = f"## {time.strftime('%H:%M:%S')}\n**用户**: {user_input}\n**助手**: {reply[:500]}\n"
+        try:
+            existing = memdir.read("conversation-log.md")
+            memdir.write("conversation-log.md", existing + "\n" + entry if existing else "# 对话流水\n" + entry)
+        except Exception:
+            pass
+        # ── 每 10 轮压缩一次对话流水（去废话，保留关键信息）──
+        if len(self.shared_msgs) % 20 == 0:
+            try:
+                full_log = memdir.read("conversation-log.md")
+                if len(full_log) > 5000:
+                    self._compress_conversation_log(full_log)
+            except Exception:
+                pass
+
+    def _distill_context(self, messages: list) -> str:
+        """用 LLM 从对话中提取关键决策和约束，过滤寒暄/废话"""
+        raw_text = "\n".join(
+            f"{'用户' if m['role']=='user' else '助手'}: {m['content']}"
+            for m in messages
+        )
+        prompt = f"""从以下对话中提取关键信息，严格过滤废话。只输出要点列表。
+忽略：礼貌用语、表情、emoji、确认收到、谢谢、好的、明白等无信息量内容。
+提取：决策、约束、配置修改、技术参数、用户偏好、待办事项。
+
+对话:
+{raw_text[:4000]}
+
+关键要点（每条一行，用 - 开头）："""
+        try:
+            msgs = [{"role": "user", "content": prompt}]
+            resp = self.pool.call_llm("__distill__", msgs)
+            return resp["choices"][0]["message"]["content"].strip()
+        except Exception:
+            return ""
+
+    def _compress_conversation_log(self, full_log: str):
+        """压缩对话流水：用 LLM 提炼，替换原文件"""
+        prompt = f"""将以下对话流水压缩为精简版，保留关键决策和结论，删除寒暄和重复。
+输出压缩后的 Markdown 内容。
+
+原始流水:
+{full_log[:6000]}
+
+压缩版:"""
+        try:
+            msgs = [{"role": "user", "content": prompt}]
+            resp = self.pool.call_llm("__compress__", msgs)
+            compressed = resp["choices"][0]["message"]["content"].strip()
+            if compressed:
+                memdir.write("conversation-log.md", compressed)
+                self.log.sys("对话流水已压缩")
+        except Exception as e:
+            self.log.sys(f"对话压缩失败: {e}")
 
     # ═══════════ 管理 ═══════════
     def reset(self):

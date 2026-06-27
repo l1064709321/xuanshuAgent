@@ -76,15 +76,33 @@ def chat():
         return jsonify({})
     data = request.get_json()
     msg = data.get("msg", "")
+    image = data.get("image", None)
 
     if msg.startswith("/"):
         parts = msg.split(maxsplit=1)
         action = parts[0].lower()
         arg = parts[1] if len(parts) > 1 else ""
+        # ── /screen 主动截图走视觉分析 ──
+        if action == "/screen":
+            from screen_reader import capture, to_base64
+            path = capture()
+            if not path:
+                return jsonify({"reply": "截图失败：未找到可用截图工具", "cmd": True, "model": _model()})
+            image = to_base64(path)
+            prompt = arg if arg else "请描述屏幕上显示的内容"
+            agent_name = bot._route(prompt)
+            reply = bot.chat(prompt, image)
+            return jsonify({
+                "reply": reply,
+                "agent": agent_name,
+                "model": _model(),
+                "screen_path": path,
+                "coordinator_mode": bot.coordinator_mode,
+            })
         return jsonify({"reply": _cmd(action, arg), "cmd": True, "model": _model()})
 
     agent_name = bot._route(msg)
-    reply = bot.chat(msg)
+    reply = bot.chat(msg, image)
     return jsonify({
         "reply": reply,
         "agent": agent_name,
@@ -260,6 +278,16 @@ def delete_memory():
     except Exception as e:
         return jsonify({"ok": False, "error": str(e)})
 
+@app.route("/screen", methods=["POST"])
+def api_screen():
+    from screen_reader import read_screen, read_and_analyze
+    data = request.get_json() or {}
+    if data.get("analyze"):
+        result = read_and_analyze()
+        return jsonify({"ok": True, "result": result})
+    result = read_screen()
+    return jsonify(result)
+
 # ── 命令 ──
 def _cmd(action, arg):
     cmds = {
@@ -278,8 +306,10 @@ def _cmd(action, arg):
         ) or "知识库为空",
         "/coordinator": _coordinator_cmd(arg),
         "/snapshot": _snapshot_cmd(arg),
+        "/screen": _screen_cmd(arg),
     }
     return cmds.get(action, f"未知命令: {action}")
+
 
 
 def _model_cmd(arg):
@@ -294,6 +324,16 @@ def _model_cmd(arg):
 
 def _model():
     return pool.get_model("搜索Agent").name
+
+
+def _screen_cmd(arg):
+    from screen_reader import read_screen, read_and_analyze
+    if arg == "analyze" or arg == "分析":
+        return read_and_analyze()
+    result = read_screen()
+    if result["ok"]:
+        return f"截图成功: {result['path']} ({result['size']} bytes)"
+    return result["error"]
 
 
 def _coordinator_cmd(arg):
@@ -317,5 +357,5 @@ def _snapshot_cmd(arg):
 
 
 if __name__ == "__main__":
-    print("扣子多Agent API → http://0.0.0.0:8900")
+    print("玄姝多Agent API → http://0.0.0.0:8900")
     app.run(host="0.0.0.0", port=8900, debug=False)

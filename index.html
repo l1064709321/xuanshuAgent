@@ -2061,11 +2061,13 @@ function updateCustomTool() {
   if (toolId) selectTool(toolId);
 }
 
-// ========== 对话持久化 ==========
+// ========== 对话持久化（服务端） ==========
+// localStorage 仅作降级缓存，主存储为服务端 .memdir/.parent_context.json
 const CONV_KEY = 'xuan_conv';
 const META_KEY = 'xuan_meta';
 
 function saveConv() {
+  // 写入 localStorage 作为降级缓存（页面刷新恢复）
   const bubbles = conv.querySelectorAll('.bubble');
   const msgs = [];
   bubbles.forEach(b => {
@@ -2078,36 +2080,67 @@ function saveConv() {
     else if (b.classList.contains('system')) msgs.push({r:'system',c:b.innerHTML});
   });
   const meta = {model:currentModel, tokens:totalTokens, at:Date.now()};
-  try {
-    localStorage.setItem(CONV_KEY, JSON.stringify(msgs));
-    localStorage.setItem(META_KEY, JSON.stringify(meta));
-  } catch(e) { /* storage full */ }
+  try { localStorage.setItem(CONV_KEY, JSON.stringify(msgs)); localStorage.setItem(META_KEY, JSON.stringify(meta)); } catch(e) {}
+  // 服务端持久化：每条消息后自动保存到 .memdir/.parent_context.json
+  fetch('/context/save', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(msgs.slice(-60))}).catch(()=>{});
 }
 
 function loadConv() {
+  // 优先从 localStorage 快速恢复（页面刷新时即时显示）
   try {
     const raw = localStorage.getItem(CONV_KEY);
-    if (!raw) return;
+    if (!raw) return false;
     const msgs = JSON.parse(raw);
-    msgs.forEach(m => {
-      const d = document.createElement('div');
-      d.className = 'bubble ' + (m.r==='agent'?'agent system':m.r);
-      if (m.r==='agent') {
-        d.innerHTML = '<div class="agent-label" style="display:flex;align-items:center;gap:6px;margin-bottom:8px">'+
-          '<span style="display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:6px;background:var(--primary);font-size:11px">⚡</span>'+
-          '<span style="font-weight:600;font-size:13px;color:var(--primary-text)">'+m.a+'</span></div>'+
-          '<div style="line-height:1.7">'+m.c+'</div>';
-      } else {
-        d.innerHTML = m.c;
-      }
-      conv.appendChild(d);
-    });
+    msgs.forEach(m => renderRestoredMsg(m));
     const meta = JSON.parse(localStorage.getItem(META_KEY)||'{}');
     if (meta.model) currentModel = meta.model;
     if (meta.tokens) totalTokens = meta.tokens;
     updateTokenBadge(); buildModelChips();
     conv.lastElementChild?.scrollIntoView();
-  } catch(e) { localStorage.removeItem(CONV_KEY); }
+    return true;
+  } catch(e) { localStorage.removeItem(CONV_KEY); return false; }
+}
+
+// 服务端恢复：页面完全重启（非刷新）时从服务端恢复完整对话
+async function restoreFromServer() {
+  try {
+    const resp = await fetch('/context');
+    const data = await resp.json();
+    if (!data.ok || !data.shared_msgs || !data.shared_msgs.length) return false;
+    // 重建消息
+    const msgs = data.shared_msgs;
+    msgs.forEach(m => {
+      if (m.role === 'user') renderRestoredMsg({r:'user', c:m.content});
+      else if (m.role === 'assistant') renderRestoredMsg({r:'agent', a:m.agent||'玄姝', c:m.content});
+      else if (m.role === 'system') renderRestoredMsg({r:'system', c:m.content});
+    });
+    if (data.model) currentModel = data.model;
+    if (data.context_summary) {
+      const d = document.createElement('div');
+      d.className = 'bubble system';
+      d.innerHTML = '📋 <b>记忆摘要：</b>'+data.context_summary;
+      conv.appendChild(d);
+    }
+    updateTokenBadge(); buildModelChips();
+    conv.lastElementChild?.scrollIntoView();
+    // 同步到 localStorage 加速后续刷新
+    saveConv();
+    return true;
+  } catch(e) { return false; }
+}
+
+function renderRestoredMsg(m) {
+  const d = document.createElement('div');
+  d.className = 'bubble ' + (m.r==='agent'?'agent system':m.r);
+  if (m.r==='agent') {
+    d.innerHTML = '<div class="agent-label" style="display:flex;align-items:center;gap:6px;margin-bottom:8px">'+
+      '<span style="display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:6px;background:var(--primary);font-size:11px">⚡</span>'+
+      '<span style="font-weight:600;font-size:13px;color:var(--primary-text)">'+m.a+'</span></div>'+
+      '<div style="line-height:1.7">'+m.c+'</div>';
+  } else {
+    d.innerHTML = m.c;
+  }
+  conv.appendChild(d);
 }
 
 function clearConv() {
@@ -2116,8 +2149,10 @@ function clearConv() {
   localStorage.removeItem(META_KEY);
 }
 
-// auto-restore
-loadConv();
+// 启动时恢复：先尝试 localStorage（刷新场景），失败则从服务端恢复（重启场景）
+if (!loadConv()) {
+  restoreFromServer();
+}
 
 // 自动检测工具适配层
 setTimeout(() => {

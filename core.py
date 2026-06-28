@@ -864,8 +864,10 @@ Spec:"""
         self._agent_contexts: Dict[str, dict] = {}  # agent_name → {last_task, last_output, files_accessed}
         # 上下文摘要（压缩旧对话后的长期记忆）
         self._context_summary: str = ""
+        # Agent 自主记忆（MEMORY.md 中积累的长期经验）
+        self._agent_memory: str = ""
         self._init_children()
-        self._load_context()  # 从磁盘恢复上下文
+        self._load_context()  # 从磁盘恢复上下文 + 加载 MEMORY.md
 
     def _init_children(self):
         # ── 共享记忆文件夹工具 ──
@@ -1558,6 +1560,14 @@ Spec:"""
         if self._context_summary:
             messages.append({"role": "system",
                 "content": f"[长期上下文摘要 - 这是此前对话中提炼的关键信息]\n{self._context_summary}"})
+        # ── 注入 Agent 自主记忆（MEMORY.md — 自己的成长经验）──
+        if self._agent_memory:
+            # 只注入最新的两条经验，避免过长
+            sections = self._agent_memory.split("### ")
+            recent_memory = "### ".join(sections[-3:]) if len(sections) > 3 else self._agent_memory
+            memory_preview = recent_memory[-2000:] if len(recent_memory) > 2000 else recent_memory
+            messages.append({"role": "system",
+                "content": f"[Agent 自主记忆 — 从过往对话中悟出的经验]\n{memory_preview}"})
         # ── 注入记忆文件夹上下文 ──
         mem_results = memdir.search(user_input)
         if mem_results:
@@ -2107,8 +2117,32 @@ DAG（只输出节点列表）:"""
     _SNAPSHOT_DIR = os.path.join(_MEMDIR, "snapshots")
     _MAX_SNAPSHOTS = 50
 
+    def get_persisted_context(self) -> dict:
+        """供前端 REST API 调用——返回持久化的对话上下文，用于页面重启后恢复"""
+        # 先从内存取当前状态，再从磁盘补充
+        result = {
+            "shared_msgs": self.shared_msgs[-60:] if self.shared_msgs else [],
+            "agent_contexts": self._agent_contexts,
+            "context_summary": self._context_summary,
+            "model": getattr(self, "model_name", ""),
+            "coordinator_mode": self.coordinator_mode,
+            "has_memory": os.path.exists(os.path.join(_MEMDIR, "MEMORY.md")),
+            "memory_size": len(self._agent_memory) if self._agent_memory else 0,
+        }
+        # 如果内存为空但磁盘有存档，则从磁盘补齐
+        if not result["shared_msgs"] and os.path.exists(self._CONTEXT_FILE):
+            try:
+                with open(self._CONTEXT_FILE, "r") as f:
+                    data = json.load(f)
+                result["shared_msgs"] = data.get("shared_msgs", [])[-60:]
+                result["agent_contexts"] = data.get("agent_contexts", {})
+                result["context_summary"] = data.get("context_summary", "")
+            except Exception:
+                pass
+        return result
+
     def _load_context(self):
-        """从磁盘恢复父Bot对话上下文（shared_msgs + agent_contexts + summary）"""
+        """从磁盘恢复父Bot对话上下文（shared_msgs + agent_contexts + summary + agent_memory）"""
         try:
             if os.path.exists(self._CONTEXT_FILE):
                 with open(self._CONTEXT_FILE, "r") as f:
@@ -2120,6 +2154,13 @@ DAG（只输出节点列表）:"""
                     self.log.sys(f"已恢复上下文: {len(self.shared_msgs)//2}轮对话, {len(self._agent_contexts)}个Agent状态")
         except Exception as e:
             self.log.sys(f"上下文恢复失败(将新建): {e}")
+        # 加载 Agent 自主记忆（MEMORY.md）
+        try:
+            self._agent_memory = memdir.read("MEMORY.md") or ""
+            if self._agent_memory:
+                self.log.sys(f"已加载自主记忆: MEMORY.md ({len(self._agent_memory)}字)")
+        except Exception:
+            self._agent_memory = ""
 
     def _save_context(self):
         """持久化父Bot对话上下文到磁盘"""
@@ -2136,6 +2177,31 @@ DAG（只输出节点列表）:"""
             os.replace(tmp, self._CONTEXT_FILE)  # 原子写入
         except Exception as e:
             self.log.sys(f"上下文保存失败: {e}")
+
+    def _save_context_external(self, frontend_msgs: list):
+        """供前端 REST API 调用——将前端序列化的消息回写到磁盘上下文文件。
+        frontend_msgs: [{r:'user'/'agent'/'system', c:content, a:agent_label}, ...]
+        """
+        try:
+            shared = []
+            for m in frontend_msgs:
+                role_map = {'user': 'user', 'agent': 'assistant', 'system': 'system'}
+                entry = {"role": role_map.get(m.get('r'), 'system'), "content": m.get('c', '')}
+                if m.get('r') == 'agent' and m.get('a'):
+                    entry['agent'] = m['a']
+                shared.append(entry)
+            data = {
+                "shared_msgs": shared[-80:],
+                "agent_contexts": self._agent_contexts,
+                "context_summary": self._context_summary,
+                "updated": time.strftime("%Y-%m-%d %H:%M:%S"),
+            }
+            tmp = self._CONTEXT_FILE + ".tmp"
+            with open(tmp, "w") as f:
+                json.dump(data, f, ensure_ascii=False)
+            os.replace(tmp, self._CONTEXT_FILE)
+        except Exception as e:
+            self.log.sys(f"外部上下文保存失败: {e}")
 
     def _compress_shared_msgs(self):
         """滚动压缩：保留最近80条（40轮），溢出部分提炼追加到摘要。
@@ -2203,6 +2269,9 @@ DAG（只输出节点列表）:"""
                     self._compress_conversation_log(full_log)
             except Exception:
                 pass
+        # ── Agent 自主记忆：每 5 轮从对话中提取可复用经验，写入 MEMORY.md ──
+        if len(self.shared_msgs) % 10 == 0 and len(self.shared_msgs) >= 10:
+            self._auto_memorize()
 
     def _distill_context(self, messages: list) -> str:
         """用 LLM 从对话中提取关键决策和约束，过滤寒暄/废话"""
@@ -2236,6 +2305,39 @@ DAG（只输出节点列表）:"""
                 self.log.sys(f"对话流水已归档（活跃日志{len(recent)}字）")
         except Exception as e:
             self.log.sys(f"对话归档失败: {e}")
+
+    def _auto_memorize(self):
+        """Agent 自主记忆——每 5 轮对话从最近交流中提取可复用经验，写入 MEMORY.md。
+        这是 Agent 自己的"脑记忆"：不是对话日志，而是从互动中悟出的行为准则、技术洞察、用户偏好。"""
+        try:
+            recent = self.shared_msgs[-20:]
+            raw = "\n".join(
+                f"{'用户' if m['role']=='user' else '助手'}: {m['content'][:300]}"
+                for m in recent
+            )
+            prompt = f"""你是一个自主学习的 Agent。从以下最近的对话中提取值得长期记忆的经验。
+只提取真正有价值的东西——经过验证的技术方法、被证实的用户偏好、重要决策及其原因、新学到的能力边界。
+不要提取：寒暄、一次性任务、没有实际后果的讨论。
+
+输出格式：每条一行，以 - 开头。每条不超过 60 字。最多 5 条。如果确实没有值得记忆的，输出空行。
+
+最近对话:
+{raw[:3000]}
+
+长期经验:"""
+            msgs = [{"role": "user", "content": prompt}]
+            resp = self._llm_call("__memorize__", msgs)
+            learnings = resp["choices"][0]["message"]["content"].strip()
+            if not learnings or learnings == "-":
+                return
+            # 写入 MEMORY.md
+            ts = time.strftime("%Y-%m-%d %H:%M")
+            memory_content = memdir.read("MEMORY.md") or ""
+            section = f"\n\n### {ts}（自动记忆）\n{learnings}"
+            memdir.write("MEMORY.md", memory_content + section)
+            self.log.sys(f"🧠 自主记忆: {len(learnings)}字写入 MEMORY.md")
+        except Exception as e:
+            self.log.sys(f"自主记忆失败(无影响): {e}")
 
     # ═══════════ 快照与回溯 ═══════════
 

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-扣子风格多Agent系统 — 父Bot路由 + 子Bot独立记忆
+玄姝多Agent系统 — 父Bot路由 + 子Bot独立记忆
 用法: python main.py [--model qwen25-7b] [--key sk-xxx] [--quiet]
 """
 
@@ -28,12 +28,14 @@ class Commander:
         handlers = {
             "/model": self._model, "/m": self._model,
             "/new": self._new, "/n": self._new,
+            "/search": self._search, "/soc": self._search,
             "/status": self._status, "/s": self._status,
             "/mem": self._mem,
             "/bind": self._bind,
             "/help": self._help,
             "/agents": self._agents,
             "/kb": self._kb,
+            "/screen": self._screen,
         }
         handler = handlers.get(action)
         if handler:
@@ -168,13 +170,37 @@ class Commander:
             print(f"  未找到: {agent_name}")
         return True
 
+    def _search(self, arg: str) -> bool:
+        if not arg:
+            print("  用法: /search <查询词>")
+            print("  例:   /search python asyncio 最佳实践")
+            return True
+        from web_search import deepen, format_cli
+        print("  正在搜索 (信誉过滤中)...")
+        results = deepen(arg, top_k=3, max_search=10)
+        print(format_cli(results))
+        return True
+
+    def _screen(self, arg: str):
+        from screen_reader import read_screen
+        result = read_screen()
+        if result["ok"]:
+            print(f"\n  截图成功: {result['path']}")
+            print(f"  大小: {result['size']} bytes")
+            print(f"  提示: /screen analyze 可调用 AI 分析")
+        else:
+            print(f"\n  失败: {result['error']}")
+        return True
+
     def _help(self):
         print(f"""
 {'─'*50}
-  扣子风格多Agent系统
+  玄姝多Agent系统
 {'─'*50}
   /model [编号|别名]  切换默认模型
   /new [模型]         新对话
+  /search <查询词>    联网搜索(信誉过滤+官方优先)
+  /screen             截取屏幕并分析
   /bind Agent 模型    子Agent独立绑定模型
   /status             系统状态（含记忆）
   /agents             查看所有子Agent配置
@@ -187,7 +213,7 @@ class Commander:
 
 
 def main():
-    p = argparse.ArgumentParser(description="扣子风格多Agent系统")
+    p = argparse.ArgumentParser(description="玄姝多Agent系统")
     p.add_argument("--model", type=str, help="初始模型")
     p.add_argument("--key", type=str, help="API Key")
     p.add_argument("--list", action="store_true", help="列出模型")
@@ -218,7 +244,7 @@ def main():
     cmd = Commander(bot, pool)
 
     print(f"\n{'='*50}")
-    print(f"  扣子风格多Agent系统")
+    print(f"  玄姝多Agent系统")
     print(f"  父Bot → 路由 → 子Bot执行 → 汇总")
     print(f"  默认模型: {BUILTIN_MODELS[model_key].name}")
     print(f"  /help 查看命令")

@@ -20,6 +20,7 @@ from models import ModelPool
 from decompile import Decompiler, detect_format, get_supported_formats
 from screen_reader import capture, to_base64
 from sandbox import run_sandboxed
+from auto_sandbox import auto_sandbox
 from monitor import get_metrics
 
 # ── 共享记忆文件夹（文件级持久化）──
@@ -694,10 +695,14 @@ def _mv(args):
     except Exception as e: return f"移动失败: {e}"
 
 def _run_code(args):
-    """安全沙箱代码执行 — CPU限制30s, 内存512MB, 无网络, 无文件写权限"""
+    """安全沙箱代码执行 — Agent 自主决策进入沙箱（CPU限制30s, 内存512MB, 无网络, 无文件写权限）"""
     code = args["code"]
-    result = run_sandboxed(code, timeout=30)
-    parts = []
+    # 自主决策：代码执行一律进沙箱
+    if auto_sandbox.should_sandbox("code_execution"):
+        result = run_sandboxed(code, timeout=30)
+    else:
+        result = run_sandboxed(code, timeout=30)  # 始终沙箱，防线不可降级
+    parts = ["[沙箱自动启动] Agent 自主将代码送入隔离环境执行"]
     if result["stdout"]:
         parts.append(f"[stdout]\n{result['stdout'][:2000]}")
     if result["stderr"]:

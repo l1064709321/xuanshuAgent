@@ -1,147 +1,100 @@
-# 玄姝Agent
-风格：多Agent智能助手系统，采用 **父Bot路由 + 子Bot独立记忆 + 前后端分离** 架构。
+# 玄姝 (Xuanshu) — 多 Agent 协作系统 v0.1.1
 
----
+> 玄姝多 Agent 系统：父 Bot 路由 + 协调者模式 + 子 Bot 独立记忆 + Fork 子代理
 
-## 系统架构
+## 核心能力
 
-```
-┌─────────────────────────────────────┐
-│            用户输入                  │
-└──────────────┬──────────────────────┘
-               ▼
-┌─────────────────────────────────────┐
-│        父Bot（路由层）               │
-│   LLM意图识别 + 关键词兜底           │
-│   决定由哪个子Agent处理              │
-└──────────────┬──────────────────────┘
-               ▼
-┌───────────────────────────────────────────┐
-│              子Bot群（执行层）              │
-│  ┌──────────┐ ┌──────────┐ ┌──────────┐  │
-│  │搜索Agent │ │代码Agent │ │文件Agent │  │
-│  │ 联网检索 │ │ 编程调试 │ │ 文件管理 │  │
-│  │  百科/天气│ │  代码生成│ │ 读写操作 │  │
-│  └──────────┘ └──────────┘ └──────────┘  │
-│       各子Agent拥有独立记忆（Bot级隔离）    │
-└──────────────┬────────────────────────────┘
-               ▼
-┌─────────────────────────────────────┐
-│            汇总返回                  │
-└─────────────────────────────────────┘
-```
-
-## 核心特性
-
-| 特性 | 说明 |
+| 模块 | 功能 |
 |------|------|
-| 父Bot路由 | LLM语义识别 + 关键词双路由，自动匹配最佳子Agent |
-| 子Bot独立记忆 | 每个子Agent独享短/中/长期记忆，互不干扰 |
-| 多模型支持 | 支持OpenAI兼容API，子Agent可独立绑定不同模型 |
-| 工具插件 | 子Agent可注册自定义工具，LLM自动调用 |
-| 知识库 | 每个子Agent可注入专属知识，检索优先召回 |
-| 前后端分离 | Flask纯API后端 + 独立HTML/CSS/JS前端 |
-| 玻璃态UI | Hermes风格毛玻璃三栏布局，移动端原生体验 |
+| **父 Bot 路由** | 根据用户意图自动分派给搜索/代码/文件三类子 Agent |
+| **协调者模式** | Research → Synthesis → Implementation → Verification 四阶段工作流 |
+| **Continue/Fresh 决策** | 基于上下文重叠度自动判断复用会话还是新开会话 |
+| **Fork 子代理** | 继承父上下文平行执行，无需重复初始化 |
+| **独立记忆** | 每个子 Agent 拥有独立记忆空间，支持快照导出/导入 |
+| **自校验** | 代码类 Agent 执行后自动验证结果 |
 
----
+## 支持的模型
+
+内置 39 个主流大模型，包括 GPT-4o、Claude 3.5 Sonnet、Gemini 2.0、Qwen2.5、DeepSeek-V3 等。通过 `models.py` 可自定义添加。
 
 ## 环境要求
 
-| 依赖 | 最低版本 | 说明 |
-|------|---------|------|
-| Python | ≥ 3.10 | 语言运行环境 |
-| pip | ≥ 23.0 | 包管理器 |
+- Python 3.8+
+- Linux / macOS / Windows（WSL）
 
-### Python 依赖
+## 安装
 
 ```bash
-pip install flask flask-cors requests wikipedia
+# 1. 克隆仓库
+git clone https://gh-proxy.com/github.com/l1064709321/xuanshuAgent.git
+cd xuanshuAgent
+
+# 2. 安装依赖
+pip install flask openai
 ```
 
-| 包名 | 用途 |
-|------|------|
-| `flask` | Web API 后端服务 |
-| `flask-cors` | 跨域请求支持（前后端分离必需） |
-| `requests` | HTTP 请求（调用LLM API） |
-| `wikipedia` | 维基百科检索（搜索Agent插件） |
+## 启动
 
----
-
-## 快速开始
-
-### 方式一：一键启动（推荐）
+### 方式一：Web 服务（推荐）
 
 ```bash
-chmod +x start.sh
-./start.sh
-```
-
-启动后浏览器打开 **http://localhost:8900**，在右侧面板填入 API Key 即可使用。
-
-### 方式二：手动启动
-
-```bash
-# 1. 安装依赖
-pip install flask flask-cors requests wikipedia
-
-# 2. 启动后端 API（终端1）
 python frontend.py
-
-# 3. 启动（已合并到单端口）
-# 已合并到单端口，无需单独启动前端
-
-# 4. 浏览器打开 http://localhost:8900
+# 浏览器打开 http://localhost:8900
 ```
 
-### 方式三：终端模式
+在界面填入 API Key（或设为 `local` 使用本地模拟），即可开始对话。
+
+### 方式二：命令行
 
 ```bash
-python main.py
+python main.py --model gpt-4o --key sk-xxxx
+# 或使用本地模拟模式
+python main.py --quiet
 ```
 
----
+## API 端点
 
-## API Key 配置
+| 端点 | 方法 | 说明 |
+|------|------|------|
+| `/` | GET | Web 前端界面 |
+| `/chat` | POST | 发送消息 `{"message":"..."}` |
+| `/coordinator-mode` | POST | 切换协调者模式 `{"enabled":true/false}` |
+| `/models` | GET/POST | 查看/添加模型配置 |
+| `/models/<key>` | DELETE | 删除自定义模型 |
+| `/set-key` | POST | 设置 API Key `{"key":"sk-xxx"}` |
+| `/snapshots/export` | POST | 导出所有子 Agent 记忆快照 |
+| `/snapshots/import` | POST | 导入记忆快照 |
+| `/browse` | POST | 浏览文件目录 `{"path":"..."}` |
+| `/file/read` | POST | 读取文件内容 `{"path":"..."}` |
+| `/memory/list` | GET | 列出共享记忆文件 |
+| `/memory/read` | POST | 读取记忆文件 `{"path":"..."}` |
+| `/memory/write` | POST | 写入记忆文件 `{"path":"...","content":"..."}` |
+| `/memory/delete` | POST | 删除记忆文件 `{"path":"..."}` |
 
-支持任何兼容 OpenAI API 格式的大模型服务（SiliconFlow / DeepSeek / OpenAI 等）。
+## 项目结构
 
-**方式一：环境变量**
-```bash
-export OPENAI_API_KEY="sk-xxx"
+```
+xuanshuAgent/
+├── frontend.py      # Flask 后端 + API + 静态文件托管
+├── core.py          # 父 Bot + 协调者 + 子 Agent 系统核心
+├── models.py        # 39 模型池定义
+├── memory.py        # 子 Agent 独立记忆 + 快照
+├── web_search.py    # 联网搜索 + 域名信誉过滤
+├── logger.py        # 日志模块
+├── main.py          # 命令行入口（含 /search 命令）
+├── push.py          # Git 推送辅助脚本
+├── demo_cloud_agent.py  # 云端 Agent 演示
+├── index.html       # Web 前端界面
+└── start.sh         # 快速启动脚本
 ```
 
-**方式二：Web 页面设置**
-启动后在右侧面板 → 设置 → 填入 Key → 应用设置
+## 协调者模式流程
 
----
-
-## 内置命令
-
-| 命令 | 说明 |
-|------|------|
-| `/model` | 查看可用模型列表 |
-| `/model <编号>` | 切换默认模型 |
-| `/bind <Agent名> <模型>` | 为指定子Agent绑定独立模型 |
-| `/status` | 查看系统状态（模型/插件/记忆） |
-| `/agents` | 查看所有子Agent详细配置 |
-| `/mem` | 查看各子Agent独立记忆 |
-| `/kb` | 查看知识库 |
-| `/kb add <Agent名> <文本>` | 为子Agent注入知识 |
-| `/new` | 开启新对话（清空上下文+记忆） |
-| `/help` | 帮助 |
-| `/quit` | 退出 |
-
----
-
-## 文件说明
-
-| 文件 | 说明 |
-|------|------|
-| `start.sh` | 一键启动脚本 |
-| `main.py` | 终端交互入口，命令行解析与主循环 |
-| `core.py` | 核心引擎：父Bot路由、子Bot定义、对话流程、工具调用 |
-| `models.py` | 多模型池管理，支持多对多绑定（子Agent↔模型） |
-| `memory.py` | 独立记忆系统，基于关键词召回，分短/中/长期 |
-| `logger.py` | 日志系统，支持开关控制 |
-| `frontend.py` | Flask API 后端，暴露 JSON 接口，开启 CORS |
-| `index.html` | 前端页面，Hermes风格玻璃态UI，独立HTML/CSS/JS |
+```
+用户输入
+  → Research: 搜索Agent 收集信息
+  → Synthesis: 父Bot 综合分析生成方案
+  → Implementation: 代码Agent 或 文件Agent 执行
+  → Verification: 自校验验证结果
+  → 返回最终回复
+```

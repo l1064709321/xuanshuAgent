@@ -3,7 +3,16 @@
 """
 from typing import Dict, Optional
 from dataclasses import dataclass, field
-from openai import OpenAI
+import time
+
+# 延迟导入，避免 openai 未安装时启动失败
+OpenAI = None
+def _get_openai():
+    global OpenAI
+    if OpenAI is None:
+        from openai import OpenAI as _OpenAI
+        OpenAI = _OpenAI
+    return OpenAI
 
 
 @dataclass
@@ -21,43 +30,49 @@ class ModelEntry:
 # 所有主流模型的 API Base URL
 BUILTIN_MODELS: Dict[str, ModelEntry] = {
     # ── OpenAI ──
+    "gpt-5.5": ModelEntry("gpt-5.5", "GPT-5.5", "gpt-5.5",
+        "https://api.openai.com/v1", "OpenAI", "旗舰 1.1M上下文", ("gpt55", "5.5", "spud")),
+    "gpt-5.5-pro": ModelEntry("gpt-5.5-pro", "GPT-5.5 Pro", "gpt-5.5-pro",
+        "https://api.openai.com/v1", "OpenAI", "极致推理 $30/$180", ("gpt55pro", "5.5pro")),
     "gpt-4o": ModelEntry("gpt-4o", "GPT-4o", "gpt-4o",
         "https://api.openai.com/v1", "OpenAI", "多模态旗舰", ("4o",)),
     "gpt-4o-mini": ModelEntry("gpt-4o-mini", "GPT-4o-mini", "gpt-4o-mini",
         "https://api.openai.com/v1", "OpenAI", "轻量多模态", ("4omini", "mini")),
-    "gpt-4.1": ModelEntry("gpt-4.1", "GPT-4.1", "gpt-4.1",
-        "https://api.openai.com/v1", "OpenAI", "2025迭代版", ("4.1", "41")),
-    "o3": ModelEntry("o3", "o3", "o3",
-        "https://api.openai.com/v1", "OpenAI", "推理增强", tuple()),
-    "o4-mini": ModelEntry("o4-mini", "o4-mini", "o4-mini",
-        "https://api.openai.com/v1", "OpenAI", "轻量推理", ("o4",)),
     # ── Anthropic ──
-    "claude-4-sonnet": ModelEntry("claude-4-sonnet", "Claude 4 Sonnet", "claude-sonnet-4-20250514",
-        "https://api.anthropic.com/v1", "Anthropic", "通用创作/代码", ("sonnet", "claude4s")),
-    "claude-4-opus": ModelEntry("claude-4-opus", "Claude 4 Opus", "claude-opus-4-20250514",
-        "https://api.anthropic.com/v1", "Anthropic", "旗舰高性能", ("opus", "claude4o")),
-    "claude-3.5-haiku": ModelEntry("claude-3.5-haiku", "Claude 3.5 Haiku", "claude-3-5-haiku-20241022",
-        "https://api.anthropic.com/v1", "Anthropic", "轻量快速", ("haiku", "claude35")),
+    "claude-opus-4.8": ModelEntry("claude-opus-4.8", "Claude Opus 4.8", "claude-opus-4-8",
+        "https://api.anthropic.com/v1", "Anthropic", "旗舰高性能 1M上下文", ("opus", "opus48", "claude48")),
+    "claude-sonnet-4.6": ModelEntry("claude-sonnet-4.6", "Claude Sonnet 4.6", "claude-sonnet-4-6",
+        "https://api.anthropic.com/v1", "Anthropic", "速度智能平衡 1M上下文", ("sonnet", "sonnet46", "claude46")),
+    "claude-haiku-4.5": ModelEntry("claude-haiku-4.5", "Claude Haiku 4.5", "claude-haiku-4-5-20251001",
+        "https://api.anthropic.com/v1", "Anthropic", "最快 20万上下文", ("haiku", "haiku45")),
+    "claude-fable-5": ModelEntry("claude-fable-5", "Claude Fable 5", "claude-fable-5",
+        "https://api.anthropic.com/v1", "Anthropic", "Mythos级 100万上下文", ("fable", "fable5", "mythos")),
     # ── Google ──
-    "gemini-2.5-pro": ModelEntry("gemini-2.5-pro", "Gemini 2.5 Pro", "gemini-2.5-pro-exp-03-25",
-        "https://generativelanguage.googleapis.com/v1beta", "Google", "多模态", ("gemini25", "g25p")),
-    "gemini-2.5-flash": ModelEntry("gemini-2.5-flash", "Gemini 2.5 Flash", "gemini-2.5-flash",
-        "https://generativelanguage.googleapis.com/v1beta", "Google", "轻量快速", ("g25f", "flash")),
+    "gemini-3.1-pro": ModelEntry("gemini-3.1-pro", "Gemini 3.1 Pro", "gemini-3.1-pro-preview",
+        "https://generativelanguage.googleapis.com/v1beta", "Google", "旗舰多模态", ("gemini31", "g31p", "gemini3")),
+    "gemini-3-flash": ModelEntry("gemini-3-flash", "Gemini 3 Flash", "gemini-3-flash-preview",
+        "https://generativelanguage.googleapis.com/v1beta", "Google", "默认首选 速度快", ("g3f", "flash3", "gflash")),
     # ── DeepSeek ──
-    "deepseek-v3": ModelEntry("deepseek-v3", "DeepSeek-V3", "deepseek-chat",
-        "https://api.deepseek.com/v1", "DeepSeek", "旗舰通用", ("ds", "v3", "deepseek")),
-    "deepseek-r1": ModelEntry("deepseek-r1", "DeepSeek-R1", "deepseek-reasoner",
-        "https://api.deepseek.com/v1", "DeepSeek", "推理思维链", ("r1", "reasoner")),
+    "deepseek-v4-pro": ModelEntry("deepseek-v4-pro", "DeepSeek-V4-Pro", "deepseek-v4-pro",
+        "https://api.deepseek.com/v1", "DeepSeek", "旗舰 1.6T/49B 1M上下文", ("v4pro", "v4", "dsv4", "v4-pro")),
+    "deepseek-v4-flash": ModelEntry("deepseek-v4-flash", "DeepSeek-V4-Flash", "deepseek-v4-flash",
+        "https://api.deepseek.com/v1", "DeepSeek", "高性价比 284B/13B 1M上下文", ("v4flash", "v4f", "flash")),
+    "deepseek-v3": ModelEntry("deepseek-v3", "DeepSeek-V3(旧)", "deepseek-chat",
+        "https://api.deepseek.com/v1", "DeepSeek", "旧版 2026/07/24弃用", ("v3", "ds", "deepseek")),
+    "deepseek-r1": ModelEntry("deepseek-r1", "DeepSeek-R1(旧)", "deepseek-reasoner",
+        "https://api.deepseek.com/v1", "DeepSeek", "旧版推理 2026/07/24弃用", ("r1", "reasoner")),
     # ── 阿里通义 ──
-    "qwen3-235b": ModelEntry("qwen3-235b", "Qwen3-235B", "qwen3-235b-a22b",
-        "https://dashscope.aliyuncs.com/compatible-mode/v1", "阿里通义", "旗舰多模态", ("qwen3", "235b")),
+    "qwen3.7-max": ModelEntry("qwen3.7-max", "Qwen3.7-Max", "qwen3.7-max-2026-06-08",
+        "https://dashscope.aliyuncs.com/compatible-mode/v1", "阿里通义", "最新旗舰 1M上下文 64K输出", ("qwen37", "qwen3.7", "qwmax", "qwen-max")),
+    "qwen3.7-plus": ModelEntry("qwen3.7-plus", "Qwen3.7-Plus", "qwen3.7-plus-2026-05-26",
+        "https://dashscope.aliyuncs.com/compatible-mode/v1", "阿里通义", "Plus版 1M上下文", ("qwen37p", "qwplus")),
     "qwen2.5-72b": ModelEntry("qwen2.5-72b", "Qwen2.5-72B", "qwen2.5-72b-instruct",
         "https://dashscope.aliyuncs.com/compatible-mode/v1", "阿里通义", "开源千亿参数", ("qwen72", "72b")),
     "qwen2.5-32b": ModelEntry("qwen2.5-32b", "Qwen2.5-32B", "qwen2.5-32b-instruct",
         "https://dashscope.aliyuncs.com/compatible-mode/v1", "阿里通义", "高性价比", ("qwen32", "32b")),
     # ── 智谱 ──
-    "glm-4-plus": ModelEntry("glm-4-plus", "GLM-4-Plus", "glm-4-plus",
-        "https://open.bigmodel.cn/api/paas/v4/", "智谱", "旗舰高性能", ("glm4p", "glmplus")),
+    "glm-5.2": ModelEntry("glm-5.2", "GLM-5.2", "glm-5.2",
+        "https://open.bigmodel.cn/api/paas/v4/", "智谱", "最新旗舰 MoE 744B/40B 1M上下文 MIT开源", ("glm52", "glm5.2", "glm", "glm5", "zhipu")),
     "glm-4-air": ModelEntry("glm-4-air", "GLM-4-Air", "glm-4-air",
         "https://open.bigmodel.cn/api/paas/v4/", "智谱", "轻量低成本", ("glm4a", "glmair")),
     # ── 月之暗面 ──
@@ -119,10 +134,60 @@ class ModelPool:
 
     def __init__(self, default_key: str = "local", api_key: str = ""):
         self.default_key = default_key
-        self.api_key = api_key
+        self._api_key = api_key
         self._clients: Dict[str, OpenAI] = {}
         self._bindings: Dict[str, str] = {}
         self._custom: Dict[str, ModelEntry] = {}  # 用户自定义模型
+        self._per_model_keys: Dict[str, str] = {}  # model key → api_key
+        # 多模型兜底链：按优先级依次尝试，直至成功
+        self._fallback_chain: list = [
+            "deepseek-v4-pro", "deepseek-v4-flash",
+            "qwen3.7-max", "qwen3.7-plus",
+            "glm-5.2", "gpt-4o-mini",
+            "gemini-3-flash",
+        ]
+        # 失败模型冷却：记录失败时间，冷却期内跳过
+        self._cooldown: Dict[str, float] = {}
+        self._cooldown_seconds: float = 60.0  # 1分钟冷却
+
+    @property
+    def api_key(self) -> str:
+        return self._api_key
+
+    @api_key.setter
+    def api_key(self, value: str):
+        if self._api_key != value:
+            self._clients.clear()  # key 变了，清空旧缓存
+        self._api_key = value
+
+    # ---- 每模型独立 API Key ----
+    def set_model_key(self, model_key: str, api_key: str):
+        """为指定模型设置独立 API Key"""
+        self._per_model_keys[model_key] = api_key
+        # 清除该 base_url 的缓存客户端，强制重建
+        entry = self.all_models.get(model_key)
+        if entry:
+            self._clients.pop(entry.base_url, None)
+
+    def remove_model_key(self, model_key: str):
+        """移除指定模型的独立 API Key"""
+        self._per_model_keys.pop(model_key, None)
+        entry = self.all_models.get(model_key)
+        if entry:
+            self._clients.pop(entry.base_url, None)
+
+    def model_has_key(self, model_key: str) -> bool:
+        """模型是否已配置独立 Key"""
+        return model_key in self._per_model_keys and bool(self._per_model_keys[model_key])
+
+    def get_model_key(self, model_key: str) -> str:
+        """获取模型的 API Key：优先独立 Key，否则全局 Key"""
+        return self._per_model_keys.get(model_key, self._api_key)
+
+    @property
+    def per_model_keys(self) -> Dict[str, bool]:
+        """返回各模型的独立 Key 配置状态（只返回是否已配，不暴露 Key 内容）"""
+        return {k: bool(v) for k, v in self._per_model_keys.items()}
 
     @property
     def all_models(self) -> Dict[str, ModelEntry]:
@@ -178,16 +243,23 @@ class ModelPool:
         return None
 
     # ---- API调用 ----
-    def _get_client(self, base_url: str) -> Optional[OpenAI]:
+    def _get_client(self, base_url: str, model_key: str = "") -> Optional[OpenAI]:
         if not base_url:
             return None
-        if base_url not in self._clients:
-            self._clients[base_url] = OpenAI(api_key=self.api_key, base_url=base_url)
-        return self._clients[base_url]
+        # 有 model_key 时用独立 Key，否则用全局 Key
+        api_key = self.get_model_key(model_key) if model_key else self.api_key
+        cache_key = f"{base_url}::{model_key}" if model_key else base_url
+        if cache_key not in self._clients:
+            try:
+                self._clients[cache_key] = _get_openai()(api_key=api_key, base_url=base_url)
+            except Exception:
+                return None
+        return self._clients[cache_key]
 
     def call_llm(self, agent: str, messages: list, tools: list = None) -> dict:
         model = self.get_model(agent)
-        client = self._get_client(model.base_url)
+        model_key = self.get_key(agent)
+        client = self._get_client(model.base_url, model_key)
 
         if client is None:
             last = messages[-1]["content"][:60] if messages else ""
@@ -212,6 +284,99 @@ class ModelPool:
                 "_model": model.name,
             }
 
+    # ═══ 多模型兜底 ═══
+
+    def set_fallback_chain(self, keys: list):
+        """设置兜底链：模型key列表，按优先级依次尝试。传入空列表清空兜底。"""
+        for k in keys:
+            if k not in self.all_models:
+                raise ValueError(f"未知模型: {k}")
+        self._fallback_chain = list(keys)
+
+    def clear_cooldown(self, model_key: str = ""):
+        """清除模型冷却状态"""
+        if model_key:
+            self._cooldown.pop(model_key, None)
+        else:
+            self._cooldown.clear()
+
+    def call_llm_with_fallback(
+        self, agent: str, messages: list, tools: list = None,
+        fallback_models: list = None, max_fallbacks: int = 5,
+    ) -> dict:
+        """多模型兜底调用：依次尝试主模型和备用模型，直至成功。
+        
+        - 先调用主模型（agent 绑定或默认）
+        - 主模型失败后，按 fallback_models → _fallback_chain 顺序尝试
+        - 处于冷却期的模型自动跳过
+        - 返回第一个成功结果；全部失败则返回最后一次错误
+        
+        返回结果中额外字段：
+          _model: 最终使用的模型名称
+          _tried: 尝试过的模型列表 [(key, ok/err), ...]
+          _fallback_used: 是否使用了备用模型
+        """
+        tried = []
+        primary_key = self.get_key(agent)
+
+        # 构建尝试列表：去重，跳过冷却期模型
+        candidates = [primary_key]
+        if fallback_models:
+            candidates += fallback_models
+        candidates += self._fallback_chain
+        seen = set()
+        ordered = []
+        now = time.time()
+        for k in candidates:
+            if k in seen:
+                continue
+            seen.add(k)
+            # 跳过冷却期内的模型（主模型不跳）
+            if k != primary_key and k in self._cooldown:
+                if now - self._cooldown[k] < self._cooldown_seconds:
+                    tried.append((k, "冷却中"))
+                    continue
+                else:
+                    del self._cooldown[k]  # 冷却到期
+            ordered.append(k)
+            if len(ordered) >= max_fallbacks + 1:
+                break
+
+        last_error = None
+        for i, key in enumerate(ordered):
+            model = self.all_models[key]
+            client = self._get_client(model.base_url)
+            if client is None:
+                tried.append((key, "无API连接"))
+                continue
+
+            params = {"model": model.model_id, "messages": messages[-20:]}
+            if tools:
+                params["tools"] = tools
+            try:
+                resp = client.chat.completions.create(**params)
+                d = resp.model_dump()
+                d["_model"] = model.name
+                d["_tried"] = tried
+                d["_fallback_used"] = (i > 0)
+                return d
+            except Exception as e:
+                err_msg = str(e)[:80]
+                tried.append((key, err_msg))
+                self._cooldown[key] = now  # 进入冷却
+                last_error = err_msg
+                continue
+
+        # 全部失败
+        return {
+            "choices": [{"message": {"role": "assistant",
+                "content": f"[多模型全部失败] 已尝试: {' → '.join(k for k,_ in tried)}。最后错误: {last_error}"}}],
+            "usage": {"total_tokens": 0},
+            "_model": "fallback-exhausted",
+            "_tried": tried,
+            "_fallback_used": True,
+        }
+
     def status(self) -> str:
         lines = [f"默认: {self.all_models[self.default_key].name}"]
         for agent, k in self._bindings.items():
@@ -233,7 +398,8 @@ class ModelPool:
             result.append({
                 "key": k, "name": v.name, "model_id": v.model_id,
                 "base_url": v.base_url, "provider": v.provider,
-                "description": v.description, "custom": v.custom
+                "description": v.description, "custom": v.custom,
+                "has_key": self.model_has_key(k),
             })
         return result
 

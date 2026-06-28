@@ -33,7 +33,7 @@ def list_models():
     models = pool.to_list()
     if provider:
         models = [m for m in models if m["provider"] == provider]
-    return jsonify({"models": models, "providers": pool.providers()})
+    return jsonify({"models": models, "providers": pool.providers(), "current_model": pool.default_key})
 
 @app.route("/models", methods=["POST"])
 def add_model():
@@ -53,6 +53,42 @@ def add_model():
 def del_model(key):
     pool.remove_custom(key)
     return jsonify({"ok": True})
+
+# ── 每模型独立 API Key ──
+@app.route("/model-key", methods=["POST", "OPTIONS"])
+def set_model_key():
+    if request.method == "OPTIONS":
+        return jsonify({})
+    data = request.get_json()
+    model_key = data.get("model", "").strip()
+    api_key = data.get("key", "").strip()
+    if not model_key:
+        return jsonify({"ok": False, "error": "模型标识不能为空"})
+    if not api_key:
+        pool.remove_model_key(model_key)
+        return jsonify({"ok": True, "model": model_key, "has_key": False})
+    pool.set_model_key(model_key, api_key)
+    # 自动切换当前模型
+    pool.set_default(model_key)
+    return jsonify({"ok": True, "model": model_key, "has_key": True, "current_model": pool.default_key})
+
+@app.route("/model-key/status", methods=["GET"])
+def model_key_status():
+    """返回所有模型的 Key 配置状态（不暴露 Key 值）"""
+    return jsonify({"keys": pool.per_model_keys, "current_model": pool.default_key})
+
+@app.route("/switch-model", methods=["POST", "OPTIONS"])
+def switch_model():
+    if request.method == "OPTIONS":
+        return jsonify({})
+    data = request.get_json()
+    model_key = data.get("model", "").strip()
+    if not model_key or model_key not in pool.all_models:
+        return jsonify({"ok": False, "error": "无效模型"})
+    pool.set_default(model_key)
+    model = pool.all_models[model_key]
+    has_key = pool.model_has_key(model_key)
+    return jsonify({"ok": True, "model": model_key, "name": model.name, "has_key": has_key})
 
 # ── API Key ──
 @app.route("/set-key", methods=["POST", "OPTIONS"])
@@ -96,6 +132,36 @@ def chat():
         "model": _model(),
         "coordinator_mode": bot.coordinator_mode,
     })
+
+# ── 流式对话 (SSE) ──
+@app.route("/chat/stream", methods=["POST"])
+def chat_stream():
+    from flask import Response, stream_with_context
+    data = request.get_json()
+    msg = data.get("msg", "")
+    image = data.get("image", None)
+    if not msg:
+        return Response("data: [错误] 消息不能为空\n\n", mimetype="text/event-stream")
+
+    def generate():
+        try:
+            for chunk in bot.chat_stream(msg, image):
+                yield f"data: {chunk}\n\n"
+            yield "data: [DONE]\n\n"
+        except Exception as e:
+            yield f"data: [错误] {e}\n\n"
+    return Response(stream_with_context(generate()), mimetype="text/event-stream")
+
+# ── Agent 管理 ──
+@app.route("/agents", methods=["GET"])
+def list_agents():
+    return jsonify({"agents": bot.list_agents()})
+
+# ── 性能指标 ──
+@app.route("/metrics", methods=["GET"])
+def get_metrics_route():
+    from monitor import get_metrics
+    return jsonify(get_metrics().to_dict())
 
 # ── 协调者模式开关 ──
 @app.route("/coordinator-mode", methods=["POST", "OPTIONS"])

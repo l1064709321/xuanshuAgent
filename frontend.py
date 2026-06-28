@@ -10,7 +10,7 @@ app = Flask(__name__, static_folder=".", static_url_path="")
 # ── 记忆文件夹路径 ──
 _MEMDIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".memdir")
 os.makedirs(_MEMDIR, exist_ok=True)
-_ALLOWED_BASE = os.path.dirname(os.path.abspath(__file__))
+_ALLOWED_BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 @app.after_request
 def cors(resp):

@@ -1,0 +1,39 @@
+# This workflow will install Python dependencies, run tests and lint with a single version of Python
+# For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-python
+
+名字: Python application
+
+在:
+推:
+分支机构: [ "main" ]: [ "main" ]
+  pull_request:
+分支机构: [ "main" ]: [ "main" ]
+
+权限:
+内容: read
+
+工作:
+构建:
+
+运行在: ubuntu-latest
+
+步骤:
+-使用：actions/checkout@v4uses: actions/checkout@v4
+    - 名字: Set up Python 3.10
+使用: actions/setup-python@v3
+与:
+python版本: "3.10"
+    - 名字: Install dependencies
+运行: |
+Python -m PIP install——upgrade PIP
+        pip install flake8 pytest
+        if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+-名称：带flake8的Lintname: Lint with flake8
+运行: |
+        # stop the build if there are Python syntax errors or undefined names
+        flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+        # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
+        flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+    - name: Test with pytest
+      run: |
+        pytest

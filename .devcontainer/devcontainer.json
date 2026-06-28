@@ -1,0 +1,7 @@
+{
+  "name": "玄姝",
+  "image": "mcr.microsoft.com/devcontainers/python:3.11",
+  "postCreateCommand": "pip install -r requirements.txt",
+  "postStartCommand": "python frontend.py",
+  "forwardPorts": [8900]
+}

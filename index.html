@@ -1524,6 +1524,7 @@ function addBubble(role, content, agentName) {
   }
   conv.appendChild(d);
   d.scrollIntoView({behavior:'smooth'});
+  saveConv();
 }
 
 function addTyping() {
@@ -2059,6 +2060,64 @@ function updateCustomTool() {
   const toolId = document.getElementById('customToolSelect').value;
   if (toolId) selectTool(toolId);
 }
+
+// ========== 对话持久化 ==========
+const CONV_KEY = 'xuan_conv';
+const META_KEY = 'xuan_meta';
+
+function saveConv() {
+  const bubbles = conv.querySelectorAll('.bubble');
+  const msgs = [];
+  bubbles.forEach(b => {
+    if (b.classList.contains('user')) msgs.push({r:'user',c:b.innerHTML});
+    else if (b.classList.contains('agent')) {
+      const label = b.querySelector('.agent-label');
+      const content = b.querySelector('div:last-child');
+      msgs.push({r:'agent',a:label?label.textContent:'',c:content?content.innerHTML:''});
+    }
+    else if (b.classList.contains('system')) msgs.push({r:'system',c:b.innerHTML});
+  });
+  const meta = {model:currentModel, tokens:totalTokens, at:Date.now()};
+  try {
+    localStorage.setItem(CONV_KEY, JSON.stringify(msgs));
+    localStorage.setItem(META_KEY, JSON.stringify(meta));
+  } catch(e) { /* storage full */ }
+}
+
+function loadConv() {
+  try {
+    const raw = localStorage.getItem(CONV_KEY);
+    if (!raw) return;
+    const msgs = JSON.parse(raw);
+    msgs.forEach(m => {
+      const d = document.createElement('div');
+      d.className = 'bubble ' + (m.r==='agent'?'agent system':m.r);
+      if (m.r==='agent') {
+        d.innerHTML = '<div class="agent-label" style="display:flex;align-items:center;gap:6px;margin-bottom:8px">'+
+          '<span style="display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:6px;background:var(--primary);font-size:11px">⚡</span>'+
+          '<span style="font-weight:600;font-size:13px;color:var(--primary-text)">'+m.a+'</span></div>'+
+          '<div style="line-height:1.7">'+m.c+'</div>';
+      } else {
+        d.innerHTML = m.c;
+      }
+      conv.appendChild(d);
+    });
+    const meta = JSON.parse(localStorage.getItem(META_KEY)||'{}');
+    if (meta.model) currentModel = meta.model;
+    if (meta.tokens) totalTokens = meta.tokens;
+    updateTokenBadge(); buildModelChips();
+    conv.lastElementChild?.scrollIntoView();
+  } catch(e) { localStorage.removeItem(CONV_KEY); }
+}
+
+function clearConv() {
+  conv.innerHTML = '<div class="bubble system"></div>';
+  localStorage.removeItem(CONV_KEY);
+  localStorage.removeItem(META_KEY);
+}
+
+// auto-restore
+loadConv();
 
 // 自动检测工具适配层
 setTimeout(() => {

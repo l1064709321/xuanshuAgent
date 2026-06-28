@@ -173,6 +173,22 @@ def toggle_coordinator():
     bot.coordinator_mode = enabled
     return jsonify({"ok": True, "coordinator_mode": enabled})
 
+# ── 上下文恢复 ──
+@app.route("/context", methods=["GET"])
+def get_context():
+    """返回持久化的对话上下文，前端关闭页面后重新打开时恢复"""
+    ctx = bot.get_persisted_context()
+    return jsonify({"ok": True, **ctx})
+
+@app.route("/context/save", methods=["POST", "OPTIONS"])
+def save_context():
+    """前端每条消息后调用的持久化保存"""
+    if request.method == "OPTIONS":
+        return jsonify({})
+    data = request.get_json(force=True, silent=True) or []
+    bot._save_context_external(data)
+    return jsonify({"ok": True})
+
 # ── 快照管理 ──
 @app.route("/snapshots/export", methods=["POST"])
 def export_snapshots():

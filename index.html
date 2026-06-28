@@ -264,6 +264,20 @@ body::before {
   cursor: default;
 }
 
+.hamburger-btn {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 20px;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 6px;
+  line-height: 1;
+  flex-shrink: 0;
+  transition: color .2s;
+}
+.hamburger-btn:hover { color: var(--primary-text); }
+
 .model-chips {
   display: flex;
   gap: 5px;
@@ -800,7 +814,7 @@ body::before {
   <aside class="left-sidebar collapsed" id="leftSidebar">
     <div class="sidebar-header">
       <span class="logo"></span>
-      <button class="settings-btn" onclick="collapseLeft()" title="收起侧栏">×</button>
+      <button class="settings-btn" onclick="toggleLeft()" title="收起侧栏">×</button>
     </div>
     <div class="session-list" id="sessionList"><div class="session-item active">当前对话</div></div>
     <div class="sidebar-footer">
@@ -815,6 +829,7 @@ body::before {
   <!-- ===== 主区域 ===== -->
   <main class="main-area">
     <div class="toolbar">
+      <button class="hamburger-btn" onclick="toggleLeft()" title="侧栏">☰</button>
       <span class="brand-logo">
         <svg width="22" height="22" viewBox="0 0 22 22" style="vertical-align:middle;margin-right:5px">
           <defs><linearGradient id="brandGrad" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#a78bfa"/><stop offset="1" stop-color="#6366f1"/></linearGradient></defs>
@@ -845,37 +860,10 @@ body::before {
   <!-- ===== 右侧面板 ===== -->
   <aside class="right-panel" id="rightPanel">
     <div class="panel-tabs">
-      <div class="panel-tab" onclick="switchPanelTab(this,'profile')">个人</div>
       <div class="panel-tab active" onclick="switchPanelTab(this,'settings')">设置</div>
       <div class="panel-tab" onclick="switchPanelTab(this,'browser')">文件</div>
       <div class="panel-tab" onclick="switchPanelTab(this,'tools')">工具</div>
       <div class="panel-tab" onclick="switchPanelTab(this,'agents')">Agent</div>
-    </div>
-
-    <!-- 个人标签 -->
-    <div class="panel-content" id="tab-profile" style="display:none">
-      <div class="panel-section" style="text-align:center">
-        <div class="avatar-large" id="profileAvatarLarge">玄</div>
-        <button class="avatar-upload-btn" onclick="document.getElementById('avatarUpload').click()">更换头像</button>
-        <input type="file" id="avatarUpload" accept="image/*" onchange="uploadAvatar()" style="display:none">
-      </div>
-      <hr style="border:none;border-top:1px solid var(--glass-border);margin:16px 0">
-      <div class="panel-section">
-        <h3>记忆文件</h3>
-        <div style="display:flex;gap:6px;margin-bottom:8px">
-          <button class="apply-btn" onclick="refreshProfileMemdir()" style="font-size:11px;padding:6px 12px">刷新</button>
-        </div>
-        <div id="profileMemList" style="max-height:300px;overflow-y:auto;display:flex;flex-direction:column;gap:2px">
-          <div style="font-size:12px;color:var(--text-dim);text-align:center;padding:12px">点击刷新加载</div>
-        </div>
-        <div id="profileMemViewer" style="display:none;margin-top:10px">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
-            <span id="profileMemViewerPath" style="font-size:11px;color:var(--primary-text);word-break:break-all"></span>
-            <button class="apply-btn ghost" onclick="document.getElementById('profileMemViewer').style.display='none'" style="padding:4px 10px;font-size:11px">X</button>
-          </div>
-          <pre id="profileMemViewerContent" style="max-height:280px;overflow:auto;padding:10px;border-radius:8px;border:1px solid var(--glass-border);background:rgba(0,0,0,0.2);font-size:11px;font-family:var(--mono);white-space:pre-wrap;word-break:break-all;color:var(--text)"></pre>
-        </div>
-      </div>
     </div>
 
     <!-- 设置标签 -->
@@ -1053,8 +1041,8 @@ body::before {
 
   <!-- ===== 底部导航（移动端） ===== -->
   <nav class="bottom-nav">
-    <button class="bottom-nav-item active" onclick="openProfileTab()">
-      <span class="nav-icon">👤</span> 个人
+    <button class="bottom-nav-item active" onclick="toggleLeft()">
+      <span class="nav-icon">☰</span> 侧栏
     </button>
     <button class="bottom-nav-item" onclick="toggleRight()">
       <span class="nav-icon">⚙</span> 设置
@@ -1117,7 +1105,7 @@ function closeAllPanels() {
 function switchPanelTab(el, tab) {
   document.querySelectorAll('.panel-tab').forEach(t => t.classList.remove('active'));
   el.classList.add('active');
-  ['profile','settings','browser','tools','agents'].forEach(id => {
+  ['settings','browser','tools','agents'].forEach(id => {
     document.getElementById('tab-' + id).style.display = id === tab ? '' : 'none';
   });
 }
@@ -1449,7 +1437,6 @@ async function delModel(key) {
 
 // 初始化
 loadModels();
-loadAvatar();
 
 // ========== 对话 ==========
 async function send() {
@@ -1686,127 +1673,6 @@ async function deleteMemdir(rel) {
 
 function showMemWrite() {
   document.getElementById('memWriteForm').style.display = '';
-}
-
-// ========== 个人中心 ==========
-function openProfileTab() {
-  const panel = document.getElementById('rightPanel');
-  const overlay = document.getElementById('overlay');
-  // 切换：已打开则关闭，未打开则打开
-  if (panel.classList.contains('open')) {
-    panel.classList.remove('open');
-    overlay.classList.remove('active');
-    return;
-  }
-  panel.classList.add('open');
-  overlay.classList.add('active');
-  // 切换到"个人"tab
-  const tabs = document.querySelectorAll('.panel-tab');
-  let profileTab = null;
-  tabs.forEach(t => {
-    if (t.textContent.trim() === '个人') profileTab = t;
-  });
-  if (profileTab) switchPanelTab(profileTab, 'profile');
-  // 自动加载记忆文件
-  refreshProfileMemdir();
-}
-
-function loadAvatar() {
-  const base64 = localStorage.getItem('avatar');
-  const avatarBtn = document.getElementById('avatarBtn');
-  const profileLarge = document.getElementById('profileAvatarLarge');
-  if (base64) {
-    avatarBtn.style.backgroundImage = 'url(' + base64 + ')';
-    avatarBtn.textContent = '';
-    if (profileLarge) {
-      profileLarge.style.backgroundImage = 'url(' + base64 + ')';
-      profileLarge.textContent = '';
-    }
-  } else {
-    avatarBtn.style.backgroundImage = '';
-    avatarBtn.textContent = '玄';
-    if (profileLarge) {
-      profileLarge.style.backgroundImage = '';
-      profileLarge.textContent = '玄';
-    }
-  }
-}
-
-function uploadAvatar() {
-  const fileInput = document.getElementById('avatarUpload');
-  const file = fileInput.files[0];
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onload = function(e) {
-    const img = new Image();
-    img.onload = function() {
-      const canvas = document.createElement('canvas');
-      const size = 200;
-      canvas.width = size; canvas.height = size;
-      const ctx = canvas.getContext('2d');
-      // 居中裁剪为正方形
-      const minDim = Math.min(img.width, img.height);
-      const sx = (img.width - minDim) / 2;
-      const sy = (img.height - minDim) / 2;
-      ctx.drawImage(img, sx, sy, minDim, minDim, 0, 0, size, size);
-      const base64 = canvas.toDataURL('image/jpeg', 0.85);
-      localStorage.setItem('avatar', base64);
-      loadAvatar();
-      showToast('头像已更新');
-    };
-    img.src = e.target.result;
-  };
-  reader.readAsDataURL(file);
-  // 重置 input 以允许重复选择同一文件
-  fileInput.value = '';
-}
-
-async function refreshProfileMemdir() {
-  try {
-    const r = await fetch(API + '/memory/list');
-    const d = await r.json();
-    if (!d.ok) { showToast(d.error); return; }
-    const list = document.getElementById('profileMemList');
-    if (!d.entries.length) {
-      list.innerHTML = '<div style="font-size:12px;color:var(--text-dim);text-align:center;padding:12px">记忆文件夹为空</div>';
-      return;
-    }
-    let html = '';
-    d.entries.forEach(e => {
-      html += '<div style="display:flex;align-items:center;justify-content:space-between;padding:6px 10px;border-radius:8px;border:1px solid var(--glass-border);font-size:12px">' +
-        '<div style="display:flex;align-items:center;gap:6px;flex:1;min-width:0;cursor:pointer" onclick="readProfileMemdir(\'' + e.rel.replace(/'/g, "\\'") + '\')">📄 <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+e.rel+'</span></div>' +
-        '<span style="color:var(--text-muted);font-size:10px;margin:0 8px;flex-shrink:0">'+formatSize(e.size)+'</span>' +
-        '<button onclick="event.stopPropagation();deleteProfileMemdir(\'' + e.rel.replace(/'/g, "\\'") + '\')" style="background:none;border:none;color:var(--danger);cursor:pointer;font-size:14px;padding:0 4px">×</button></div>';
-    });
-    list.innerHTML = html;
-  } catch(e) { showToast('加载失败'); }
-}
-
-async function readProfileMemdir(rel) {
-  try {
-    const r = await fetch(API + '/memory/read', {
-      method: 'POST', headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({rel})
-    });
-    const d = await r.json();
-    if (!d.ok) { showToast(d.error); return; }
-    document.getElementById('profileMemViewer').style.display = '';
-    document.getElementById('profileMemViewerPath').textContent = rel;
-    document.getElementById('profileMemViewerContent').textContent = d.content;
-  } catch(e) { showToast('读取失败'); }
-}
-
-async function deleteProfileMemdir(rel) {
-  if (!confirm('删除 ' + rel + ' ？')) return;
-  try {
-    const r = await fetch(API + '/memory/delete', {
-      method: 'POST', headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({rel})
-    });
-    const d = await r.json();
-    if (d.ok) { showToast('已删除'); refreshProfileMemdir(); }
-    else { showToast('失败: ' + (d.error || '错误')); }
-  } catch(e) { showToast('删除失败'); }
 }
 
 // ========== 权限弹窗 ==========

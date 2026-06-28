@@ -1562,12 +1562,19 @@ Spec:"""
                 "content": f"[长期上下文摘要 - 这是此前对话中提炼的关键信息]\n{self._context_summary}"})
         # ── 注入 Agent 自主记忆（MEMORY.md — 自己的成长经验）──
         if self._agent_memory:
-            # 只注入最新的两条经验，避免过长
-            sections = self._agent_memory.split("### ")
-            recent_memory = "### ".join(sections[-3:]) if len(sections) > 3 else self._agent_memory
-            memory_preview = recent_memory[-2000:] if len(recent_memory) > 2000 else recent_memory
-            messages.append({"role": "system",
-                "content": f"[Agent 自主记忆 — 从过往对话中悟出的经验]\n{memory_preview}"})
+            # 从 MEMORY.md 中搜索与当前查询相关的经验（关键词匹配）
+            query_keywords = set(user_input.lower().split())
+            relevant_entries = []
+            for line in self._agent_memory.split("\n"):
+                if line.strip().startswith("[") and "]" in line and "|" in line:
+                    entry_text = line.lower()
+                    hits = sum(1 for w in query_keywords if w in entry_text and len(w) > 1)
+                    if hits >= 1 or len(query_keywords) <= 3:
+                        relevant_entries.append(line.strip())
+            if relevant_entries:
+                memory_hint = "\n".join(relevant_entries[:8])  # 最多8条
+                messages.append({"role": "system",
+                    "content": f"[Agent 自主记忆 — 与当前问题相关的过往经验]\n{memory_hint}"})
         # ── 注入记忆文件夹上下文 ──
         mem_results = memdir.search(user_input)
         if mem_results:
@@ -2307,37 +2314,112 @@ DAG（只输出节点列表）:"""
             self.log.sys(f"对话归档失败: {e}")
 
     def _auto_memorize(self):
-        """Agent 自主记忆——每 5 轮对话从最近交流中提取可复用经验，写入 MEMORY.md。
-        这是 Agent 自己的"脑记忆"：不是对话日志，而是从互动中悟出的行为准则、技术洞察、用户偏好。"""
+        """Agent 自主记忆 v2 —— 分类提取、去重、评分、压缩的完整闭环。
+        每 5 轮触发，提取可复用经验；每 15 轮额外做记忆巩固（查漏补缺）。
+        写入 MEMORY.md，格式：[类别] [置信度] 经验内容 [来源证据]"""
         try:
             recent = self.shared_msgs[-20:]
             raw = "\n".join(
-                f"{'用户' if m['role']=='user' else '助手'}: {m['content'][:300]}"
+                f"{'用户' if m['role']=='user' else '助手'}: {m['content'][:400]}"
                 for m in recent
             )
-            prompt = f"""你是一个自主学习的 Agent。从以下最近的对话中提取值得长期记忆的经验。
-只提取真正有价值的东西——经过验证的技术方法、被证实的用户偏好、重要决策及其原因、新学到的能力边界。
-不要提取：寒暄、一次性任务、没有实际后果的讨论。
+            # ── 阶段1：从最近对话中提取候选记忆 ──
+            prompt = f"""你是一个自主学习的 Agent。从以下最近对话中提取值得长期记忆的经验。
 
-输出格式：每条一行，以 - 开头。每条不超过 60 字。最多 5 条。如果确实没有值得记忆的，输出空行。
+分类提取（每种最多2条）：
+- [偏好] 用户明确表达的偏好、习惯、要求（如实记录，不要推断）
+- [洞察] 从本次互动中悟出的技术方法、最佳实践、判断依据
+- [教训] 本次出过的错、绕过的方法、发现的能力边界
+- [决策] 重要决策的原因（为什么选A不选B）
 
-最近对话:
-{raw[:3000]}
+每条格式：`[类别] 经验内容（≤50字） | 来源：对话中哪句话验证了这条`
+必须是本次对话中有实际证据支撑的，不是推测。如果某个类别确实没有，留空。
+如果没有任何值得长期记忆的内容，输出"无"。
 
-长期经验:"""
+最近对话({len(recent)//2}轮):
+{raw[:4000]}
+
+候选记忆:"""
             msgs = [{"role": "user", "content": prompt}]
             resp = self._llm_call("__memorize__", msgs)
-            learnings = resp["choices"][0]["message"]["content"].strip()
-            if not learnings or learnings == "-":
+            candidates = resp["choices"][0]["message"]["content"].strip()
+            if not candidates or candidates.startswith("无"):
                 return
-            # 写入 MEMORY.md
+
+            # ── 阶段2：去重（与现有记忆比对，相似度>70%则合并或跳过）──
+            existing = memdir.read("MEMORY.md") or ""
+            lines = candidates.strip().split("\n")
+            accepted = []
+            for line in lines:
+                line = line.strip()
+                if not line or not line.startswith("["):
+                    continue
+                # 提取关键词（取[]后的前5个词）
+                content = line.split("]", 1)[-1].split("|")[0].strip() if "]" in line else line
+                words = set(content.lower().split()[:6])
+                # 检查与现有记忆的重叠度
+                is_dup = False
+                for old_line in existing.split("\n"):
+                    if old_line.strip().startswith("[") and "]" in old_line:
+                        old_content = old_line.split("]", 1)[-1].split("|")[0].strip()
+                        old_words = set(old_content.lower().split()[:6])
+                        overlap = len(words & old_words) / max(len(words | old_words), 1)
+                        if overlap > 0.7:
+                            is_dup = True
+                            break
+                if not is_dup:
+                    # 追加置信度标记
+                    accepted.append(f"{line} [×1]")
+
+            if not accepted:
+                return
+
+            # ── 阶段3：写入 MEMORY.md ──
             ts = time.strftime("%Y-%m-%d %H:%M")
-            memory_content = memdir.read("MEMORY.md") or ""
-            section = f"\n\n### {ts}（自动记忆）\n{learnings}"
-            memdir.write("MEMORY.md", memory_content + section)
-            self.log.sys(f"🧠 自主记忆: {len(learnings)}字写入 MEMORY.md")
+            section = f"\n\n## {ts}\n" + "\n".join(accepted)
+            memdir.write("MEMORY.md", existing + section)
+            self.log.sys(f"🧠 自主记忆: +{len(accepted)}条")
+            self._agent_memory = existing + section  # 刷新内存缓存
+
+            # ── 阶段4：每 15 轮做一次记忆巩固（合并相似条目、淘汰过时）──
+            if len(self.shared_msgs) >= 30 and len(self.shared_msgs) % 30 == 0:
+                self._memory_consolidate()
+
         except Exception as e:
             self.log.sys(f"自主记忆失败(无影响): {e}")
+
+    def _memory_consolidate(self):
+        """记忆巩固——合并相似经验、升级高置信度条目、淘汰过时记忆。
+        每 15 轮触发一次，保持 MEMORY.md 精炼。"""
+        try:
+            memory = memdir.read("MEMORY.md") or ""
+            if len(memory) < 500:
+                return  # 太少，不需要巩固
+            prompt = f"""你是一个记忆管理 Agent。以下是你自己的长期记忆文件。请进行精简优化：
+
+规则：
+1. 合并语义相似的条目为一条更精炼的版本
+2. 删除明显过时的（如"刚刚开始做X"但后面已经有更成熟的版本）
+3. 保留每个类别最重要的 3-5 条
+4. 如果一条经验被多次记录（×2、×3），提升为更高置信度
+5. 保持原有格式：[类别] 经验 | 来源 [×次数]
+
+输出整个优化后的 MEMORY.md 文件内容（包括头部元信息和历史分节），保持可读的结构。
+
+当前记忆:
+{memory[-8000:]}
+
+优化后的完整 MEMORY.md:"""
+            msgs = [{"role": "user", "content": prompt}]
+            resp = self._llm_call("__consolidate__", msgs)
+            consolidated = resp["choices"][0]["message"]["content"].strip()
+            if consolidated and len(consolidated) > 100:
+                memdir.write("MEMORY.md", consolidated)
+                self._agent_memory = consolidated
+                removed = len(memory) - len(consolidated)
+                self.log.sys(f"🧠 记忆巩固: {len(memory)}→{len(consolidated)}字（精简{removed}字）")
+        except Exception as e:
+            self.log.sys(f"记忆巩固失败(无影响): {e}")
 
     # ═══════════ 快照与回溯 ═══════════
 

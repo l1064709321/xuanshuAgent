@@ -104,6 +104,15 @@ body::before {
   box-shadow: 0 0 12px var(--primary-glow);
 }
 
+.sidebar-profile {
+  padding: 0 18px 14px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  border-bottom: 1px solid var(--glass-border);
+  margin-bottom: 6px;
+}
+
 .session-list {
   flex: 1;
   overflow-y: auto;
@@ -979,29 +988,44 @@ body::before {
     <!-- 工具标签 -->
     <div class="panel-content" id="tab-tools" style="display:none">
       <div class="panel-section">
-        <h3>搜索Agent</h3>
-        <div style="display:flex;flex-direction:column;gap:6px">
-          <div style="display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:8px;border:1px solid var(--glass-border);font-size:12px">
-            <span style="color:var(--success)">●</span> search_wikipedia
-          </div>
-          <div style="display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:8px;border:1px solid var(--glass-border);font-size:12px">
-            <span style="color:var(--success)">●</span> get_weather
-          </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+          <h3 style="margin:0">工具适配层</h3>
+          <span id="toolAdapterStatus" style="font-size:10px;color:var(--text-muted)">⚫ 未连接</span>
         </div>
+        <div style="display:flex;gap:6px;margin-bottom:10px">
+          <input id="toolAdapterUrl" placeholder="适配层地址" value="http://127.0.0.1:9010" style="flex:1;padding:7px 10px;border-radius:8px;border:1px solid var(--glass-border);background:var(--glass);color:var(--text);font-size:11px">
+          <button class="apply-btn" onclick="checkToolEnv()" style="padding:7px 12px;font-size:11px">扫描</button>
+        </div>
+        <div id="toolEnvResult" style="font-size:11px;color:var(--text-dim);margin-bottom:8px"></div>
+        <div id="toolGrid" style="display:grid;grid-template-columns:1fr 1fr;gap:6px"></div>
       </div>
+
+      <!-- 预设操作区 -->
+      <div class="panel-section" id="presetSection" style="display:none">
+        <h3 id="presetTitle">预设操作</h3>
+        <div id="presetList" style="display:flex;flex-direction:column;gap:6px"></div>
+        <div id="presetParams" style="margin-top:8px;display:none"></div>
+      </div>
+
+      <!-- 自定义命令 -->
       <div class="panel-section">
-        <h3>文件Agent</h3>
-        <div style="display:flex;flex-direction:column;gap:6px">
-          <div style="display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:8px;border:1px solid var(--glass-border);font-size:12px">
-            <span style="color:var(--success)">●</span> list_files
-          </div>
-          <div style="display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:8px;border:1px solid var(--glass-border);font-size:12px">
-            <span style="color:var(--success)">●</span> read_file
-          </div>
-          <div style="display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:8px;border:1px solid var(--glass-border);font-size:12px">
-            <span style="color:var(--success)">●</span> write_file
-          </div>
+        <h3>自定义命令</h3>
+        <div style="display:flex;gap:6px;margin-bottom:6px">
+          <select id="customToolSelect" onchange="updateCustomTool()" style="flex:1;padding:7px 10px;border-radius:8px;border:1px solid var(--glass-border);background:var(--glass);color:var(--text);font-size:11px">
+            <option value="">选择工具</option>
+          </select>
         </div>
+        <input id="customCmd" placeholder="输入命令…" onkeydown="if(event.key==='Enter'){runCustomCmd()}" style="width:100%;padding:8px 12px;border-radius:8px;border:1px solid var(--glass-border);background:var(--glass);color:var(--text);font-size:12px;font-family:var(--mono);margin-bottom:6px">
+        <button class="apply-btn" onclick="runCustomCmd()" style="width:100%;font-size:12px">执行</button>
+      </div>
+
+      <!-- 输出区 -->
+      <div class="panel-section" id="toolOutput" style="display:none">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+          <h3 style="margin:0">执行结果 <span id="toolExitCode" style="font-size:11px;font-weight:400"></span></h3>
+          <button class="apply-btn ghost" onclick="document.getElementById('toolOutput').style.display='none'" style="padding:4px 10px;font-size:11px">X</button>
+        </div>
+        <pre id="toolOutputContent" style="max-height:260px;overflow:auto;padding:10px;border-radius:8px;border:1px solid var(--glass-border);background:rgba(0,0,0,0.2);font-size:11px;font-family:var(--mono);white-space:pre-wrap;word-break:break-all;color:var(--text)"></pre>
       </div>
     </div>
 
@@ -1830,6 +1854,220 @@ function showToast(msg) {
 }
 
 // ========== 会话（已禁用多对话切换）==========
+
+// ========== 工具适配层 ==========
+let toolAdapterBase = '';
+let cachedTools = {};
+let activeToolId = '';
+
+async function checkToolEnv() {
+  const status = document.getElementById('toolAdapterStatus');
+  const result = document.getElementById('toolEnvResult');
+  const grid = document.getElementById('toolGrid');
+  const select = document.getElementById('customToolSelect');
+
+  toolAdapterBase = document.getElementById('toolAdapterUrl').value.replace(/\/$/, '');
+  status.textContent = '🟡 扫描中…';
+  status.style.color = 'var(--warning)';
+
+  try {
+    const resp = await fetch(toolAdapterBase + '/api/check_env');
+    cachedTools = await resp.json();
+
+    const available = Object.values(cachedTools).filter(t => t.available).length;
+    const total = Object.keys(cachedTools).length;
+    status.textContent = `🟢 已连接 (${available}/${total})`;
+    status.style.color = 'var(--success)';
+
+    // 环境信息
+    result.innerHTML = '';
+    for (const [tid, t] of Object.entries(cachedTools)) {
+      result.innerHTML += `<div style="display:flex;align-items:center;gap:6px;margin-bottom:2px">
+        <span style="color:${t.available ? 'var(--success)' : 'var(--text-muted)'}">${t.available ? '●' : '○'}</span>
+        <span style="font-size:11px">${t.available ? '<b>' + tid + '</b>' : tid} ${t.path || ''}</span>
+        ${!t.available ? '<span style="font-size:10px;color:var(--text-muted)">' + (t.install_hint||'') + '</span>' : ''}
+      </div>`;
+    }
+
+    // 工具网格
+    buildToolGrid();
+
+    // 自定义命令下拉
+    select.innerHTML = '<option value="">选择工具</option>';
+    for (const [tid, t] of Object.entries(cachedTools)) {
+      select.innerHTML += `<option value="${tid}" ${!t.available ? 'disabled' : ''}>${t.available ? '✅' : '❌'} ${tid}</option>`;
+    }
+  } catch (e) {
+    status.textContent = '🔴 连接失败';
+    status.style.color = 'var(--danger)';
+    result.innerHTML = '<span style="color:var(--danger)">无法连接适配层，请确认服务已启动</span>';
+  }
+}
+
+function buildToolGrid() {
+  const grid = document.getElementById('toolGrid');
+  grid.innerHTML = '';
+  for (const [tid, t] of Object.entries(cachedTools)) {
+    grid.innerHTML += `<div class="tool-card" onclick="selectTool('${tid}')" style="
+      padding:10px;border-radius:10px;border:1px solid var(--glass-border);
+      background:${t.available?'rgba(34,197,94,0.06)':'rgba(255,255,255,0.02)'};
+      cursor:pointer;transition:all var(--transition);
+      opacity:${t.available ? '1' : '0.5'}
+    " onmouseenter="this.style.borderColor='var(--primary)'" onmouseleave="this.style.borderColor='var(--glass-border)'">
+      <div style="font-size:18px;margin-bottom:2px">${t.available ? '🟢' : '⚫'}</div>
+      <div style="font-size:12px;font-weight:600;color:var(--text)">${tid}</div>
+      <div style="font-size:10px;color:var(--text-dim);margin-top:2px">${t.available ? '已就绪' : '未安装'}</div>
+    </div>`;
+  }
+}
+
+async function selectTool(toolId) {
+  activeToolId = toolId;
+  document.getElementById('customToolSelect').value = toolId;
+
+  // 加载预设
+  const presetSection = document.getElementById('presetSection');
+  const presetTitle = document.getElementById('presetTitle');
+  const presetList = document.getElementById('presetList');
+
+  try {
+    const resp = await fetch(toolAdapterBase + '/api/presets?tool=' + toolId);
+    const presets = await resp.json();
+
+    if (Object.keys(presets).length === 0) {
+      presetSection.style.display = 'none';
+      return;
+    }
+
+    presetSection.style.display = 'block';
+    presetTitle.textContent = `预设操作 - ${toolId}`;
+    presetList.innerHTML = '';
+    for (const [pid, p] of Object.entries(presets)) {
+      presetList.innerHTML += `<div class="preset-item" onclick="loadPreset('${toolId}', '${pid}')" style="
+        padding:10px 12px;border-radius:8px;border:1px solid var(--glass-border);
+        cursor:pointer;transition:all var(--transition);
+        background:var(--glass)
+      " onmouseenter="this.style.borderColor='var(--primary)'" onmouseleave="this.style.borderColor='var(--glass-border)'">
+        <div style="font-size:12px;font-weight:600;color:var(--text)">${p.label}</div>
+        <div style="font-size:10px;color:var(--text-dim);margin-top:2px">${p.desc}</div>
+      </div>`;
+    }
+  } catch (e) {
+    presetSection.style.display = 'none';
+  }
+}
+
+let currentPreset = null;
+let currentPresetId = '';
+
+async function loadPreset(toolId, presetId) {
+  try {
+    const resp = await fetch(toolAdapterBase + '/api/presets?tool=' + toolId);
+    const presets = await resp.json();
+    currentPreset = presets[presetId];
+    currentPresetId = presetId;
+
+    if (!currentPreset || !currentPreset.params) return;
+
+    const paramsDiv = document.getElementById('presetParams');
+    paramsDiv.style.display = 'block';
+    paramsDiv.innerHTML = '';
+
+    for (const param of currentPreset.params) {
+      paramsDiv.innerHTML += `<div style="margin-bottom:6px">
+        <label style="font-size:10px;color:var(--text-dim);display:block;margin-bottom:2px">${param.label}</label>
+        <input class="preset-param" data-key="${param.key}" placeholder="${param.placeholder}"
+          style="width:100%;padding:6px 10px;border-radius:6px;border:1px solid var(--glass-border);background:var(--glass);color:var(--text);font-size:11px;font-family:var(--mono)">
+      </div>`;
+    }
+    paramsDiv.innerHTML += `<div style="display:flex;gap:6px;margin-top:8px">
+      <button class="apply-btn" onclick="runPreset('${toolId}')" style="flex:1;font-size:11px">执行</button>
+      <button class="apply-btn ghost" onclick="previewCmd('${toolId}')" style="font-size:11px">预览</button>
+    </div>`;
+  } catch (e) {}
+}
+
+function buildCmd() {
+  if (!currentPreset) return '';
+  let cmd = currentPreset.template;
+  document.querySelectorAll('.preset-param').forEach(el => {
+    const val = el.value.trim() || el.placeholder;
+    cmd = cmd.replace('{' + el.dataset.key + '}', val);
+  });
+  return cmd;
+}
+
+function previewCmd(toolId) {
+  const cmd = buildCmd();
+  showOutput(cmd, '', '(预览)', 0);
+}
+
+async function runPreset(toolId) {
+  const cmd = buildCmd();
+  await runCommand(toolId, cmd);
+}
+
+async function runCustomCmd() {
+  const toolId = document.getElementById('customToolSelect').value;
+  const cmd = document.getElementById('customCmd').value.trim();
+  if (!toolId) { showToast('请先选择工具'); return; }
+  if (!cmd) return;
+  await runCommand(toolId, cmd);
+}
+
+async function runCommand(toolId, command) {
+  const output = document.getElementById('toolOutput');
+  const content = document.getElementById('toolOutputContent');
+  const code = document.getElementById('toolExitCode');
+
+  output.style.display = 'block';
+  content.textContent = '执行中…';
+  code.textContent = '';
+
+  try {
+    const resp = await fetch(toolAdapterBase + '/api/run', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({tool: toolId, command: command})
+    });
+    const data = await resp.json();
+    showOutput(data.stdout, data.stderr, data.command, data.returncode);
+  } catch (e) {
+    content.textContent = '请求失败: ' + e.message;
+    code.textContent = '(网络错误)';
+  }
+}
+
+function showOutput(stdout, stderr, cmd, code) {
+  const output = document.getElementById('toolOutput');
+  const content = document.getElementById('toolOutputContent');
+  const exitCode = document.getElementById('toolExitCode');
+
+  output.style.display = 'block';
+  let text = '';
+  if (cmd) text += '$ ' + cmd + '\n' + '─'.repeat(40) + '\n';
+  if (stdout) text += stdout;
+  if (stderr) text += (stdout ? '\n' : '') + '── STDERR ──\n' + stderr;
+  if (!stdout && !stderr) text += '(无输出)';
+
+  content.textContent = text;
+  exitCode.textContent = code === 0 ? '(成功)' : '(退出码: ' + code + ')';
+  exitCode.style.color = code === 0 ? 'var(--success)' : 'var(--warning)';
+}
+
+function updateCustomTool() {
+  const toolId = document.getElementById('customToolSelect').value;
+  if (toolId) selectTool(toolId);
+}
+
+// 自动检测工具适配层
+setTimeout(() => {
+  if (document.getElementById('tab-tools').offsetParent !== null ||
+      sessionStorage.getItem('toolAdapterChecked')) {
+    checkToolEnv();
+    sessionStorage.setItem('toolAdapterChecked', '1');
+  }
+}, 2000);
 </script>
 </body>
 </html>

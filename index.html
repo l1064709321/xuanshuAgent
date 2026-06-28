@@ -291,19 +291,24 @@ body::before {
   cursor: default;
 }
 
-.hamburger-btn {
-  background: none;
-  border: none;
-  color: var(--text-muted);
-  font-size: 20px;
+.toolbar-avatar {
+  width: 32px; height: 32px;
+  border-radius: 50%;
+  background: var(--primary);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 700;
   cursor: pointer;
-  padding: 4px 8px;
-  border-radius: 6px;
-  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   flex-shrink: 0;
-  transition: color .2s;
+  background-size: cover;
+  background-position: center;
+  transition: transform .2s, box-shadow .2s;
+  user-select: none;
 }
-.hamburger-btn:hover { color: var(--primary-text); }
+.toolbar-avatar:hover { transform: scale(1.1); box-shadow: 0 0 12px var(--primary-glow); }
 
 .model-chips {
   display: flex;
@@ -873,14 +878,7 @@ body::before {
   <!-- ===== 主区域 ===== -->
   <main class="main-area">
     <div class="toolbar">
-      <button class="hamburger-btn" onclick="toggleLeft()" title="侧栏">☰</button>
-      <span class="brand-logo">
-        <svg width="22" height="22" viewBox="0 0 22 22" style="vertical-align:middle;margin-right:5px">
-          <defs><linearGradient id="brandGrad" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#a78bfa"/><stop offset="1" stop-color="#6366f1"/></linearGradient></defs>
-          <rect rx="5" width="22" height="22" fill="url(#brandGrad)"/>
-          <text x="11" y="16" text-anchor="middle" fill="white" font-size="14" font-weight="700" font-family="sans-serif">玄</text>
-        </svg>玄姝
-      </span>
+      <div class="toolbar-avatar" id="toolbarAvatar" onclick="toggleLeft()" title="个人主页">玄</div>
       <span style="flex:1"></span>
       <span class="token-badge" id="tokenBadge" title="Token用量">0 tk</span>
     </div>
@@ -1723,13 +1721,18 @@ function showMemWrite() {
 // ========== 侧栏个人主页 ==========
 function loadSidebarAvatar() {
   const base64 = localStorage.getItem('avatar');
-  const el = document.getElementById('sidebarAvatar');
+  const sidebarEl = document.getElementById('sidebarAvatar');
+  const toolbarEl = document.getElementById('toolbarAvatar');
   if (base64) {
-    el.style.backgroundImage = 'url(' + base64 + ')';
-    el.textContent = '';
+    sidebarEl.style.backgroundImage = 'url(' + base64 + ')';
+    sidebarEl.textContent = '';
+    toolbarEl.style.backgroundImage = 'url(' + base64 + ')';
+    toolbarEl.textContent = '';
   } else {
-    el.style.backgroundImage = '';
-    el.textContent = '玄';
+    sidebarEl.style.backgroundImage = '';
+    sidebarEl.textContent = '玄';
+    toolbarEl.style.backgroundImage = '';
+    toolbarEl.textContent = '玄';
   }
 }
 

@@ -3,6 +3,7 @@
 """
 from typing import Dict, Optional
 from dataclasses import dataclass, field
+import time
 
 # 延迟导入，避免 openai 未安装时启动失败
 OpenAI = None
@@ -137,6 +138,17 @@ class ModelPool:
         self._clients: Dict[str, OpenAI] = {}
         self._bindings: Dict[str, str] = {}
         self._custom: Dict[str, ModelEntry] = {}  # 用户自定义模型
+        self._per_model_keys: Dict[str, str] = {}  # model key → api_key
+        # 多模型兜底链：按优先级依次尝试，直至成功
+        self._fallback_chain: list = [
+            "deepseek-v4-pro", "deepseek-v4-flash",
+            "qwen3.7-max", "qwen3.7-plus",
+            "glm-5.2", "gpt-4o-mini",
+            "gemini-3-flash",
+        ]
+        # 失败模型冷却：记录失败时间，冷却期内跳过
+        self._cooldown: Dict[str, float] = {}
+        self._cooldown_seconds: float = 60.0  # 1分钟冷却
 
     @property
     def api_key(self) -> str:
@@ -147,6 +159,35 @@ class ModelPool:
         if self._api_key != value:
             self._clients.clear()  # key 变了，清空旧缓存
         self._api_key = value
+
+    # ---- 每模型独立 API Key ----
+    def set_model_key(self, model_key: str, api_key: str):
+        """为指定模型设置独立 API Key"""
+        self._per_model_keys[model_key] = api_key
+        # 清除该 base_url 的缓存客户端，强制重建
+        entry = self.all_models.get(model_key)
+        if entry:
+            self._clients.pop(entry.base_url, None)
+
+    def remove_model_key(self, model_key: str):
+        """移除指定模型的独立 API Key"""
+        self._per_model_keys.pop(model_key, None)
+        entry = self.all_models.get(model_key)
+        if entry:
+            self._clients.pop(entry.base_url, None)
+
+    def model_has_key(self, model_key: str) -> bool:
+        """模型是否已配置独立 Key"""
+        return model_key in self._per_model_keys and bool(self._per_model_keys[model_key])
+
+    def get_model_key(self, model_key: str) -> str:
+        """获取模型的 API Key：优先独立 Key，否则全局 Key"""
+        return self._per_model_keys.get(model_key, self._api_key)
+
+    @property
+    def per_model_keys(self) -> Dict[str, bool]:
+        """返回各模型的独立 Key 配置状态（只返回是否已配，不暴露 Key 内容）"""
+        return {k: bool(v) for k, v in self._per_model_keys.items()}
 
     @property
     def all_models(self) -> Dict[str, ModelEntry]:
@@ -202,16 +243,23 @@ class ModelPool:
         return None
 
     # ---- API调用 ----
-    def _get_client(self, base_url: str) -> Optional[OpenAI]:
+    def _get_client(self, base_url: str, model_key: str = "") -> Optional[OpenAI]:
         if not base_url:
             return None
-        if base_url not in self._clients:
-            self._clients[base_url] = _get_openai()(api_key=self.api_key, base_url=base_url)
-        return self._clients[base_url]
+        # 有 model_key 时用独立 Key，否则用全局 Key
+        api_key = self.get_model_key(model_key) if model_key else self.api_key
+        cache_key = f"{base_url}::{model_key}" if model_key else base_url
+        if cache_key not in self._clients:
+            try:
+                self._clients[cache_key] = _get_openai()(api_key=api_key, base_url=base_url)
+            except Exception:
+                return None
+        return self._clients[cache_key]
 
     def call_llm(self, agent: str, messages: list, tools: list = None) -> dict:
         model = self.get_model(agent)
-        client = self._get_client(model.base_url)
+        model_key = self.get_key(agent)
+        client = self._get_client(model.base_url, model_key)
 
         if client is None:
             last = messages[-1]["content"][:60] if messages else ""
@@ -236,6 +284,99 @@ class ModelPool:
                 "_model": model.name,
             }
 
+    # ═══ 多模型兜底 ═══
+
+    def set_fallback_chain(self, keys: list):
+        """设置兜底链：模型key列表，按优先级依次尝试。传入空列表清空兜底。"""
+        for k in keys:
+            if k not in self.all_models:
+                raise ValueError(f"未知模型: {k}")
+        self._fallback_chain = list(keys)
+
+    def clear_cooldown(self, model_key: str = ""):
+        """清除模型冷却状态"""
+        if model_key:
+            self._cooldown.pop(model_key, None)
+        else:
+            self._cooldown.clear()
+
+    def call_llm_with_fallback(
+        self, agent: str, messages: list, tools: list = None,
+        fallback_models: list = None, max_fallbacks: int = 5,
+    ) -> dict:
+        """多模型兜底调用：依次尝试主模型和备用模型，直至成功。
+        
+        - 先调用主模型（agent 绑定或默认）
+        - 主模型失败后，按 fallback_models → _fallback_chain 顺序尝试
+        - 处于冷却期的模型自动跳过
+        - 返回第一个成功结果；全部失败则返回最后一次错误
+        
+        返回结果中额外字段：
+          _model: 最终使用的模型名称
+          _tried: 尝试过的模型列表 [(key, ok/err), ...]
+          _fallback_used: 是否使用了备用模型
+        """
+        tried = []
+        primary_key = self.get_key(agent)
+
+        # 构建尝试列表：去重，跳过冷却期模型
+        candidates = [primary_key]
+        if fallback_models:
+            candidates += fallback_models
+        candidates += self._fallback_chain
+        seen = set()
+        ordered = []
+        now = time.time()
+        for k in candidates:
+            if k in seen:
+                continue
+            seen.add(k)
+            # 跳过冷却期内的模型（主模型不跳）
+            if k != primary_key and k in self._cooldown:
+                if now - self._cooldown[k] < self._cooldown_seconds:
+                    tried.append((k, "冷却中"))
+                    continue
+                else:
+                    del self._cooldown[k]  # 冷却到期
+            ordered.append(k)
+            if len(ordered) >= max_fallbacks + 1:
+                break
+
+        last_error = None
+        for i, key in enumerate(ordered):
+            model = self.all_models[key]
+            client = self._get_client(model.base_url)
+            if client is None:
+                tried.append((key, "无API连接"))
+                continue
+
+            params = {"model": model.model_id, "messages": messages[-20:]}
+            if tools:
+                params["tools"] = tools
+            try:
+                resp = client.chat.completions.create(**params)
+                d = resp.model_dump()
+                d["_model"] = model.name
+                d["_tried"] = tried
+                d["_fallback_used"] = (i > 0)
+                return d
+            except Exception as e:
+                err_msg = str(e)[:80]
+                tried.append((key, err_msg))
+                self._cooldown[key] = now  # 进入冷却
+                last_error = err_msg
+                continue
+
+        # 全部失败
+        return {
+            "choices": [{"message": {"role": "assistant",
+                "content": f"[多模型全部失败] 已尝试: {' → '.join(k for k,_ in tried)}。最后错误: {last_error}"}}],
+            "usage": {"total_tokens": 0},
+            "_model": "fallback-exhausted",
+            "_tried": tried,
+            "_fallback_used": True,
+        }
+
     def status(self) -> str:
         lines = [f"默认: {self.all_models[self.default_key].name}"]
         for agent, k in self._bindings.items():
@@ -257,7 +398,8 @@ class ModelPool:
             result.append({
                 "key": k, "name": v.name, "model_id": v.model_id,
                 "base_url": v.base_url, "provider": v.provider,
-                "description": v.description, "custom": v.custom
+                "description": v.description, "custom": v.custom,
+                "has_key": self.model_has_key(k),
             })
         return result
 

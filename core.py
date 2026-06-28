@@ -9,15 +9,18 @@ v3:
   - Fork 子代理: 继承父上下文平行执行
   - 自校验: 代码类Agent执行后自动验证
 """
-import json, time, os, threading
+import json, time, os, threading, re, copy
 from pathlib import Path
-from typing import List, Dict, Optional, Tuple
+from typing import List, Dict, Optional, Tuple, Callable, Any
 from dataclasses import dataclass, field
+from collections import defaultdict
 from memory import AgentMemory
 from logger import Logger
 from models import ModelPool
 from decompile import Decompiler, detect_format, get_supported_formats
 from screen_reader import capture, to_base64
+from sandbox import run_sandboxed
+from monitor import get_metrics
 
 # ── 共享记忆文件夹（文件级持久化）──
 _MEMDIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".memdir")
@@ -217,6 +220,193 @@ class Tool:
                 },
             },
         }
+
+
+# ── 工具调用防抖工具函数 ─────────────────────────────
+
+def _safe_parse_json(raw: str, fallback: dict = None) -> Tuple[Optional[dict], Optional[str]]:
+    """安全解析 JSON，返回 (parsed_dict, error_msg)。失败时尝试修复常见畸形。"""
+    if fallback is None:
+        fallback = {}
+    if not raw or not raw.strip():
+        return fallback, "空参数"
+    # 尝试直接解析
+    try:
+        return json.loads(raw), None
+    except json.JSONDecodeError:
+        pass
+    # 修复1: 去掉首尾非JSON垃圾（如 LLM 加了前导说明）
+    m = re.search(r'\{.*\}', raw, re.DOTALL)
+    if m:
+        try:
+            return json.loads(m.group(0)), None
+        except json.JSONDecodeError:
+            pass
+    # 修复2: 去掉尾逗号
+    cleaned = re.sub(r',\s*}', '}', raw)
+    cleaned = re.sub(r',\s*]', ']', cleaned)
+    try:
+        return json.loads(cleaned), None
+    except json.JSONDecodeError as e:
+        return fallback, f"JSON解析失败: {e}"
+
+def _fuzzy_match_tool(name: str, tool_names: List[str], threshold: float = 0.5) -> Optional[str]:
+    """模糊匹配工具名。精确匹配优先；否则按子串包含 + 编辑距离兜底。"""
+    if name in tool_names:
+        return name
+    # 子串包含
+    for tn in tool_names:
+        if name in tn or tn in name:
+            return tn
+    # 简单编辑距离
+    best, best_dist = None, 999
+    for tn in tool_names:
+        dist = _edit_distance(name, tn)
+        if dist < best_dist:
+            best_dist = dist
+            best = tn
+    max_dist = max(len(name), len(best or "")) * (1 - threshold)
+    return best if best_dist <= max_dist else None
+
+def _edit_distance(a: str, b: str) -> int:
+    """Levenshtein 编辑距离"""
+    m, n = len(a), len(b)
+    dp = list(range(n + 1))
+    for i in range(1, m + 1):
+        prev = dp[0]
+        dp[0] = i
+        for j in range(1, n + 1):
+            temp = dp[j]
+            if a[i-1] == b[j-1]:
+                dp[j] = prev
+            else:
+                dp[j] = 1 + min(prev, dp[j], dp[j-1])
+            prev = temp
+    return dp[n]
+
+def _validate_tool_args(tool: 'Tool', raw_args: dict) -> Tuple[dict, Optional[str]]:
+    """校验工具参数，填充默认值，返回 (validated_args, error_msg)。"""
+    validated = {}
+    for param_name, param_spec in tool.params.items():
+        if param_name in raw_args:
+            validated[param_name] = raw_args[param_name]
+        else:
+            # 尝试填充默认值
+            default = param_spec.get("default")
+            if default is not None:
+                validated[param_name] = default
+            else:
+                return {}, f"缺少必要参数 '{param_name}'（工具 {tool.name}）"
+    # 保留额外参数（LLM 可能多传无关参数，容错不拒绝）
+    for k, v in raw_args.items():
+        if k not in validated:
+            validated[k] = v
+    return validated, None
+
+def _dispatch_tool_call(child, tc: dict) -> Tuple[str, str]:
+    """安全分发单个工具调用，返回 (tool_name, result_str)。
+    失败时返回错误消息，绝不抛异常。"""
+    # 1. 提取 function 块
+    fn_block = tc.get("function")
+    if not fn_block:
+        return "?", "[工具调用错误] tool_call 缺少 function 字段"
+
+    raw_name = fn_block.get("name", "")
+    raw_args = fn_block.get("arguments", "{}")
+    call_id = tc.get("id", "unknown")
+
+    # 2. 解析参数 JSON
+    parsed_args, json_err = _safe_parse_json(raw_args)
+    if json_err:
+        return raw_name, (
+            f"[工具调用错误] 参数JSON解析失败: {json_err}\n"
+            f"原始参数: {raw_args[:300]}\n"
+            f"请用合法的JSON重新调用工具。"
+        )
+
+    # 3. 工具名模糊匹配
+    valid_names = [t.name for t in child.tools]
+    matched_name = _fuzzy_match_tool(raw_name, valid_names)
+    if matched_name is None:
+        return raw_name, (
+            f"[工具调用错误] 工具 '{raw_name}' 不存在。\n"
+            f"可用工具: {', '.join(valid_names)}\n"
+            f"请选择正确的工具名称重新调用。"
+        )
+    if matched_name != raw_name:
+        raw_name = matched_name  # 使用模糊匹配后的名称
+
+    # 4. 找到工具实例
+    tool = None
+    for t in child.tools:
+        if t.name == matched_name:
+            tool = t
+            break
+    if tool is None:
+        return matched_name, f"[工具调用错误] 工具 '{matched_name}' 内部未找到"
+
+    # 5. 参数校验与默认值填充
+    validated_args, arg_err = _validate_tool_args(tool, parsed_args)
+    if arg_err:
+        return matched_name, (
+            f"[工具调用错误] {arg_err}\n"
+            f"该工具的参数定义: {json.dumps(tool.params, ensure_ascii=False)}\n"
+            f"你提供的参数: {json.dumps(parsed_args, ensure_ascii=False)[:200]}\n"
+            f"请补充缺失的参数后重新调用。"
+        )
+
+    return matched_name, child.exec_tool(matched_name, validated_args)
+
+
+# ── 工具执行器（带重试+降级）─────────────────────────
+class ToolExecutor:
+    """工具执行器 — 失败自动重试 + 降级链 + 延迟记录"""
+
+    # 降级链：工具名 → 备选工具列表
+    DEGRADATION_CHAINS = {
+        "web_search": ["search_wikipedia", "web_fetch"],
+    }
+
+    MAX_RETRIES = 2   # 同一工具最多重试 2 次
+    RETRY_DELAY = 1.0  # 重试间隔秒
+
+    @staticmethod
+    def execute(child_name: str, tool_name: str, args: dict, get_tool_fn: Callable) -> str:
+        """执行工具，失败时自动重试并降级。返回结果字符串"""
+        metrics = get_metrics()
+        last_error = None
+
+        # 当前工具名 + 降级链
+        tool_chain = [tool_name] + ToolExecutor.DEGRADATION_CHAINS.get(tool_name, [])
+        if tool_name not in ("web_search",):
+            tool_chain = [tool_name]  # 仅搜索类工具走降级
+
+        for chain_idx, current_tool in enumerate(tool_chain):
+            t = get_tool_fn(current_tool)
+            if t is None:
+                continue
+
+            for attempt in range(ToolExecutor.MAX_RETRIES):
+                t0 = time.time()
+                try:
+                    result = t.executor(args)
+                    lat = time.time() - t0
+                    metrics.record_tool(child_name, current_tool, lat, error=False)
+                    if chain_idx > 0:
+                        # 降级成功，标注
+                        return f"[降级至 {current_tool}]\n{result}"
+                    return result
+                except Exception as e:
+                    lat = time.time() - t0
+                    metrics.record_tool(child_name, current_tool, lat, error=True)
+                    last_error = str(e)
+                    if attempt < ToolExecutor.MAX_RETRIES - 1:
+                        time.sleep(ToolExecutor.RETRY_DELAY * (attempt + 1))
+                        continue
+                    # 该工具重试耗尽，尝试下一个降级工具
+                    break
+
+        return f"[工具错误] {tool_name} 所有尝试均失败({ToolExecutor.MAX_RETRIES}次重试+降级链耗尽): {last_error}"
 
 
 # ── 工具实现 ──────────────────────────────────────────
@@ -504,30 +694,20 @@ def _mv(args):
     except Exception as e: return f"移动失败: {e}"
 
 def _run_code(args):
-    """自校验代码执行 — 运行代码并返回结果+退出码"""
-    import subprocess, tempfile
-    try:
-        code = args["code"]
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False, encoding="utf-8") as f:
-            f.write(code)
-            tmp_path = f.name
-        result = subprocess.run(
-            ["python3", tmp_path], capture_output=True, text=True, timeout=30
-        )
-        os.unlink(tmp_path)
-        stdout = result.stdout.strip()
-        stderr = result.stderr.strip()
-        parts = []
-        if stdout:
-            parts.append(f"[stdout]\n{stdout[:1000]}")
-        if stderr:
-            parts.append(f"[stderr]\n{stderr[:500]}")
-        parts.append(f"[exit_code] {result.returncode}")
-        return "\n".join(parts)
-    except subprocess.TimeoutExpired:
-        return "[错误] 代码执行超时(30s)"
-    except Exception as e:
-        return f"[错误] 执行失败: {e}"
+    """安全沙箱代码执行 — CPU限制30s, 内存512MB, 无网络, 无文件写权限"""
+    code = args["code"]
+    result = run_sandboxed(code, timeout=30)
+    parts = []
+    if result["stdout"]:
+        parts.append(f"[stdout]\n{result['stdout'][:2000]}")
+    if result["stderr"]:
+        parts.append(f"[stderr]\n{result['stderr'][:1000]}")
+    if result.get("timed_out"):
+        parts.append("[警告] 代码执行超时(30s)")
+    if result.get("error") and result["error"] != "timeout":
+        parts.append(f"[沙箱错误] {result['error']}")
+    parts.append(f"[exit_code] {result['exit_code']}")
+    return "\n".join(parts)
 
 
 # ── 反编译工具 ─────────────────────────────────────────
@@ -596,10 +776,13 @@ class ChildBot:
         return [t.schema() for t in self.tools]
 
     def exec_tool(self, name: str, args: dict) -> str:
-        for t in self.tools:
-            if t.name == name and t.executor:
-                return t.executor(args)
-        return f"[{name}] 工具未注册"
+        """工具执行 — 经 ToolExecutor 重试/降级"""
+        def _finder(n: str):
+            for t in self.tools:
+                if t.name == n:
+                    return t
+            return None
+        return ToolExecutor.execute(self.name, name, args, _finder)
 
     def verify(self, last_reply: str, pool: "ModelPool") -> str:
         """自校验 — 对代码输出进行验证"""
@@ -663,17 +846,21 @@ Spec:"""
 
 验证报告:"""
 
-    def __init__(self, pool: ModelPool, verbose: bool = True, coordinator_mode: bool = True):
+    def __init__(self, pool: ModelPool, verbose: bool = True, coordinator_mode: bool = True, fallback_mode: bool = True):
         self.pool = pool
         self.log = Logger(enabled=verbose)
         self.children: Dict[str, ChildBot] = {}
         self.shared_msgs: List[dict] = []
         self.coordinator_mode = coordinator_mode
+        self.fallback_mode = fallback_mode  # 多模型兜底：主模型失败自动换备用
         self.permissions: Dict[str, bool] = {}  # 通用权限（对话级）
         self._perm_pending: Optional[tuple] = None  # (user_input, image) 授权后自动重试
         # 追踪活跃的 agent 上下文（用于 Continue 决策）
         self._agent_contexts: Dict[str, dict] = {}  # agent_name → {last_task, last_output, files_accessed}
+        # 上下文摘要（压缩旧对话后的长期记忆）
+        self._context_summary: str = ""
         self._init_children()
+        self._load_context()  # 从磁盘恢复上下文
 
     def _init_children(self):
         # ── 共享记忆文件夹工具 ──
@@ -807,7 +994,7 @@ Spec:"""
 {{"tool": "工具名", "args": {{参数...}} }}"""
             try:
                 msgs = [{"role": "user", "content": prompt}]
-                resp = self.pool.call_llm("__file_op__", msgs)
+                resp = self._llm_call("__file_op__", msgs)
                 text = resp["choices"][0]["message"]["content"].strip()
                 import re as _re, json as _json
                 m = _re.search(r'\{[^{}]*"tool"[^{}]*\}', text, _re.DOTALL)
@@ -840,7 +1027,7 @@ Spec:"""
         prompt = self.ROUTER_PROMPT.format(query=query)
         msgs = [{"role": "user", "content": prompt}]
         try:
-            resp = self.pool.call_llm("__router__", msgs)
+            resp = self._llm_call("__router__", msgs)
             choice = resp["choices"][0]["message"]["content"].strip()
             self.log.sys(f'LLM路由 → "{choice}"')
             if choice in self.children:
@@ -984,7 +1171,7 @@ Spec:"""
         )
         msgs = [{"role": "user", "content": prompt}]
         try:
-            resp = self.pool.call_llm("__synthesizer__", msgs)
+            resp = self._llm_call("__synthesizer__", msgs)
             spec = resp["choices"][0]["message"]["content"].strip()
             self.log.sys(f"Spec生成: {len(spec)}字")
             return spec
@@ -1011,7 +1198,7 @@ Spec:"""
         )
         msgs = [{"role": "user", "content": prompt}]
         try:
-            resp = self.pool.call_llm("__verifier__", msgs)
+            resp = self._llm_call("__verifier__", msgs)
             return resp["choices"][0]["message"]["content"].strip()
         except Exception as e:
             self.log.error(f"验证失败: {e}")
@@ -1082,7 +1269,7 @@ Spec:"""
 子任务列表(用 ||| 分隔):"""
         try:
             msgs = [{"role": "user", "content": split_prompt}]
-            resp = self.pool.call_llm("__fork_split__", msgs)
+            resp = self._llm_call("__fork_split__", msgs)
             tasks_text = resp["choices"][0]["message"]["content"].strip()
             sub_tasks = [t.strip() for t in tasks_text.split("|||") if t.strip()]
             if len(sub_tasks) < 2:
@@ -1107,7 +1294,7 @@ Spec:"""
 
 请汇总各子任务结果，给出一个整合的最终回复。"""
             msgs2 = [{"role": "user", "content": summary_prompt}]
-            resp2 = self.pool.call_llm("__fork_merge__", msgs2)
+            resp2 = self._llm_call("__fork_merge__", msgs2)
             merged = resp2["choices"][0]["message"]["content"].strip()
 
             self._update_shared_history(user_input, merged)
@@ -1126,22 +1313,35 @@ Spec:"""
         if perm_cmd:
             ptype = perm_cmd.group(1)
             action = perm_cmd.group(2)
-            # 兼容 /screen → screencap
             if ptype == 'screen':
                 ptype = 'screencap'
             self.permissions[ptype] = (action == 'allow')
             self.log.sys(f"权限 {ptype} → {action}")
             msg = f"已{'授予' if action == 'allow' else '拒绝'}「{ptype}」权限。"
-            # 授权后自动重试挂起的请求
             if action == 'allow' and self._perm_pending:
                 retry_input, retry_image = self._perm_pending
                 self._perm_pending = None
                 return msg + "\n\n" + self.chat(retry_input, retry_image)
             return msg
 
+        # ── 回退命令 ──
+        if stripped in ("回退", "回滚", "撤销分支", "/rollback"):
+            return self._rollback_chat()
+
+        # ── Agent 管理命令 ──
+        if stripped.startswith("/agents"):
+            agents = self.list_agents()
+            return "\n".join(f"{a['name']}: {a['desc']} ({a['tools']}工具)" for a in agents)
+        if stripped.startswith("/metrics"):
+            return get_metrics().summary()
+
         # ── 屏幕截图触发词 ──
         if stripped in ("/screen", "截图", "截屏", "看屏幕", "看看屏幕"):
             return self._handle_screen(stripped)
+
+        # ── 项目命令 ──
+        if self._is_project_cmd(user_input):
+            return self._project_chat(user_input)
 
         # ── 父Bot直接拦截文件操作 ──
         if self._is_file_op(user_input):
@@ -1150,6 +1350,14 @@ Spec:"""
                 self.log.sys("父Bot直接处理文件操作")
                 self._update_shared_history(user_input, result)
                 return self._intercept_permission(result, user_input, image)
+
+        # 自主闭环: 需要多步探索的任务
+        if self._is_autonomous_task(user_input):
+            return self._intercept_permission(self._autonomous_chat(user_input, image), user_input, image)
+
+        # DAG编排: 多阶段依赖任务
+        if self._is_dag_task(user_input) and self.coordinator_mode:
+            return self._intercept_permission(self._dag_chat(user_input), user_input, image)
 
         # Fork模式: 可并行拆解的任务
         if self._is_forkable(user_input):
@@ -1219,7 +1427,7 @@ Spec:"""
                     {"type": "image_url", "image_url": {"url": b64}},
                 ]
             }]
-            resp = self.pool.call_llm("搜索Agent", messages)
+            resp = self._llm_call("搜索Agent", messages)
             return resp.get("choices", [{}])[0].get("message", {}).get("content", "截图分析失败")
         except ImportError:
             return "屏幕截图功能不可用（本地环境缺少 screen_reader 依赖）。"
@@ -1305,6 +1513,14 @@ Spec:"""
         return result
 
     # ═══════════ 子Agent执行循环 ═══════════
+
+    def _llm_call(self, agent: str, messages: list, tools: list = None, extra_fallbacks: list = None) -> dict:
+        """统一 LLM 调用入口：根据 fallback_mode 自动选择兜底或直调。
+        兜底模式下主模型失败会依次尝试备用模型，返回结果中 _tried 记录尝试链。"""
+        if self.fallback_mode:
+            return self.pool.call_llm_with_fallback(agent, messages, tools, fallback_models=extra_fallbacks)
+        return self._llm_call(agent, messages, tools)
+
     def _build_child_msgs(self, child: ChildBot, user_input: str,
                           extra_context: str = "", image: str = None) -> list:
         """构建子Agent消息列表 — v4: 指向 memdir/MEMORY.md 自举"""
@@ -1333,6 +1549,10 @@ Spec:"""
                 role_label = "用户" if m["role"] == "user" else "助手"
                 ctx_lines.append(f"【{role_label}】{m['content']}")
             messages.append({"role": "system", "content": "\n".join(ctx_lines)})
+        # ── 注入长期上下文摘要（跨会话记忆）──
+        if self._context_summary:
+            messages.append({"role": "system",
+                "content": f"[长期上下文摘要 - 这是此前对话中提炼的关键信息]\n{self._context_summary}"})
         # ── 注入记忆文件夹上下文 ──
         mem_results = memdir.search(user_input)
         if mem_results:
@@ -1356,15 +1576,18 @@ Spec:"""
 
     def _run_child(self, child: ChildBot, messages: list) -> tuple:
         """子Agent工具调用循环 — v4: 思维链注入。返回 (reply, tool_rounds)"""
+        metrics = get_metrics()
         tools = child.tool_schemas()
         for loop in range(5):
             t0 = time.time()
-            resp = self.pool.call_llm(child.name, messages, tools)
+            resp = self._llm_call(child.name, messages, tools)
             latency = time.time() - t0
 
             usage = resp.get("usage", {})
             model = resp.get("_model", "?")
-            self.log.llm(model, usage.get("total_tokens", 0), latency)
+            tokens = usage.get("total_tokens", 0)
+            self.log.llm(model, tokens, latency)
+            metrics.record_llm(child.name, tokens, latency, model)
 
             msg = resp["choices"][0]["message"]
             tcs = msg.get("tool_calls")
@@ -1377,33 +1600,418 @@ Spec:"""
 
             messages.append(msg)
             tool_results = []
+            errors = []
             for tc in tcs:
-                fn = tc["function"]["name"]
-                fa = json.loads(tc["function"]["arguments"])
-                self.log.tool_start(fn, fa)
-                result = child.exec_tool(fn, fa)
+                fn, result = _dispatch_tool_call(child, tc)
+                self.log.tool_start(fn, {})
                 self.log.tool_end(result)
                 tool_results.append({"name": fn, "result": str(result)})
                 messages.append({
                     "role": "tool",
-                    "tool_call_id": tc["id"],
+                    "tool_call_id": tc.get("id", f"call_{loop}"),
                     "content": str(result),
                 })
+                # 检测工具调用是否有错误，收集起来给 LLM 自纠正
+                if "[工具调用错误]" in result:
+                    errors.append(f"  {fn}: {result[:300]}")
 
-            # ── v4: 注入思维链反思提示 ──
+            # ── v5: 结构化错误反馈 + 思维链反思 ──
             result_summary = "\n".join(
                 f"  {r['name']}: {r['result'][:200]}" for r in tool_results
             )
-            cot_prompt = (
-                f"[思考提示]\n"
-                f"工具已返回结果，摘要如下：\n{result_summary}\n\n"
-                f"请用自然语言表达你的反应——这个结果是印证了你的预期、修正了你的认知，"
-                f"还是引发了新问题？然后决定下一步：继续用工具探索，还是给出最终回答。"
-                f"最终回答前，请确认：答案有依据吗？来源可靠吗？还有遗漏吗？"
-            )
-            messages.append({"role": "system", "content": cot_prompt})
+            if errors:
+                error_block = (
+                    f"[工具调用错误反馈]\n"
+                    f"以下工具调用失败，请根据错误信息修正后重试。不要重复完全相同的错误调用：\n"
+                    + "\n".join(errors) +
+                    f"\n\n[工具执行摘要（含成功项）]\n{result_summary}\n\n"
+                    f"请分析失败原因，修正参数或换用其他工具，然后继续。"
+                )
+                messages.append({"role": "system", "content": error_block})
+            else:
+                cot_prompt = (
+                    f"[思考提示]\n"
+                    f"工具已返回结果，摘要如下：\n{result_summary}\n\n"
+                    f"请用自然语言表达你的反应——这个结果是印证了你的预期、修正了你的认知，"
+                    f"还是引发了新问题？然后决定下一步：继续用工具探索，还是给出最终回答。"
+                    f"最终回答前，请确认：答案有依据吗？来源可靠吗？还有遗漏吗？"
+                )
+                messages.append({"role": "system", "content": cot_prompt})
 
         return "[子Agent] 工具调用轮数超限", 5
+
+    # ═══════════ 自主任务闭环 (Plan→Execute→Observe→Replan) ═══════════
+    def _autonomous_chat(self, user_input: str, image: str = None) -> str:
+        """自主多轮任务闭环：Agent 规划→执行→观察→重新规划，直到完成或卡住。
+        最多 5 次迭代，每次迭代 Agent 自主判断是否完成。"""
+        metrics = get_metrics()
+        child_name = self._route(user_input)
+        child = self.children[child_name]
+        self.log.banner(f"自主闭环: {child_name}")
+
+        # 初始规划
+        plan_prompt = f"""你是一个自主任务执行器。收到任务后，先制定执行计划，然后逐步执行。
+每一步执行完工具后，观察结果，决定下一步。如果任务完成，回复 FINISHED: 你的总结。
+
+任务: {user_input}
+
+执行计划（用 - 列出步骤，然后开始执行第一步）:"""
+        messages = self._build_child_msgs(child, plan_prompt)
+
+        all_results = []
+        for iteration in range(5):
+            self.log.sys(f"自主闭环 迭代{iteration+1}/5")
+            reply, rounds = self._run_child(child, messages)
+
+            if reply.startswith("FINISHED:"):
+                final = reply.replace("FINISHED:", "").strip()
+                self.log.sys(f"自主闭环完成: {len(final)}字")
+                self._child_memorize(child, user_input, final)
+                self._update_context(child_name, user_input, final)
+                self._update_shared_history(user_input, final, image)
+                metrics.record_task(child_name, True)
+                metrics.record_autonomous_loop(child_name)
+                return final
+
+            all_results.append(reply)
+            # 追加观察提示
+            observe_prompt = (
+                f"[观察]\n上一步结果:\n{reply[:500]}\n\n"
+                f"请判断：任务是否已完成？如果完成，回复 FINISHED: 你的总结。"
+                f"如果未完成，继续下一步操作。"
+            )
+            messages.append({"role": "system", "content": observe_prompt})
+
+        # 超限汇总
+        summary_prompt = f"""任务执行了 5 轮仍未完成。请根据以下结果给出最优回答：
+
+原始任务: {user_input}
+
+各轮结果:
+{chr(10).join(f'轮{i+1}: {r[:300]}' for i, r in enumerate(all_results))}
+
+汇总回答:"""
+        msgs = [{"role": "user", "content": summary_prompt}]
+        resp = self._llm_call(child.name, msgs)
+        final = resp["choices"][0]["message"]["content"].strip()
+        self._update_shared_history(user_input, final, image)
+        metrics.record_task(child_name, False)
+        metrics.record_autonomous_loop(child_name)
+        return f"[自主闭环 - 达到上限]\n{final}"
+
+    def _is_autonomous_task(self, query: str) -> bool:
+        """判断是否需要自主闭环模式"""
+        auto_signals = [
+            "帮我完成", "帮我做", "全部处理", "帮我搞定", "自动",
+            "逐个", "一步步", "继续", "往下", "下一步",
+            "搜索并总结", "调查", "深入研究", "对比分析",
+        ]
+        ql = query.lower()
+        return any(s in ql for s in auto_signals) and len(query) > 20
+
+    # ═══════════ Agent 间委托通信 ═══════════
+    def delegate_to(self, from_agent: str, to_agent: str, task: str, context: str = "") -> str:
+        """子 Agent 直接委托另一个 Agent 执行任务（peer-to-peer）"""
+        if to_agent not in self.children:
+            return f"委托失败: Agent '{to_agent}' 不存在"
+        child = self.children[to_agent]
+        self.log.sys(f"委托: {from_agent} → {to_agent}")
+        prompt = f"[委托自 {from_agent}]\n{task}" + (f"\n\n上下文:\n{context}" if context else "")
+        reply, _ = self._run_child(child, self._build_child_msgs(child, prompt))
+        return reply
+
+    # ═══════════ DAG 任务编排 ═══════════
+    def _dag_chat(self, user_input: str) -> str:
+        """DAG 任务图执行：LLM 拆解任务为有向无环图，按依赖顺序执行。"""
+        self.log.banner("DAG 任务编排")
+
+        # 用 LLM 拆解
+        dag_prompt = f"""将以下任务拆解为任务图（DAG），每个节点一行。
+格式: node_id: 依赖的node_id列表 | Agent名称 | 任务描述
+依赖为空则用 [] 表示。
+
+任务: {user_input}
+
+DAG（只输出节点列表）:"""
+        msgs = [{"role": "user", "content": dag_prompt}]
+        resp = self._llm_call("__dag_split__", msgs)
+        dag_text = resp["choices"][0]["message"]["content"].strip()
+
+        # 解析DAG
+        nodes = {}
+        for line in dag_text.split("\n"):
+            line = line.strip()
+            if not line or not ":" in line:
+                continue
+            try:
+                node_id, rest = line.split(":", 1)
+                node_id = node_id.strip()
+                deps_str, agent_task = rest.split("|", 1)
+                deps = [d.strip() for d in deps_str.strip("[] ").split(",") if d.strip()]
+                agent_part, task_desc = agent_task.split("|", 1)
+                agent_name = agent_part.strip()
+                task_desc = task_desc.strip()
+                # 匹配 Agent
+                if agent_name not in self.children:
+                    for n in self.children:
+                        if agent_name in n:
+                            agent_name = n
+                            break
+                    else:
+                        agent_name = self._route(task_desc)
+                nodes[node_id] = {"deps": deps, "agent": agent_name, "task": task_desc, "result": None}
+            except Exception:
+                continue
+
+        if not nodes:
+            return self._simple_chat(user_input)  # 兜底
+
+        self.log.sys(f"DAG 解析: {len(nodes)} 个节点")
+
+        # 拓扑排序执行
+        completed = set()
+        results = {}
+        while len(completed) < len(nodes):
+            progress = False
+            for nid, nd in nodes.items():
+                if nid in completed:
+                    continue
+                if all(d in completed for d in nd["deps"]):
+                    # 构建上下文（依赖节点的结果）
+                    ctx = ""
+                    if nd["deps"]:
+                        dep_results = []
+                        for d in nd["deps"]:
+                            if nodes[d]["result"]:
+                                dep_results.append(f"[{d}结果]: {nodes[d]['result'][:300]}")
+                        ctx = "\n".join(dep_results)
+
+                    child = self.children[nd["agent"]]
+                    prompt = nd["task"]
+                    if ctx:
+                        prompt = f"前置结果:\n{ctx}\n\n当前任务: {prompt}"
+                    reply, _ = self._run_child(child, self._build_child_msgs(child, prompt))
+                    nd["result"] = reply
+                    results[nid] = reply
+                    completed.add(nid)
+                    progress = True
+                    self.log.sys(f"DAG 完成: {nid} ({nd['agent']})")
+
+            if not progress:
+                # 有循环依赖或解析错误
+                pending = [n for n in nodes if n not in completed]
+                self.log.sys(f"DAG 阻塞: 剩余节点 {pending}")
+                break
+
+        # 汇总
+        merged = "\n\n---\n\n".join(f"**[{nid}]**\n{results[nid][:500]}" for nid in results)
+        self._update_shared_history(user_input, merged)
+        return merged
+
+    def _is_dag_task(self, query: str) -> bool:
+        """判断是否适合 DAG 编排"""
+        dag_signals = ["先", "然后", "接着", "同时", "最后", "分别", "各自", "再", "并行"]
+        ql = query.lower()
+        return sum(1 for s in dag_signals if s in ql) >= 2 and len(query) > 15
+
+    # ═══════════ 长期目标/项目追踪 ═══════════
+    def _project_chat(self, user_input: str) -> str:
+        """项目长目标追踪：创建/更新/查询项目进度。"""
+        proj_dir = Path(memdir.root) / "projects"
+        proj_dir.mkdir(exist_ok=True)
+        proj_file = proj_dir / "_active.json"
+
+        active_projects = {}
+        if proj_file.exists():
+            try:
+                active_projects = json.loads(proj_file.read_text())
+            except Exception:
+                pass
+
+        ql = user_input.lower()
+
+        # 查询项目进度
+        if any(kw in ql for kw in ["项目进度", "进度", "进行中", "还有哪些"]):
+            if not active_projects:
+                return "当前没有进行中的项目。说「创建项目: 项目名 | 目标描述」来开始。"
+            lines = ["## 进行中的项目\n"]
+            for pname, pdata in active_projects.items():
+                lines.append(f"- **{pname}**: {pdata['goal'][:80]}")
+                lines.append(f"  进度: {pdata.get('progress','新项目')} | 创建: {pdata.get('created','')}")
+            return "\n".join(lines)
+
+        # 创建项目
+        if "创建项目:" in user_input or "新建项目:" in user_input:
+            try:
+                parts = user_input.split(":", 1)[1].strip().split("|", 1)
+                name = parts[0].strip()
+                goal = parts[1].strip() if len(parts) > 1 else ""
+                active_projects[name] = {
+                    "goal": goal, "progress": "已创建", "created": time.strftime("%Y-%m-%d %H:%M"),
+                    "steps": [], "status": "active",
+                }
+                proj_file.write_text(json.dumps(active_projects, indent=2, ensure_ascii=False))
+                self.log.sys(f"项目创建: {name}")
+                return f"项目「{name}」已创建。目标: {goal[:100]}"
+            except Exception as e:
+                return f"创建失败: {e}"
+
+        # 更新项目进度
+        if "更新项目:" in user_input or "项目进展:" in user_input:
+            try:
+                parts = user_input.split(":", 1)[1].strip().split("|", 1)
+                name = parts[0].strip()
+                update = parts[1].strip() if len(parts) > 1 else "已更新"
+                if name in active_projects:
+                    active_projects[name]["progress"] = update
+                    active_projects[name]["updated"] = time.strftime("%Y-%m-%d %H:%M")
+                    proj_file.write_text(json.dumps(active_projects, indent=2, ensure_ascii=False))
+                    return f"项目「{name}」已更新: {update[:100]}"
+                return f"项目「{name}」不存在。可用项目: {list(active_projects.keys())}"
+            except Exception as e:
+                return f"更新失败: {e}"
+
+        # 完成项目
+        if "完成项目:" in user_input:
+            try:
+                name = user_input.split(":", 1)[1].strip()
+                if name in active_projects:
+                    done = active_projects.pop(name)
+                    # 归档
+                    archive_dir = proj_dir / "completed"
+                    archive_dir.mkdir(exist_ok=True)
+                    done["completed"] = time.strftime("%Y-%m-%d %H:%M")
+                    (archive_dir / f"{name.replace('/','_')}.json").write_text(
+                        json.dumps(done, indent=2, ensure_ascii=False))
+                    proj_file.write_text(json.dumps(active_projects, indent=2, ensure_ascii=False))
+                    return f"项目「{name}」已完成并归档。"
+                return f"项目「{name}」不存在。"
+            except Exception as e:
+                return f"操作失败: {e}"
+
+        return self._simple_chat(user_input)
+
+    def _is_project_cmd(self, query: str) -> bool:
+        ql = query.lower()
+        return any(kw in ql for kw in ["项目进度", "创建项目", "新建项目", "更新项目", "完成项目", "项目进展"])
+
+    # ═══════════ 对话分支与回溯 ═══════════
+    def _branch_chat(self, user_input: str) -> str:
+        """对话分支：Fork 一条独立分支尝试替代方案。"""
+        branch_dir = Path(memdir.root) / "branches"
+        branch_dir.mkdir(exist_ok=True)
+
+        # 保存当前状态快照
+        snapshot = {
+            "timestamp": time.strftime("%Y-%m-%d %H:%M:%S"),
+            "shared_msgs": self.shared_msgs[-20:] if self.shared_msgs else [],
+            "agent_contexts": copy.deepcopy(self._agent_contexts),
+            "permissions": copy.deepcopy(self.permissions),
+        }
+        branch_id = f"branch_{int(time.time())}"
+        (branch_dir / f"{branch_id}.json").write_text(json.dumps(snapshot, indent=2, ensure_ascii=False))
+
+        self.log.sys(f"分支创建: {branch_id}")
+
+        # 在新分支中执行
+        result = self._simple_chat(user_input)
+
+        # 标注
+        return f"[分支 {branch_id}]\n{result}\n\n说「回退」可恢复分支前的对话状态。"
+
+    def _rollback_chat(self) -> str:
+        """回退到最近的分支点。"""
+        branch_dir = Path(memdir.root) / "branches"
+        if not branch_dir.exists():
+            return "没有可回退的分支点。"
+
+        files = sorted(branch_dir.glob("branch_*.json"), key=lambda f: f.stat().st_mtime, reverse=True)
+        if not files:
+            return "没有可回退的分支点。"
+
+        latest = files[0]
+        snapshot = json.loads(latest.read_text())
+        self.shared_msgs = snapshot["shared_msgs"]
+        self._agent_contexts = snapshot["agent_contexts"]
+        self.permissions = snapshot["permissions"]
+        latest.unlink()  # 消费分支点
+        self.log.sys(f"回退: {latest.stem}")
+        return f"已回退到 {snapshot['timestamp']} 的对话状态。共恢复 {len(self.shared_msgs)//2} 轮对话。"
+
+    # ═══════════ Agent 注册表（热插拔）═══════════
+    def register_agent(self, name: str, description: str, system_prompt: str,
+                       tools: List[Tool] = None, self_verify: bool = False) -> bool:
+        """运行时注册新 Agent。返回是否成功。"""
+        if name in self.children:
+            return False
+        self.children[name] = ChildBot(
+            name=name, description=description,
+            system_prompt=system_prompt,
+            tools=tools or [],
+            self_verify=self_verify,
+        )
+        # 扩展路由关键词
+        self.log.sys(f"Agent注册: {name} ({len(tools or [])}个工具)")
+        return True
+
+    def unregister_agent(self, name: str) -> bool:
+        """运行时移除 Agent。"""
+        if name not in self.children:
+            return False
+        del self.children[name]
+        if name in self._agent_contexts:
+            del self._agent_contexts[name]
+        self.log.sys(f"Agent移除: {name}")
+        return True
+
+    def list_agents(self) -> list:
+        """列出所有已注册的 Agent 及其能力。"""
+        return [
+            {"name": n, "desc": c.description, "tools": len(c.tools),
+             "verify": c.self_verify, "memory": c.memory.get_stats()}
+            for n, c in self.children.items()
+        ]
+
+    # ═══════════ 流式生成支持 ═══════════
+    def chat_stream(self, user_input: str, image: str = None):
+        """生成器: 逐 token 产出回复（用于 SSE 推送）。
+        注意：工具调用期间先完成再流式输出最终回复。"""
+        child_name = self._route(user_input)
+        child = self.children[child_name]
+        messages = self._build_child_msgs(child, user_input, "", image)
+
+        # 工具循环
+        for loop in range(5):
+            tools = child.tool_schemas() if loop == 0 else None
+            if loop > 0:
+                tools = child.tool_schemas()
+
+            resp = self._llm_call(child.name, messages, tools)
+            msg = resp["choices"][0]["message"]
+            tcs = msg.get("tool_calls")
+
+            if tcs:
+                messages.append(msg)
+                for tc in tcs:
+                    fn, result = _dispatch_tool_call(child, tc)
+                    messages.append({
+                        "role": "tool", "tool_call_id": tc.get("id", f"call_{loop}"), "content": str(result),
+                    })
+                continue
+
+            # 流式输出最终回复
+            reply = msg.get("content", "")
+            self._child_memorize(child, user_input, reply)
+            self._update_context(child_name, user_input, reply)
+            self._update_shared_history(user_input, reply, image)
+
+            # 分段推送（模拟流式）
+            chunk_size = 30
+            for i in range(0, len(reply), chunk_size):
+                yield reply[i:i+chunk_size]
+            return
+
+        yield "[子Agent] 工具调用轮数超限"
 
     # ═══════════ Skill 学习闭环 ═══════════
     # 借鉴 Hermes Agent Curator: 复杂任务完成后自动提炼经验 → 生成 Skill 文档
@@ -1416,7 +2024,7 @@ Spec:"""
         skill_dir.mkdir(exist_ok=True)
 
         # 关键词提取
-        kw_resp = self.pool.call_llm(
+        kw_resp = self._llm_call(
             child.name,
             [{"role": "user", "content": f"从以下任务描述提取3-5个英文关键词(逗号分隔,只输出关键词):\n{user_input[:300]}"}],
             []
@@ -1430,7 +2038,7 @@ Spec:"""
 任务: {user_input[:200]}
 输出: {reply[:500]}
 提炼要点: 哪些操作容易出错? 什么顺序最有效? 有没有可复用的模式?"""
-        sc_resp = self.pool.call_llm(
+        sc_resp = self._llm_call(
             child.name,
             [{"role": "user", "content": skill_prompt}],
             []
@@ -1488,6 +2096,77 @@ Spec:"""
             child.memory.save()
             self.log.memory(f"{child.name}", f"记忆已落盘 重要性:{imp:.1f}")
 
+    # ═══════════ 上下文持久化（跨会话记忆）═══════════
+
+    _CONTEXT_FILE = os.path.join(_MEMDIR, ".parent_context.json")
+    _SNAPSHOT_DIR = os.path.join(_MEMDIR, "snapshots")
+    _MAX_SNAPSHOTS = 50
+
+    def _load_context(self):
+        """从磁盘恢复父Bot对话上下文（shared_msgs + agent_contexts + summary）"""
+        try:
+            if os.path.exists(self._CONTEXT_FILE):
+                with open(self._CONTEXT_FILE, "r") as f:
+                    data = json.load(f)
+                self.shared_msgs = data.get("shared_msgs", [])[-40:]
+                self._agent_contexts = data.get("agent_contexts", {})
+                self._context_summary = data.get("context_summary", "")
+                if self.shared_msgs:
+                    self.log.sys(f"已恢复上下文: {len(self.shared_msgs)//2}轮对话, {len(self._agent_contexts)}个Agent状态")
+        except Exception as e:
+            self.log.sys(f"上下文恢复失败(将新建): {e}")
+
+    def _save_context(self):
+        """持久化父Bot对话上下文到磁盘"""
+        try:
+            data = {
+                "shared_msgs": self.shared_msgs[-80:],
+                "agent_contexts": self._agent_contexts,
+                "context_summary": self._context_summary,
+                "updated": time.strftime("%Y-%m-%d %H:%M:%S"),
+            }
+            tmp = self._CONTEXT_FILE + ".tmp"
+            with open(tmp, "w") as f:
+                json.dump(data, f, ensure_ascii=False)
+            os.replace(tmp, self._CONTEXT_FILE)  # 原子写入
+        except Exception as e:
+            self.log.sys(f"上下文保存失败: {e}")
+
+    def _compress_shared_msgs(self):
+        """滚动压缩：保留最近80条（40轮），溢出部分提炼追加到摘要。
+        摘要永远追加不覆盖，原始消息仅滚动窗口，不永久丢失。
+        压缩前自动创建快照，支持回溯。"""
+        if len(self.shared_msgs) <= 80:
+            return
+        # ── 压缩前保存完整快照，供回溯使用 ──
+        self._save_snapshot("auto")
+        overflow = self.shared_msgs[:-80]
+        self.shared_msgs = self.shared_msgs[-80:]
+
+        raw_text = "\n".join(
+            f"{'用户' if m['role']=='user' else '助手'}: {m['content'][:400]}"
+            for m in overflow
+        )
+        ts = time.strftime("%m-%d %H:%M")
+        prompt = f"""将以下对话提炼为要点列表（每条一行 - 开头，尽量保留具体信息）。
+保留：用户偏好、技术决策、配置参数、文件路径、Bug描述、代码改动内容。
+忽略：寒暄、emoji、谢谢、好的、纯确认。
+
+对话（{len(overflow)//2}轮）:
+{raw_text[:6000]}
+
+要点:"""
+        try:
+            msgs = [{"role": "user", "content": prompt}]
+            resp = self._llm_call("__summary__", msgs)
+            new_summary = resp["choices"][0]["message"]["content"].strip()
+            section = f"\n### {ts}（{len(overflow)//2}轮）\n{new_summary}"
+            self._context_summary = (self._context_summary + section) if self._context_summary else section.lstrip()
+            self._save_context()
+            self.log.sys(f"上下文滚动压缩: 保留80条, 摘要{len(self._context_summary)}字")
+        except Exception as e:
+            self.log.sys(f"上下文压缩失败: {e}")
+
     def _update_context(self, agent_name: str, task: str, output: str):
         """更新 Agent 上下文追踪（供 Continue/Fresh 决策用）"""
         self._agent_contexts[agent_name] = {
@@ -1495,13 +2174,14 @@ Spec:"""
             "last_output": output,
             "timestamp": time.time(),
         }
+        self._save_context()
 
     def _update_shared_history(self, user_input: str, reply: str, image: str = None):
         content = f"{user_input} [图片]" if image else user_input
         self.shared_msgs.append({"role": "user", "content": content})
         self.shared_msgs.append({"role": "assistant", "content": reply})
-        if len(self.shared_msgs) > 40:
-            self.shared_msgs = self.shared_msgs[-40:]
+        # ── 持久化上下文到磁盘 ──
+        self._save_context()
         # ── 同步写入对话流水到 memdir（跨会话记忆）──
         entry = f"## {time.strftime('%H:%M:%S')}\n**用户**: {user_input}\n**助手**: {reply[:500]}\n"
         try:
@@ -1509,8 +2189,9 @@ Spec:"""
             memdir.write("conversation-log.md", existing + "\n" + entry if existing else "# 对话流水\n" + entry)
         except Exception:
             pass
-        # ── 每 10 轮压缩一次对话流水（去废话，保留关键信息）──
-        if len(self.shared_msgs) % 20 == 0:
+        # ── 每 40 轮滚动压缩上下文 + 对话流水 ──
+        if len(self.shared_msgs) % 80 == 0:
+            self._compress_shared_msgs()
             try:
                 full_log = memdir.read("conversation-log.md")
                 if len(full_log) > 5000:
@@ -1534,38 +2215,134 @@ Spec:"""
 关键要点（每条一行，用 - 开头）："""
         try:
             msgs = [{"role": "user", "content": prompt}]
-            resp = self.pool.call_llm("__distill__", msgs)
+            resp = self._llm_call("__distill__", msgs)
             return resp["choices"][0]["message"]["content"].strip()
         except Exception:
             return ""
 
     def _compress_conversation_log(self, full_log: str):
-        """压缩对话流水：用 LLM 提炼，替换原文件"""
-        prompt = f"""将以下对话流水压缩为精简版，保留关键决策和结论，删除寒暄和重复。
-输出压缩后的 Markdown 内容。
-
-原始流水:
-{full_log[:6000]}
-
-压缩版:"""
+        """对话流水归档：旧内容移到归档文件，活跃日志保留最后8000字（永不压缩丢失）"""
         try:
-            msgs = [{"role": "user", "content": prompt}]
-            resp = self.pool.call_llm("__compress__", msgs)
-            compressed = resp["choices"][0]["message"]["content"].strip()
-            if compressed:
-                memdir.write("conversation-log.md", compressed)
-                self.log.sys("对话流水已压缩")
+            if len(full_log) > 8000:
+                recent = full_log[-8000:]
+                archive = memdir.read("conversation-archive.md") or ""
+                memdir.write("conversation-archive.md", archive + "\n---\n" + full_log[:-8000])
+                memdir.write("conversation-log.md", recent)
+                self.log.sys(f"对话流水已归档（活跃日志{len(recent)}字）")
         except Exception as e:
-            self.log.sys(f"对话压缩失败: {e}")
+            self.log.sys(f"对话归档失败: {e}")
+
+    # ═══════════ 快照与回溯 ═══════════
+
+    def _save_snapshot(self, reason: str = "manual") -> str:
+        """保存当前完整上下文为快照，返回 snapshot_id。
+        reason: 'auto' 压缩触发 / 'manual' 用户主动回溯点。"""
+        try:
+            os.makedirs(self._SNAPSHOT_DIR, exist_ok=True)
+            snap_id = time.strftime("%Y%m%d_%H%M%S")
+            data = {
+                "snapshot_id": snap_id,
+                "reason": reason,
+                "shared_msgs": self.shared_msgs[:],  # 完整拷贝
+                "agent_contexts": dict(self._agent_contexts),
+                "context_summary": self._context_summary,
+                "permissions": dict(self.permissions),
+                "created": time.strftime("%Y-%m-%d %H:%M:%S"),
+                "rounds": len(self.shared_msgs) // 2,
+            }
+            path = os.path.join(self._SNAPSHOT_DIR, f"{snap_id}.json")
+            with open(path, "w") as f:
+                json.dump(data, f, ensure_ascii=False)
+            # 清理旧快照，保留最近 _MAX_SNAPSHOTS 个
+            self._prune_snapshots()
+            self.log.sys(f"快照已保存: {snap_id} ({data['rounds']}轮, {reason})")
+            return snap_id
+        except Exception as e:
+            self.log.sys(f"快照保存失败: {e}")
+            return ""
+
+    def _prune_snapshots(self):
+        """清理旧快照，保留最近 _MAX_SNAPSHOTS 个"""
+        try:
+            files = sorted(
+                [f for f in os.listdir(self._SNAPSHOT_DIR) if f.endswith(".json")],
+                reverse=True,
+            )
+            for old in files[self._MAX_SNAPSHOTS:]:
+                os.remove(os.path.join(self._SNAPSHOT_DIR, old))
+        except Exception:
+            pass
+
+    def list_snapshots(self) -> list:
+        """列出所有可用快照（按时间倒序）"""
+        try:
+            if not os.path.exists(self._SNAPSHOT_DIR):
+                return []
+            result = []
+            for f in sorted(os.listdir(self._SNAPSHOT_DIR), reverse=True):
+                if not f.endswith(".json"):
+                    continue
+                try:
+                    with open(os.path.join(self._SNAPSHOT_DIR, f)) as fp:
+                        data = json.load(fp)
+                    result.append({
+                        "id": data["snapshot_id"],
+                        "created": data["created"],
+                        "rounds": data["rounds"],
+                        "reason": data["reason"],
+                    })
+                except Exception:
+                    continue
+            return result
+        except Exception:
+            return []
+
+    def rollback_to_snapshot(self, snapshot_id: str = "") -> str:
+        """回滚到指定快照。不传 id 时回滚到最近的快照。
+        返回回滚结果描述。"""
+        try:
+            if not os.path.exists(self._SNAPSHOT_DIR):
+                return "没有可用快照。"
+            if not snapshot_id:
+                files = sorted(
+                    [f for f in os.listdir(self._SNAPSHOT_DIR) if f.endswith(".json")],
+                    reverse=True,
+                )
+                if not files:
+                    return "没有可用快照。"
+                snapshot_id = files[0].replace(".json", "")
+
+            path = os.path.join(self._SNAPSHOT_DIR, f"{snapshot_id}.json")
+            if not os.path.exists(path):
+                return f"快照 {snapshot_id} 不存在。可用: {self.list_snapshots()}"
+            with open(path) as f:
+                data = json.load(f)
+            # 回滚前先保存当前状态为快照（"回滚前"标记）
+            self._save_snapshot("rollback-pre")
+            self.shared_msgs = data["shared_msgs"]
+            self._agent_contexts = data["agent_contexts"]
+            self._context_summary = data.get("context_summary", "")
+            self.permissions = data.get("permissions", {})
+            self._save_context()
+            return f"已回滚到快照 {snapshot_id}（{data['created']}），恢复 {data['rounds']} 轮对话。回滚前状态已另存快照。"
+        except Exception as e:
+            return f"回滚失败: {e}"
 
     # ═══════════ 管理 ═══════════
     def reset(self):
         self.shared_msgs = []
         self._agent_contexts = {}
+        self._context_summary = ""
         self.permissions = {}
         self._perm_pending = None
         for child in self.children.values():
             child.memory = AgentMemory()
+        # ── 清除持久化上下文 ──
+        try:
+            if os.path.exists(self._CONTEXT_FILE):
+                os.remove(self._CONTEXT_FILE)
+        except Exception:
+            pass
         self.log.sys("对话已重置")
 
     def status(self) -> str:

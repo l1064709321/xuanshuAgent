@@ -1,0 +1,70 @@
+当一个版本被创建时，这个工作流将上传一个Python包到PyPI
+#更多信息请参见：https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-python#publishing-to-package-registries
+
+#此工作流使用未经GitHub认证的操作。
+#它们是由第三方提供的，由
+#单独的服务条款、隐私政策和支持
+#文档。
+
+名字: Upload Python Package
+
+:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+
+工作:
+  release-build:
+上运行:ubuntu-latest
+
+步骤:
+      - 使用: actions/checkout@v4
+
+      - 使用: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      - 名字: Build release distributions
+        run: |
+#注意：把你自己的发行版构建步骤放在这里。
+Python -m PIP install build
+          python -m build
+
+      - 名字: Upload distributions
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-dists
+          path: dist/
+
+  pypi-publish:
+上运行:ubuntu-latest
+    needs:
+      - release-build
+    permissions:
+      # IMPORTANT: this permission is mandatory for trusted publishing
+      id-token: write
+
+    # Dedicated environments with protections for publishing are strongly recommended.
+    # For more information, see: https://docs.github.com/en/actions/deployment/targeting-different-environments/using-environments-for-deployment#deployment-protection-rules
+环境:
+      name: pypi
+      # OPTIONAL: uncomment and update to include your PyPI project URL in the deployment status:
+      # url: https://pypi.org/p/YOURPROJECT
+      #
+      # ALTERNATIVE: if your GitHub Release name is the PyPI project version string
+      # ALTERNATIVE: exactly, uncomment the following line instead:
+      # url: https://pypi.org/project/YOURPROJECT/${{ github.event.release.name }}
+
+步骤:
+      - 名字: Retrieve release distributions
+        uses: actions/download-artifact@v4
+        with:
+          name: release-dists
+          path: dist/
+
+      - name: Publish release distributions to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: dist/

@@ -105,12 +105,39 @@ body::before {
 }
 
 .sidebar-profile {
-  padding: 0 18px 14px;
+  padding: 10px 14px 14px;
+  border-bottom: 1px solid var(--glass-border);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.sidebar-avatar-wrap {
   display: flex;
   flex-direction: column;
   align-items: center;
-  border-bottom: 1px solid var(--glass-border);
-  margin-bottom: 6px;
+  gap: 6px;
+}
+
+.sidebar-avatar {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--glass-active);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--primary-text);
+  background-size: cover;
+  background-position: center;
+  border: 2px solid var(--glass-border);
+}
+
+.sidebar-mem-section {
+  flex: 1;
+  min-height: 0;
 }
 
 .session-list {
@@ -816,6 +843,23 @@ body::before {
       <span class="logo"></span>
       <button class="settings-btn" onclick="toggleLeft()" title="收起侧栏">×</button>
     </div>
+    <!-- 个人主页 -->
+    <div class="sidebar-profile" id="sidebarProfile">
+      <div class="sidebar-avatar-wrap">
+        <div class="sidebar-avatar" id="sidebarAvatar">玄</div>
+        <button class="avatar-upload-btn" onclick="document.getElementById('sidebarAvatarUpload').click()">换头像</button>
+        <input type="file" id="sidebarAvatarUpload" accept="image/*" onchange="uploadSidebarAvatar()" style="display:none">
+      </div>
+      <div class="sidebar-mem-section">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+          <span style="font-size:12px;font-weight:600;color:var(--text-dim)">记忆</span>
+          <button class="apply-btn ghost" onclick="refreshSidebarMemdir()" style="font-size:10px;padding:2px 8px">刷新</button>
+        </div>
+        <div id="sidebarMemList" style="max-height:200px;overflow-y:auto;font-size:11px;color:var(--text-dim)">
+          <div style="text-align:center;padding:8px">点击刷新</div>
+        </div>
+      </div>
+    </div>
     <div class="session-list" id="sessionList"><div class="session-item active">当前对话</div></div>
     <div class="sidebar-footer">
       <div class="status-indicator">
@@ -1437,6 +1481,7 @@ async function delModel(key) {
 
 // 初始化
 loadModels();
+loadSidebarAvatar();
 
 // ========== 对话 ==========
 async function send() {
@@ -1673,6 +1718,87 @@ async function deleteMemdir(rel) {
 
 function showMemWrite() {
   document.getElementById('memWriteForm').style.display = '';
+}
+
+// ========== 侧栏个人主页 ==========
+function loadSidebarAvatar() {
+  const base64 = localStorage.getItem('avatar');
+  const el = document.getElementById('sidebarAvatar');
+  if (base64) {
+    el.style.backgroundImage = 'url(' + base64 + ')';
+    el.textContent = '';
+  } else {
+    el.style.backgroundImage = '';
+    el.textContent = '玄';
+  }
+}
+
+function uploadSidebarAvatar() {
+  const file = document.getElementById('sidebarAvatarUpload').files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const img = new Image();
+    img.onload = function() {
+      const canvas = document.createElement('canvas');
+      canvas.width = canvas.height = 200;
+      const ctx = canvas.getContext('2d');
+      const minDim = Math.min(img.width, img.height);
+      ctx.drawImage(img, (img.width-minDim)/2, (img.height-minDim)/2, minDim, minDim, 0, 0, 200, 200);
+      const base64 = canvas.toDataURL('image/jpeg', 0.85);
+      localStorage.setItem('avatar', base64);
+      loadSidebarAvatar();
+      showToast('头像已更新');
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+async function refreshSidebarMemdir() {
+  try {
+    const r = await fetch(API + '/memory/list');
+    const d = await r.json();
+    const list = document.getElementById('sidebarMemList');
+    if (!d.ok) { list.innerHTML = '<div style="text-align:center;padding:8px;color:var(--danger)">加载失败</div>'; return; }
+    if (!d.entries.length) {
+      list.innerHTML = '<div style="text-align:center;padding:8px">空</div>';
+      return;
+    }
+    let html = '';
+    d.entries.forEach(e => {
+      html += '<div style="display:flex;align-items:center;justify-content:space-between;padding:4px 6px;border-radius:6px;cursor:pointer;transition:background .15s" ' +
+        'onmouseenter="this.style.background=\'var(--glass-hover)\'" onmouseleave="this.style.background=\'\'" ' +
+        'onclick="readSidebarMemdir(\'' + e.rel.replace(/'/g, "\\'") + '\')">' +
+        '<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0">📄 '+e.rel+'</span>' +
+        '<button onclick="event.stopPropagation();deleteSidebarMemdir(\'' + e.rel.replace(/'/g, "\\'") + '\')" style="background:none;border:none;color:var(--danger);cursor:pointer;font-size:14px;padding:0 2px;flex-shrink:0">×</button></div>';
+    });
+    list.innerHTML = html;
+  } catch(e) { list.innerHTML = '<div style="text-align:center;padding:8px;color:var(--danger)">加载失败</div>'; }
+}
+
+async function readSidebarMemdir(rel) {
+  try {
+    const r = await fetch(API + '/memory/read', {
+      method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({rel})
+    });
+    const d = await r.json();
+    if (!d.ok) { showToast(d.error); return; }
+    showToast(rel + ' 已复制到剪贴板');
+    try { await navigator.clipboard.writeText(d.content); } catch(_) {}
+  } catch(e) { showToast('读取失败'); }
+}
+
+async function deleteSidebarMemdir(rel) {
+  if (!confirm('删除 ' + rel + ' ？')) return;
+  try {
+    const r = await fetch(API + '/memory/delete', {
+      method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({rel})
+    });
+    const d = await r.json();
+    if (d.ok) { showToast('已删除'); refreshSidebarMemdir(); }
+    else { showToast('失败'); }
+  } catch(e) { showToast('删除失败'); }
 }
 
 // ========== 权限弹窗 ==========

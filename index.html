@@ -491,6 +491,7 @@ body::before {
 
 /* ── 输入栏 ── */
 .input-area {
+  position: relative;
   padding: 12px 20px;
   padding-bottom: max(12px, env(safe-area-inset-bottom));
   background: var(--glass);
@@ -540,6 +541,114 @@ body::before {
 .send-btn:hover { background: #6366f1; transform: scale(1.05); }
 .send-btn:active { transform: scale(0.95); }
 .send-btn:disabled { background: var(--glass-border); color: var(--text-dim); cursor: not-allowed; transform: none; }
+
+/* ── 文件浏览按钮 ── */
+.file-browse-btn {
+  width: 44px; height: 44px;
+  border-radius: 50%;
+  border: 1px solid var(--glass-border);
+  background: var(--glass);
+  color: var(--primary-text);
+  font-size: 22px;
+  cursor: pointer;
+  transition: all var(--transition);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  line-height: 1;
+}
+.file-browse-btn:hover { background: var(--glass-hover); border-color: var(--primary); }
+.file-browse-btn.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+
+/* ── 文件浏览器弹窗 ── */
+.file-browser-popup {
+  position: absolute;
+  bottom: 100%;
+  left: 0; right: 0;
+  margin: 0 14px 8px 14px;
+  max-height: 340px;
+  background: var(--glass);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--glass-border);
+  border-radius: 16px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  z-index: 100;
+}
+.file-browser-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--glass-border);
+  gap: 10px;
+}
+.file-browser-header span {
+  font-size: 13px;
+  color: var(--primary-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+  min-width: 0;
+}
+.file-browser-close {
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  border: none;
+  background: transparent;
+  color: var(--text-dim);
+  font-size: 16px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all var(--transition);
+}
+.file-browser-close:hover { background: var(--glass-hover); color: var(--text); }
+.file-browser-list {
+  overflow-y: auto;
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.file-browser-list .fb-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  font-size: 13px;
+  transition: all var(--transition);
+  gap: 8px;
+}
+.file-browser-list .fb-item:hover { background: var(--glass-hover); border-color: var(--glass-border); }
+.file-browser-list .fb-item .fb-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.file-browser-list .fb-item .fb-size {
+  font-size: 11px;
+  color: var(--text-dim);
+  flex-shrink: 0;
+}
+.file-browser-list .fb-up {
+  font-weight: 500;
+  color: var(--primary);
+}
 
 /* ── 右侧面板 ── */
 .right-panel {
@@ -890,10 +999,20 @@ body::before {
 
     <div class="input-area">
       <div class="input-row">
+        <button class="file-browse-btn" onclick="toggleFileBrowser()" title="浏览本地文件">+</button>
         <input id="input" type="text" placeholder="输入消息…" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();send()}" autocomplete="off">
         <span id="imagePreview" style="display:none;margin-right:8px"></span>
         <button class="send-btn" onclick="send()">↑</button>
       </div>
+    </div>
+
+    <!-- 文件浏览器弹窗 -->
+    <div class="file-browser-popup" id="fileBrowserPopup" style="display:none">
+      <div class="file-browser-header">
+        <span id="fbBreadcrumb">📁 /</span>
+        <button class="file-browser-close" onclick="toggleFileBrowser()">✕</button>
+      </div>
+      <div class="file-browser-list" id="fbFileList"></div>
     </div>
 
     <div class="model-bar" id="modelChips"></div>
@@ -1570,6 +1689,85 @@ function updateTokenBadge() {
   const k = (totalTokens / 1000).toFixed(1);
   document.getElementById('tokenBadge').textContent = k + 'k tk';
   document.getElementById('tokenCount').textContent = k + 'k tk';
+}
+
+// ========== 输入框文件浏览器 ==========
+let fbCurrentPath = '';
+
+async function toggleFileBrowser() {
+  const popup = document.getElementById('fileBrowserPopup');
+  const btn = document.querySelector('.file-browse-btn');
+  if (popup.style.display === 'none') {
+    popup.style.display = '';
+    btn.classList.add('active');
+    await fbBrowse('');
+    // 点击外部关闭
+    setTimeout(() => {
+      document.addEventListener('click', fbClickOutside);
+      document.addEventListener('keydown', fbEscClose);
+    }, 0);
+  } else {
+    fbClose();
+  }
+}
+
+function fbClose() {
+  document.getElementById('fileBrowserPopup').style.display = 'none';
+  document.querySelector('.file-browse-btn').classList.remove('active');
+  document.removeEventListener('click', fbClickOutside);
+  document.removeEventListener('keydown', fbEscClose);
+}
+
+function fbClickOutside(e) {
+  const popup = document.getElementById('fileBrowserPopup');
+  if (popup.style.display === 'none') return;
+  if (!popup.contains(e.target) && !e.target.classList.contains('file-browse-btn')) {
+    fbClose();
+  }
+}
+
+function fbEscClose(e) {
+  if (e.key === 'Escape') fbClose();
+}
+
+async function fbBrowse(path) {
+  try {
+    const r = await fetch(API + '/browse', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({path: path || fbCurrentPath})
+    });
+    const d = await r.json();
+    if (!d.ok) { showToast(d.error); return; }
+    fbCurrentPath = d.path;
+    document.getElementById('fbBreadcrumb').textContent = '📁 ' + d.path;
+    fbRenderList(d.entries, d.parent);
+  } catch(e) { showToast('浏览失败: 服务未启动'); }
+}
+
+function fbRenderList(entries, parent) {
+  const list = document.getElementById('fbFileList');
+  if (!entries.length && !parent) {
+    list.innerHTML = '<div style="padding:16px;color:var(--text-dim);text-align:center;font-size:13px">空文件夹</div>';
+    return;
+  }
+  let html = '';
+  if (parent) {
+    html += '<div class="fb-item fb-up" onclick="fbBrowse(\'' + parent.replace(/'/g, "\\'") + '\')"><span class="fb-name">📂 ..</span></div>';
+  }
+  entries.forEach(e => {
+    const icon = e.dir ? '📁' : '📄';
+    const size = formatSize(e.size);
+    html += '<div class="fb-item" onclick="' + (e.dir ? 'fbBrowse(' : 'fbSelectFile(') + '\'' + e.path.replace(/'/g, "\\'") + '\')">' +
+      '<span class="fb-name">' + icon + ' ' + e.name + '</span>' +
+      '<span class="fb-size">' + size + '</span></div>';
+  });
+  list.innerHTML = html;
+}
+
+function fbSelectFile(path) {
+  document.getElementById('input').value = path;
+  toggleFileBrowser();
+  document.getElementById('input').focus();
 }
 
 // ========== 文件浏览器 ==========

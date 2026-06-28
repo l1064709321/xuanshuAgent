@@ -1,4 +1,4 @@
-# 玄姝 (Xuanshu) — 多 Agent 协作系统 v0.1.1
+# 玄姝 (Xuanshu) — 多 Agent 协作系统 v0.0.0.1
 
 > 玄姝多 Agent 系统：父 Bot 路由 + 协调者模式 + 子 Bot 独立记忆 + Fork 子代理
 

@@ -1,16 +1,17 @@
 """玄姝多Agent API — Flask 后端 + 前端托管，单端口 8900"""
 import os, sys, json, mimetypes, base64
+_BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from flask import Flask, request, jsonify, send_file
 from core import ParentBot
 from models import ModelPool
 
-app = Flask(__name__, static_folder=".", static_url_path="")
+app = Flask(__name__, static_folder=_BASE_DIR, static_url_path="")
 
 # ── 记忆文件夹路径 ──
-_MEMDIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".memdir")
+_MEMDIR = os.path.join(_BASE_DIR, ".memdir")
 os.makedirs(_MEMDIR, exist_ok=True)
-_ALLOWED_BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+_ALLOWED_BASE = os.path.dirname(_BASE_DIR)
 
 @app.after_request
 def cors(resp):
@@ -24,7 +25,7 @@ bot = ParentBot(pool=pool, verbose=False, coordinator_mode=True)
 
 @app.route("/")
 def index():
-    return send_file("index.html")
+    return send_file(os.path.join(_BASE_DIR, "index.html"))
 
 # ── 模型管理 ──
 @app.route("/models", methods=["GET"])

@@ -379,6 +379,20 @@ body::before {
 }
 .token-badge:hover { color: var(--text); }
 
+.toolbar-btn {
+  width: 32px; height: 32px;
+  border-radius: 50%;
+  background: transparent;
+  border: 1px solid var(--glass-border);
+  color: var(--text-dim);
+  font-size: 15px;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: all var(--transition);
+  flex-shrink: 0;
+}
+.toolbar-btn:hover { color: var(--text); border-color: var(--primary); transform: scale(1.1); }
+
 .conversation {
   flex: 1;
   overflow-y: auto;
@@ -990,6 +1004,7 @@ body::before {
       <div class="toolbar-avatar" id="toolbarAvatar" onclick="toggleLeft()" title="个人主页">玄</div>
       <span style="flex:1"></span>
       <span class="token-badge" id="tokenBadge" title="Token用量">0 tk</span>
+      <button class="toolbar-btn" onclick="toggleRight()" title="设置">⚙</button>
     </div>
 
     <div class="conversation" id="conv">
@@ -999,7 +1014,7 @@ body::before {
 
     <div class="input-area">
       <div class="input-row">
-        <button class="file-browse-btn" onclick="toggleFileBrowser()" title="浏览本地文件">+</button>
+        <button class="file-browse-btn" id="fileBrowseBtn" title="浏览本地文件">+</button>
         <input id="input" type="text" placeholder="输入消息…" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();send()}" autocomplete="off">
         <span id="imagePreview" style="display:none;margin-right:8px"></span>
         <button class="send-btn" onclick="send()">↑</button>
@@ -1010,7 +1025,7 @@ body::before {
     <div class="file-browser-popup" id="fileBrowserPopup" style="display:none">
       <div class="file-browser-header">
         <span id="fbBreadcrumb">📁 /</span>
-        <button class="file-browser-close" onclick="toggleFileBrowser()">✕</button>
+        <button class="file-browser-close" id="fileBrowseClose">✕</button>
       </div>
       <div class="file-browser-list" id="fbFileList"></div>
     </div>
@@ -1022,7 +1037,6 @@ body::before {
   <aside class="right-panel" id="rightPanel">
     <div class="panel-tabs">
       <div class="panel-tab active" onclick="switchPanelTab(this,'settings')">设置</div>
-      <div class="panel-tab" onclick="switchPanelTab(this,'browser')">文件</div>
       <div class="panel-tab" onclick="switchPanelTab(this,'tools')">工具</div>
       <div class="panel-tab" onclick="switchPanelTab(this,'agents')">Agent</div>
     </div>
@@ -1085,52 +1099,6 @@ body::before {
         <h3>Token统计</h3>
         <div style="font-size:13px;color:var(--text-dim)">累计: <span id="tokenCount">0 tk</span></div>
         <div style="font-size:13px;color:var(--text-dim);margin-top:4px">模型: <span id="panelModel">本地模拟</span></div>
-      </div>
-    </div>
-
-    <!-- 文件浏览器标签 -->
-    <div class="panel-content" id="tab-browser" style="display:none">
-      <div class="panel-section">
-        <h3>本地文件夹</h3>
-        <div style="display:flex;gap:6px;margin-bottom:8px">
-          <input id="browsePath" placeholder="起始路径（留空=项目根目录）" style="flex:1;padding:8px 12px;border-radius:8px;border:1px solid var(--glass-border);background:var(--glass);color:var(--text);font-size:12px">
-          <button class="apply-btn" onclick="browseDir()" style="padding:8px 12px;font-size:12px">浏览</button>
-        </div>
-        <div id="breadcrumb" style="font-size:11px;color:var(--text-dim);margin-bottom:8px;word-break:break-all"></div>
-        <div id="fileList" style="max-height:240px;overflow-y:auto;display:flex;flex-direction:column;gap:2px"></div>
-        <div id="fileViewer" style="display:none;margin-top:10px">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
-            <span id="viewerPath" style="font-size:11px;color:var(--primary-text);word-break:break-all"></span>
-            <button class="apply-btn ghost" onclick="closeViewer()" style="padding:4px 10px;font-size:11px">X</button>
-          </div>
-          <pre id="viewerContent" style="max-height:280px;overflow:auto;padding:10px;border-radius:8px;border:1px solid var(--glass-border);background:rgba(0,0,0,0.2);font-size:11px;font-family:var(--mono);white-space:pre-wrap;word-break:break-all;color:var(--text)"></pre>
-        </div>
-      </div>
-
-      <div class="panel-section">
-        <h3>记忆文件夹 <span style="font-size:10px;color:var(--text-muted)">（.memdir）</span></h3>
-        <div style="display:flex;gap:6px;margin-bottom:8px">
-          <button class="apply-btn" onclick="refreshMemdir()" style="font-size:11px;padding:6px 12px">刷新</button>
-          <button class="apply-btn ghost" onclick="showMemWrite()" style="font-size:11px;padding:6px 12px">+ 写入</button>
-        </div>
-        <div id="memWriteForm" style="display:none;margin-bottom:8px">
-          <input id="memFilename" placeholder="文件名 (如 context/item.md)" style="width:100%;padding:8px 12px;border-radius:8px;border:1px solid var(--glass-border);background:var(--glass);color:var(--text);font-size:12px;margin-bottom:6px">
-          <textarea id="memContent" placeholder="内容" rows="5" style="width:100%;padding:8px 12px;border-radius:8px;border:1px solid var(--glass-border);background:var(--glass);color:var(--text);font-size:12px;font-family:var(--mono);resize:vertical;margin-bottom:6px"></textarea>
-          <div style="display:flex;gap:6px">
-            <button class="apply-btn" onclick="writeMemdir()" style="flex:1;font-size:12px">保存</button>
-            <button class="apply-btn ghost" onclick="document.getElementById('memWriteForm').style.display='none'" style="flex:1;font-size:12px">取消</button>
-          </div>
-        </div>
-        <div id="memList" style="max-height:220px;overflow-y:auto;display:flex;flex-direction:column;gap:2px">
-          <div style="font-size:12px;color:var(--text-dim);text-align:center;padding:12px">点击刷新加载</div>
-        </div>
-        <div id="memViewer" style="display:none;margin-top:10px">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
-            <span id="memViewerPath" style="font-size:11px;color:var(--primary-text);word-break:break-all"></span>
-            <button class="apply-btn ghost" onclick="document.getElementById('memViewer').style.display='none'" style="padding:4px 10px;font-size:11px">X</button>
-          </div>
-          <pre id="memViewerContent" style="max-height:280px;overflow:auto;padding:10px;border-radius:8px;border:1px solid var(--glass-border);background:rgba(0,0,0,0.2);font-size:11px;font-family:var(--mono);white-space:pre-wrap;word-break:break-all;color:var(--text)"></pre>
-        </div>
       </div>
     </div>
 
@@ -1694,26 +1662,57 @@ function updateTokenBadge() {
 // ========== 输入框文件浏览器 ==========
 let fbCurrentPath = '';
 
-async function toggleFileBrowser() {
+async function toggleFileBrowser(e) {
+  if (e) { e.preventDefault(); e.stopPropagation(); }
   const popup = document.getElementById('fileBrowserPopup');
-  const btn = document.querySelector('.file-browse-btn');
-  if (popup.style.display === 'none') {
+  const btn = document.getElementById('fileBrowseBtn');
+  if (popup.style.display === 'none' || !popup.style.display) {
     popup.style.display = '';
     btn.classList.add('active');
-    await fbBrowse('');
+    // 显示加载状态
+    document.getElementById('fbFileList').innerHTML = '<div style="padding:16px;color:var(--text-dim);text-align:center;font-size:13px">加载中…</div>';
+    try {
+      await fbBrowse('');
+    } catch(e) {
+      document.getElementById('fbFileList').innerHTML = '<div style="padding:16px;color:#e74c3c;text-align:center;font-size:13px">加载失败: ' + (e.message || '未知错误') + '</div>';
+    }
     // 点击外部关闭
     setTimeout(() => {
       document.addEventListener('click', fbClickOutside);
       document.addEventListener('keydown', fbEscClose);
-    }, 0);
+    }, 100);
   } else {
     fbClose();
   }
 }
 
+// 绑定事件（兼容移动端触屏与桌面端点击）
+document.addEventListener('DOMContentLoaded', function() {
+  const btn = document.getElementById('fileBrowseBtn');
+  if (btn) {
+    btn.addEventListener('click', toggleFileBrowser);
+    btn.addEventListener('touchend', function(e) {
+      e.preventDefault();
+      toggleFileBrowser(e);
+    });
+  }
+  const closeBtn = document.getElementById('fileBrowseClose');
+  if (closeBtn) {
+    closeBtn.addEventListener('click', function(e) { e.stopPropagation(); fbClose(); });
+    closeBtn.addEventListener('touchend', function(e) { e.preventDefault(); e.stopPropagation(); fbClose(); });
+  }
+  // 弹窗内点击不关闭
+  const popup = document.getElementById('fileBrowserPopup');
+  if (popup) {
+    popup.addEventListener('click', function(e) { e.stopPropagation(); });
+    popup.addEventListener('touchend', function(e) { e.stopPropagation(); });
+  }
+});
+
 function fbClose() {
   document.getElementById('fileBrowserPopup').style.display = 'none';
-  document.querySelector('.file-browse-btn').classList.remove('active');
+  const btn = document.getElementById('fileBrowseBtn');
+  if (btn) btn.classList.remove('active');
   document.removeEventListener('click', fbClickOutside);
   document.removeEventListener('keydown', fbEscClose);
 }
@@ -1721,7 +1720,8 @@ function fbClose() {
 function fbClickOutside(e) {
   const popup = document.getElementById('fileBrowserPopup');
   if (popup.style.display === 'none') return;
-  if (!popup.contains(e.target) && !e.target.classList.contains('file-browse-btn')) {
+  const btn = document.getElementById('fileBrowseBtn');
+  if (!popup.contains(e.target) && e.target !== btn && !btn.contains(e.target)) {
     fbClose();
   }
 }

@@ -1080,7 +1080,7 @@ body::before {
           <option value="">全部厂商</option>
         </select>
         <div id="modelList" style="max-height:280px;overflow-y:auto;display:flex;flex-direction:column;gap:4px"></div>
-        <button class="apply-btn ghost" onclick="showCustomModel()" style="margin-top:10px;width:100%">+ 自定义模型</button>
+        <button class="apply-btn ghost" onclick="showCustomModel()" style="margin-top:10px;width:100%;touch-action:manipulation">+ 自定义模型</button>
       </div>
 
       <div class="panel-section" id="customModelForm" style="display:none">
@@ -1186,6 +1186,7 @@ const API = '';  // 同端口，无需跨域
 
 let currentModel = 'deepseek-v3';
 let hasKey = false;
+let savedKey = '';           // 已成功应用的全局Key（input清空后保留）
 let totalTokens = 0;
 let currentSessionId = 'sess_' + Date.now();
 const conv = document.getElementById('conv');
@@ -1253,8 +1254,13 @@ function setStatus(state, label) {
 
 // ========== API Key ==========
 async function applyKey() {
-  const key = document.getElementById('keyInput').value.trim();
+  let key = document.getElementById('keyInput').value.trim();
+  if (!key) key = savedKey;  // input被清空后，使用已保存的Key重新应用
   if (!key) { showToast('请输入 API Key'); return; }
+  if (currentModel === 'local') {
+    showToast('请先在模型列表中选择一个真实模型');
+    return;
+  }
   setStatus('offline', '验证中…');
   try {
     const r = await fetch(API + '/set-key', {
@@ -1264,8 +1270,10 @@ async function applyKey() {
     const d = await r.json();
     if (d.ok) {
       hasKey = true;
+      savedKey = key;
       setStatus('online', '已连接 ' + d.model);
       showToast('已连接 ' + d.model);
+      document.getElementById('keyInput').value = '';
       closeAllPanels();
       loadModels();
     } else {
@@ -1280,12 +1288,15 @@ async function applyKey() {
 
 async function resetKey() {
   document.getElementById('keyInput').value = '';
+  savedKey = '';
   hasKey = false;
   try {
-    await fetch(API + '/set-key', {
+    const r = await fetch(API + '/set-key', {
       method: 'POST', headers: {'Content-Type':'application/json'},
       body: JSON.stringify({key: '', model: 'local'})
     });
+    const d = await r.json();
+    if (d.local) currentModel = 'local';
   } catch(e) {}
   setStatus('offline', '本地模拟模式');
   showToast('已切换为本地模拟');
@@ -1494,11 +1505,14 @@ async function clearAllModelKeys() {
 }
 
 function showCustomModel() {
-  document.getElementById('customModelForm').style.display = '';
+  const form = document.getElementById('customModelForm');
+  form.style.display = '';
   document.getElementById('customName').value = '';
   document.getElementById('customUrl').value = '';
   document.getElementById('customModelId').value = '';
   document.getElementById('urlDetect').textContent = '';
+  // 滚动到表单可见区域，确保移动端能看到
+  setTimeout(() => form.scrollIntoView({behavior:'smooth',block:'nearest'}), 100);
 }
 
 function autoDetectUrl() {

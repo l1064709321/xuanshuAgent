@@ -1,0 +1,230 @@
+
+2026-06-29 16:50:12,969 [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:8900
+ * Running on http://172.18.0.2:8900
+2026-06-29 16:50:12,971 [33mPress CTRL+C to quit[0m
+2026-06-29 17:00:18,401 127.0.0.1 - - [29/Jun/2026 17:00:18] "GET / HTTP/1.1" 200 -
+2026-06-29 17:42:43,725 POST /model-key data={'model': 'kimi-k2', 'key': 'sk-test-demo'}
+2026-06-29 17:42:43,725 127.0.0.1 - - [29/Jun/2026 17:42:43] "POST /model-key HTTP/1.1" 200 -
+2026-06-29 17:42:43,733 127.0.0.1 - - [29/Jun/2026 17:42:43] "GET /models HTTP/1.1" 200 -
+2026-06-29 17:42:50,707 POST /chat data={'message': '回两字ok'}
+2026-06-29 17:42:54,893 HTTP Request: POST https://api.moonshot.cn/v1/chat/completions "HTTP/1.1 401 Unauthorized"
+2026-06-29 17:42:54,989 HTTP Request: POST https://api.moonshot.cn/v1/chat/completions "HTTP/1.1 401 Unauthorized"
+2026-06-29 17:42:55,078 HTTP Request: POST https://api.moonshot.cn/v1/chat/completions "HTTP/1.1 401 Unauthorized"
+2026-06-29 17:42:55,204 HTTP Request: POST https://api.moonshot.cn/v1/chat/completions "HTTP/1.1 401 Unauthorized"
+2026-06-29 17:42:55,253 127.0.0.1 - - [29/Jun/2026 17:42:55] "POST /chat HTTP/1.1" 200 -
+2026-06-29 17:43:08,320 POST /set-key data={'key': 'sk-global-fake', 'model': 'local'}
+2026-06-29 17:43:08,320 127.0.0.1 - - [29/Jun/2026 17:43:08] "POST /set-key HTTP/1.1" 200 -
+2026-06-29 17:43:08,326 POST /model-key data={'model': 'kimi-k2', 'key': ''}
+2026-06-29 17:43:08,326 127.0.0.1 - - [29/Jun/2026 17:43:08] "POST /model-key HTTP/1.1" 200 -
+2026-06-29 17:43:08,331 GET /model-key/status data={}
+2026-06-29 17:43:08,332 127.0.0.1 - - [29/Jun/2026 17:43:08] "GET /model-key/status HTTP/1.1" 200 -
+2026-06-29 17:43:08,338 POST /chat data={'message': '回两字ok'}
+2026-06-29 17:43:08,565 HTTP Request: POST https://api.deepseek.com/v1/chat/completions "HTTP/1.1 401 Authorization Required"
+2026-06-29 17:43:08,754 HTTP Request: POST https://api.deepseek.com/v1/chat/completions "HTTP/1.1 401 Authorization Required"
+2026-06-29 17:43:08,886 HTTP Request: POST https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions "HTTP/1.1 401 Unauthorized"
+2026-06-29 17:43:09,013 HTTP Request: POST https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions "HTTP/1.1 401 Unauthorized"
+2026-06-29 17:43:09,115 HTTP Request: POST https://open.bigmodel.cn/api/paas/v4/chat/completions "HTTP/1.1 401 Unauthorized"
+2026-06-29 17:43:14,136 Retrying request to /chat/completions in 0.478268 seconds
+2026-06-29 17:43:19,621 Retrying request to /chat/completions in 0.986333 seconds
+2026-06-29 17:43:45,654 Retrying request to /chat/completions in 0.375996 seconds
+2026-06-29 17:44:06,052 Retrying request to /chat/completions in 0.989658 seconds
+2026-06-29 17:44:27,193 HTTP Request: POST https://api.deepseek.com/v1/chat/completions "HTTP/1.1 401 Authorization Required"
+2026-06-29 17:44:27,345 HTTP Request: POST https://api.deepseek.com/v1/chat/completions "HTTP/1.1 401 Authorization Required"
+2026-06-29 17:44:27,452 HTTP Request: POST https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions "HTTP/1.1 401 Unauthorized"
+2026-06-29 17:44:27,559 HTTP Request: POST https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions "HTTP/1.1 401 Unauthorized"
+2026-06-29 17:44:27,651 HTTP Request: POST https://open.bigmodel.cn/api/paas/v4/chat/completions "HTTP/1.1 401 Unauthorized"
+2026-06-29 17:44:32,688 Retrying request to /chat/completions in 0.450197 seconds
+2026-06-29 17:44:38,146 Retrying request to /chat/completions in 0.765318 seconds
+2026-06-29 17:44:59,062 POST /set-key data={'key': '', 'model': 'local'}
+2026-06-29 17:44:59,062 127.0.0.1 - - [29/Jun/2026 17:44:59] "POST /set-key HTTP/1.1" 200 -
+2026-06-29 17:44:59,068 GET /model-key/status data={}
+2026-06-29 17:44:59,068 127.0.0.1 - - [29/Jun/2026 17:44:59] "GET /model-key/status HTTP/1.1" 200 -
+2026-06-29 17:45:03,944 Retrying request to /chat/completions in 0.496729 seconds
+2026-06-29 17:45:08,405 127.0.0.1 - - [29/Jun/2026 17:45:08] "POST /switch-model HTTP/1.1" 200 -
+2026-06-29 17:45:08,411 POST /set-key data={'key': 'sk-global-test', 'model': 'deepseek-v4-pro'}
+2026-06-29 17:45:08,411 127.0.0.1 - - [29/Jun/2026 17:45:08] "POST /set-key HTTP/1.1" 200 -
+2026-06-29 17:45:08,416 GET /model-key/status data={}
+2026-06-29 17:45:08,416 127.0.0.1 - - [29/Jun/2026 17:45:08] "GET /model-key/status HTTP/1.1" 200 -
+2026-06-29 17:45:08,422 POST /chat data={'message': '回两个字：测试'}
+2026-06-29 17:45:08,562 HTTP Request: POST https://api.deepseek.com/v1/chat/completions "HTTP/1.1 401 Authorization Required"
+2026-06-29 17:45:24,463 Retrying request to /chat/completions in 0.779783 seconds
+2026-06-29 17:45:28,600 Retrying request to /chat/completions in 0.442970 seconds
+2026-06-29 17:45:45,294 127.0.0.1 - - [29/Jun/2026 17:45:45] "POST /chat HTTP/1.1" 200 -
+2026-06-29 17:45:49,066 Retrying request to /chat/completions in 0.947418 seconds
+2026-06-29 17:46:10,153 HTTP Request: POST https://api.deepseek.com/v1/chat/completions "HTTP/1.1 401 Authorization Required"
+2026-06-29 17:46:10,322 HTTP Request: POST https://api.deepseek.com/v1/chat/completions "HTTP/1.1 401 Authorization Required"
+2026-06-29 17:46:10,444 HTTP Request: POST https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions "HTTP/1.1 401 Unauthorized"
+2026-06-29 17:46:10,558 HTTP Request: POST https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions "HTTP/1.1 401 Unauthorized"
+2026-06-29 17:46:10,775 HTTP Request: POST https://open.bigmodel.cn/api/paas/v4/chat/completions "HTTP/1.1 401 Unauthorized"
+2026-06-29 17:46:15,805 Retrying request to /chat/completions in 0.439785 seconds
+2026-06-29 17:46:21,251 Retrying request to /chat/completions in 0.810076 seconds
+2026-06-29 17:46:27,235 HTTP Request: POST https://api.deepseek.com/v1/chat/completions "HTTP/1.1 401 Authorization Required"
+2026-06-29 17:46:47,259 Retrying request to /chat/completions in 0.407130 seconds
+2026-06-29 17:47:07,689 Retrying request to /chat/completions in 0.778355 seconds
+2026-06-29 17:47:28,665 HTTP Request: POST https://api.deepseek.com/v1/chat/completions "HTTP/1.1 401 Authorization Required"
+2026-06-29 17:47:28,851 HTTP Request: POST https://api.deepseek.com/v1/chat/completions "HTTP/1.1 401 Authorization Required"
+2026-06-29 17:47:28,953 HTTP Request: POST https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions "HTTP/1.1 401 Unauthorized"
+2026-06-29 17:47:29,056 HTTP Request: POST https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions "HTTP/1.1 401 Unauthorized"
+2026-06-29 17:47:29,152 HTTP Request: POST https://open.bigmodel.cn/api/paas/v4/chat/completions "HTTP/1.1 401 Unauthorized"
+2026-06-29 17:47:34,160 Retrying request to /chat/completions in 0.423521 seconds
+2026-06-29 17:47:39,589 Retrying request to /chat/completions in 0.995231 seconds
+2026-06-29 17:47:45,622 127.0.0.1 - - [29/Jun/2026 17:47:45] "POST /chat HTTP/1.1" 200 -
+2026-06-29 17:53:24,119 [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:8900
+ * Running on http://172.18.0.2:8900
+2026-06-29 17:53:24,120 [33mPress CTRL+C to quit[0m
+2026-06-29 18:03:46,278 [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:8900
+ * Running on http://172.18.0.2:8900
+2026-06-29 18:03:46,278 [33mPress CTRL+C to quit[0m
+2026-06-29 18:14:08,708 [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:8900
+ * Running on http://172.18.0.2:8900
+2026-06-29 18:14:08,709 [33mPress CTRL+C to quit[0m
+2026-06-29 18:25:17,727 [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:8901
+ * Running on http://172.18.0.2:8901
+2026-06-29 18:25:17,727 [33mPress CTRL+C to quit[0m
+2026-06-29 18:45:42,018 [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:8901
+ * Running on http://172.18.0.2:8901
+2026-06-29 18:45:42,019 [33mPress CTRL+C to quit[0m
+2026-06-29 18:53:20,320 [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:8901
+ * Running on http://172.18.0.2:8901
+2026-06-29 18:53:20,321 [33mPress CTRL+C to quit[0m
+2026-06-29 19:13:18,964 [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:8901
+ * Running on http://172.18.0.2:8901
+2026-06-29 19:13:18,965 [33mPress CTRL+C to quit[0m
+2026-06-29 19:25:48,742 [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:8901
+ * Running on http://172.18.0.2:8901
+2026-06-29 19:25:48,743 [33mPress CTRL+C to quit[0m
+2026-06-29 20:57:25,058 [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:8901
+ * Running on http://172.18.0.2:8901
+2026-06-29 20:57:25,059 [33mPress CTRL+C to quit[0m
+2026-06-29 21:56:37,011 [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:8901
+ * Running on http://172.18.0.2:8901
+2026-06-29 21:56:37,012 [33mPress CTRL+C to quit[0m
+2026-06-30 07:15:21,398 [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:8901
+ * Running on http://172.18.0.2:8901
+2026-06-30 07:15:21,399 [33mPress CTRL+C to quit[0m
+2026-06-30 07:31:11,268 POST /model-key data={'model': 'kimi-k2', 'key': 'sk-vtest'}
+2026-06-30 07:31:11,268 127.0.0.1 - - [30/Jun/2026 07:31:11] "POST /model-key HTTP/1.1" 200 -
+2026-06-30 07:31:11,276 127.0.0.1 - - [30/Jun/2026 07:31:11] "GET /models HTTP/1.1" 200 -
+2026-06-30 07:31:14,345 POST /chat data={'message': '回两字ok'}
+2026-06-30 07:31:19,878 HTTP Request: POST https://api.moonshot.cn/v1/chat/completions "HTTP/1.1 401 Unauthorized"
+2026-06-30 07:31:19,976 HTTP Request: POST https://api.moonshot.cn/v1/chat/completions "HTTP/1.1 401 Unauthorized"
+2026-06-30 07:31:20,071 HTTP Request: POST https://api.moonshot.cn/v1/chat/completions "HTTP/1.1 401 Unauthorized"
+2026-06-30 07:31:20,190 HTTP Request: POST https://api.moonshot.cn/v1/chat/completions "HTTP/1.1 401 Unauthorized"
+2026-06-30 07:31:20,230 127.0.0.1 - - [30/Jun/2026 07:31:20] "POST /chat HTTP/1.1" 200 -
+2026-06-30 09:07:06,291 [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:8901
+ * Running on http://172.18.0.2:8901
+2026-06-30 09:07:06,292 [33mPress CTRL+C to quit[0m
+2026-06-30 09:17:09,310 127.0.0.1 - - [30/Jun/2026 09:17:09] "GET /models HTTP/1.1" 200 -
+2026-06-30 09:19:02,133 POST /model-key data={'model': 'deepseek-v4-pro', 'key': 'sk-test'}
+2026-06-30 09:19:02,134 127.0.0.1 - - [30/Jun/2026 09:19:02] "POST /model-key HTTP/1.1" 200 -
+2026-06-30 09:19:02,141 127.0.0.1 - - [30/Jun/2026 09:19:02] "GET /models HTTP/1.1" 200 -
+2026-06-30 09:19:02,161 POST /chat data={'message': '回两个字ok'}
+2026-06-30 09:19:05,032 HTTP Request: POST https://api.deepseek.com/v1/chat/completions "HTTP/1.1 401 Authorization Required"
+2026-06-30 09:19:05,253 HTTP Request: POST https://api.deepseek.com/v1/chat/completions "HTTP/1.1 401 Authorization Required"
+2026-06-30 09:19:05,331 HTTP Request: POST https://api.deepseek.com/v1/chat/completions "HTTP/1.1 401 Authorization Required"
+2026-06-30 09:19:05,426 HTTP Request: POST https://api.deepseek.com/v1/chat/completions "HTTP/1.1 401 Authorization Required"
+2026-06-30 09:19:05,544 HTTP Request: POST https://api.deepseek.com/v1/chat/completions "HTTP/1.1 401 Authorization Required"
+2026-06-30 09:19:05,545 127.0.0.1 - - [30/Jun/2026 09:19:05] "POST /chat HTTP/1.1" 200 -
+2026-06-30 09:19:46,883 [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:8901
+ * Running on http://172.18.0.2:8901
+2026-06-30 09:19:46,883 [33mPress CTRL+C to quit[0m
+2026-06-30 09:19:49,529 127.0.0.1 - - [30/Jun/2026 09:19:49] "GET /models HTTP/1.1" 200 -
+2026-06-30 09:29:49,162 127.0.0.1 - - [30/Jun/2026 09:29:49] "GET /models HTTP/1.1" 200 -
+2026-06-30 09:30:03,911 [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:8901
+ * Running on http://172.18.0.2:8901
+2026-06-30 09:30:03,912 [33mPress CTRL+C to quit[0m
+2026-06-30 09:30:07,507 127.0.0.1 - - [30/Jun/2026 09:30:07] "GET /models HTTP/1.1" 200 -
+2026-06-30 09:30:07,521 POST /model-key data={'model': 'deepseek-v4-pro', 'key': 'sk-fake'}
+2026-06-30 09:30:07,522 127.0.0.1 - - [30/Jun/2026 09:30:07] "POST /model-key HTTP/1.1" 200 -
+2026-06-30 09:41:10,414 127.0.0.1 - - [30/Jun/2026 09:41:10] "GET /models HTTP/1.1" 200 -
+2026-06-30 09:41:18,610 [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:8901
+ * Running on http://172.18.0.2:8901
+2026-06-30 09:41:18,610 [33mPress CTRL+C to quit[0m
+2026-06-30 09:41:23,265 127.0.0.1 - - [30/Jun/2026 09:41:23] "GET /models HTTP/1.1" 200 -
+2026-06-30 09:41:32,014 127.0.0.1 - - [30/Jun/2026 09:41:32] "GET /models HTTP/1.1" 200 -
+2026-06-30 09:41:32,032 POST /model-key data={'model': 'deepseek-v4-pro', 'key': 'sk-test'}
+2026-06-30 09:41:32,032 127.0.0.1 - - [30/Jun/2026 09:41:32] "POST /model-key HTTP/1.1" 200 -
+2026-06-30 09:41:40,694 POST /chat data={'message': '1+1等于几'}
+2026-06-30 09:41:42,274 HTTP Request: POST https://api.deepseek.com/v1/chat/completions "HTTP/1.1 401 Authorization Required"
+2026-06-30 09:41:42,479 HTTP Request: POST https://api.deepseek.com/v1/chat/completions "HTTP/1.1 401 Authorization Required"
+2026-06-30 09:41:42,560 HTTP Request: POST https://api.deepseek.com/v1/chat/completions "HTTP/1.1 401 Authorization Required"
+2026-06-30 09:41:42,676 HTTP Request: POST https://api.deepseek.com/v1/chat/completions "HTTP/1.1 401 Authorization Required"
+2026-06-30 09:41:42,712 127.0.0.1 - - [30/Jun/2026 09:41:42] "POST /chat HTTP/1.1" 200 -
+2026-06-30 09:59:49,299 [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:8901
+ * Running on http://172.18.0.2:8901
+2026-06-30 09:59:49,300 [33mPress CTRL+C to quit[0m
+2026-06-30 10:09:56,273 127.0.0.1 - - [30/Jun/2026 10:09:56] "GET /models HTTP/1.1" 200 -
+2026-06-30 10:38:54,386 [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:8901
+ * Running on http://172.18.0.2:8901
+2026-06-30 10:38:54,387 [33mPress CTRL+C to quit[0m
+2026-06-30 10:38:56,355 127.0.0.1 - - [30/Jun/2026 10:38:56] "GET /models HTTP/1.1" 200 -
+2026-06-30 10:54:11,058 [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:8901
+ * Running on http://172.18.0.2:8901
+2026-06-30 10:54:11,058 [33mPress CTRL+C to quit[0m
+2026-06-30 10:54:14,399 127.0.0.1 - - [30/Jun/2026 10:54:14] "GET /models HTTP/1.1" 200 -
+2026-06-30 11:04:19,162 [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:8901
+ * Running on http://172.18.0.2:8901
+2026-06-30 11:04:19,162 [33mPress CTRL+C to quit[0m
+2026-06-30 11:04:21,234 127.0.0.1 - - [30/Jun/2026 11:04:21] "GET /models HTTP/1.1" 200 -
+2026-06-30 13:18:46,535 [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:8901
+ * Running on http://172.18.0.2:8901
+2026-06-30 13:18:46,537 [33mPress CTRL+C to quit[0m
+2026-06-30 13:29:22,577 [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:8901
+ * Running on http://172.18.0.2:8901
+2026-06-30 13:29:22,577 [33mPress CTRL+C to quit[0m
+2026-06-30 13:29:23,924 POST /set-key data={'key': '', 'model': 'local'}
+2026-06-30 13:29:23,925 127.0.0.1 - - [30/Jun/2026 13:29:23] "POST /set-key HTTP/1.1" 200 -
+2026-06-30 13:29:23,930 POST /set-key data={'key': 'sk-test123', 'model': 'deepseek-v3'}
+2026-06-30 13:29:23,930 127.0.0.1 - - [30/Jun/2026 13:29:23] "POST /set-key HTTP/1.1" 200 -
+2026-06-30 13:29:23,934 POST /set-key data={'key': '', 'model': 'local'}
+2026-06-30 13:29:23,934 127.0.0.1 - - [30/Jun/2026 13:29:23] "POST /set-key HTTP/1.1" 200 -
+2026-06-30 13:31:44,777 [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:8901
+ * Running on http://172.18.0.2:8901
+2026-06-30 13:31:44,777 [33mPress CTRL+C to quit[0m
+2026-06-30 13:31:46,094 127.0.0.1 - - [30/Jun/2026 13:31:46] "GET / HTTP/1.1" 200 -

@@ -14,8 +14,14 @@ _ALLOWED_BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 # ── 请求日志（调试用）──
 import logging
-logging.basicConfig(filename=os.path.join(os.path.dirname(os.path.abspath(__file__)), 'req.log'),
-                    level=logging.INFO, format='%(asctime)s %(message)s')
+import sys
+logger = logging.getLogger()
+logger.setLevel(logging.INFO)
+fh = logging.FileHandler(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'req.log'))
+fh.setFormatter(logging.Formatter('%(asctime)s %(message)s'))
+ch = logging.StreamHandler(sys.stderr)
+ch.setFormatter(logging.Formatter('%(asctime)s %(message)s'))
+logger.handlers = [fh, ch]
 @app.before_request
 def log_request():
     if request.path.startswith('/model-key') or request.path.startswith('/set-key') or request.path == '/chat':

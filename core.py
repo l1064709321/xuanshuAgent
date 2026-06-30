@@ -1146,7 +1146,18 @@ Spec:"""
 
     # ═══════════ 协调者模式: 四阶段工作流 ═══════════
     def _is_complex_task(self, query: str) -> bool:
-        """判断是否为需要多阶段的复杂任务"""
+        """判断是否为需要多阶段的复杂任务。
+        需同时满足：关键词命中 + 足够长度 + 非简单问答。"""
+        simple_qa_signals = [
+            "是什么", "什么是", "怎么样", "如何", "怎么", "为什么",
+            "说说", "介绍一下", "解释", "定义", "含义",
+            "多少钱", "几点", "天气", "日期", "今天几号",
+            "回复", "重复", "说一遍", "翻译",
+        ]
+        ql = query.lower()
+        # 简单问答直接放行
+        if any(s in ql for s in simple_qa_signals) and len(query) < 80:
+            return False
         complex_signals = [
             "研究", "分析", "调研", "对比", "方案", "设计",
             "实现", "开发", "重构", "修复", "优化",
@@ -1154,7 +1165,6 @@ Spec:"""
             "查找并", "然后", "之后", "接着",
             "research", "implement", "fix", "build", "create",
         ]
-        ql = query.lower()
         return any(s in ql for s in complex_signals) and len(query) > 30
 
     def _research_phase(self, query: str, child_name: str) -> str:
@@ -1484,14 +1494,44 @@ Spec:"""
         self._update_shared_history(user_input, child_reply, image)
         return child_reply
 
+    def _is_research_sufficient(self, research: str) -> bool:
+        """判断研究阶段结果是否已是完整答案，无需进入实施阶段。
+        条件: 内容充实（>100字）、无文件修改意图、无代码生成需求。"""
+        if not research or len(research) < 100:
+            return False
+        if "子Agent] 工具调用轮数超限" in research:
+            return False
+        # 实施意图信号: 需要代码/文件修改/构建
+        impl_signals = [
+            "创建", "生成", "修改", "写入", "构建", "实现", "重构",
+            "修复", "部署", "添加", "删除", "更新文件", "安装",
+            "create", "build", "implement", "fix", "refactor",
+            "deploy", "install", "write to file", "modify",
+        ]
+        rl = research.lower()
+        # 有实施意图 → 不够，继续走实施阶段
+        if any(s in rl for s in impl_signals):
+            return False
+        return True
+
     def _coordinator_chat(self, user_input: str) -> str:
-        """协调者模式: Research → Synthesis → Implementation → Verification"""
+        """协调者模式: Research → (可选Synthesis → Implementation → Verification)
+        研究阶段返回完整答案时，跳过后续阶段直接返回。"""
         self.log.banner("协调者模式")
 
         # 阶段1: 研究（搜索/文件Agent做研究）
         child_name = self._route(user_input)
         research_name = "搜索Agent" if child_name == "代码Agent" else child_name
         research = self._research_phase(f"研究: {user_input}", research_name)
+
+        # ── 早期退出: 研究结果已是完整答案（纯信息查询）──
+        if self._is_research_sufficient(research):
+            self.log.sys("研究阶段已产出完整答案，跳过后续阶段")
+            child = self.children[child_name]
+            self._child_memorize(child, user_input, research)
+            self._update_context(child_name, user_input, research)
+            self._update_shared_history(user_input, research)
+            return research
 
         # 阶段2: 合成
         spec = self._synthesize(user_input, research)
@@ -1600,7 +1640,7 @@ Spec:"""
         """子Agent工具调用循环 — v4: 思维链注入。返回 (reply, tool_rounds)"""
         metrics = get_metrics()
         tools = child.tool_schemas()
-        for loop in range(5):
+        for loop in range(4):
             t0 = time.time()
             resp = self._llm_call(child.name, messages, tools)
             latency = time.time() - t0
@@ -1633,11 +1673,9 @@ Spec:"""
                     "tool_call_id": tc.get("id", f"call_{loop}"),
                     "content": str(result),
                 })
-                # 检测工具调用是否有错误，收集起来给 LLM 自纠正
                 if "[工具调用错误]" in result:
                     errors.append(f"  {fn}: {result[:300]}")
 
-            # ── v5: 结构化错误反馈 + 思维链反思 ──
             result_summary = "\n".join(
                 f"  {r['name']}: {r['result'][:200]}" for r in tool_results
             )
@@ -1650,17 +1688,17 @@ Spec:"""
                     f"请分析失败原因，修正参数或换用其他工具，然后继续。"
                 )
                 messages.append({"role": "system", "content": error_block})
+            elif loop >= 2:
+                # 第3轮起强制收束: 已有足够信息，必须给出最终回答
+                messages.append({"role": "system",
+                    "content": f"[强制结束]\n工具已返回结果: {result_summary}\n"
+                               f"你已完成 {loop+1} 轮工具探索，信息足够。请直接给出最终回答。"})
             else:
-                cot_prompt = (
-                    f"[思考提示]\n"
-                    f"工具已返回结果，摘要如下：\n{result_summary}\n\n"
-                    f"请用自然语言表达你的反应——这个结果是印证了你的预期、修正了你的认知，"
-                    f"还是引发了新问题？然后决定下一步：继续用工具探索，还是给出最终回答。"
-                    f"最终回答前，请确认：答案有依据吗？来源可靠吗？还有遗漏吗？"
-                )
-                messages.append({"role": "system", "content": cot_prompt})
+                messages.append({"role": "system",
+                    "content": f"[工具反馈]\n{result_summary}\n"
+                               f"信息已足够则给出最终回答；确有遗漏才再调工具。"})
 
-        return "[子Agent] 工具调用轮数超限", 5
+        return "[子Agent] 工具调用轮数超限", 4
 
     # ═══════════ 自主任务闭环 (Plan→Execute→Observe→Replan) ═══════════
     def _autonomous_chat(self, user_input: str, image: str = None) -> str:
@@ -2003,7 +2041,7 @@ DAG（只输出节点列表）:"""
         messages = self._build_child_msgs(child, user_input, "", image)
 
         # 工具循环
-        for loop in range(5):
+        for loop in range(4):
             tools = child.tool_schemas() if loop == 0 else None
             if loop > 0:
                 tools = child.tool_schemas()

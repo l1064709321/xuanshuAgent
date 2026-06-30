@@ -69,26 +69,39 @@ print(f"\\n[AUTO_TEST] {{tests_passed}}/{{tests_total}} passed")
 
     @staticmethod
     def pre_push_validate(project_dir: str = None) -> dict:
-        """推送前自动验证：读取文件内容后做语法检查"""
+        """推送前自动验证：语法 + 运行时导入检查"""
+        import importlib.util
         d = project_dir or _WS
         py_files = []
         for root, dirs, files in os.walk(d):
-            dirs[:] = [x for x in dirs if x not in ('.git', '.sandbox', '__pycache__', '.memory', '.memdir')]
+            dirs[:] = [x for x in dirs if x not in ('.git', '.sandbox', '__pycache__', '.memory', '.memdir', '.venv')]
             for f in files:
                 if f.endswith('.py'):
                     py_files.append(os.path.join(root, f))
 
-        results = {"total": len(py_files), "passed": 0, "failed": [], "checked_at": datetime.now().isoformat()}
+        results = {"total": len(py_files), "syntax_passed": 0, "syntax_failed": [],
+                   "import_passed": 0, "import_failed": [], "checked_at": datetime.now().isoformat()}
         for f in py_files:
             try:
                 with open(f, 'r') as src:
                     code = src.read()
                 compile(code, f, 'exec')
-                results["passed"] += 1
+                results["syntax_passed"] += 1
+                # 运行时导入检查：用 compile+import 验证模块可加载
+                try:
+                    spec = importlib.util.spec_from_file_location("_auto_check", f)
+                    if spec and spec.loader:
+                        mod = importlib.util.module_from_spec(spec)
+                        spec.loader.exec_module(mod)
+                        results["import_passed"] += 1
+                    else:
+                        results["import_passed"] += 1  # 无法检测，不算失败
+                except Exception as e:
+                    results["import_failed"].append({"file": f, "error": str(e)[:100]})
             except SyntaxError as e:
-                results["failed"].append({"file": f, "error": str(e)})
+                results["syntax_failed"].append({"file": f, "error": str(e)})
             except Exception as e:
-                results["failed"].append({"file": f, "error": str(e)})
+                results["syntax_failed"].append({"file": f, "error": str(e)})
         return results
 
     @staticmethod

@@ -1,0 +1,8 @@
+#!/bin/sh
+'''exec' /home/marvis/Marvis/User/77A0318BB6CBFBF7DD7DE820DE597C1E/workspace/conv_19e5d3037f5_3a9b862be1cb/output/multi_agent/.venv/bin/python3 "$0" "$@"
+' '''
+import sys
+from idna.cli import main
+if __name__ == '__main__':
+    sys.argv[0] = sys.argv[0].removesuffix('.exe')
+    sys.exit(main())

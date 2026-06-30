@@ -1,4 +1,4 @@
-"""玄姝多Agent API — Flask 后端 + 前端托管，单端口 8900"""
+"""玄姝多Agent API — Flask 后端 + 前端托管，单端口 8901"""
 import os, sys, json, mimetypes, base64
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from flask import Flask, request, jsonify, send_file
@@ -14,8 +14,14 @@ _ALLOWED_BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 # ── 请求日志（调试用）──
 import logging
-logging.basicConfig(filename=os.path.join(os.path.dirname(os.path.abspath(__file__)), 'req.log'),
-                    level=logging.INFO, format='%(asctime)s %(message)s')
+import sys
+logger = logging.getLogger()
+logger.setLevel(logging.INFO)
+fh = logging.FileHandler(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'req.log'))
+fh.setFormatter(logging.Formatter('%(asctime)s %(message)s'))
+ch = logging.StreamHandler(sys.stderr)
+ch.setFormatter(logging.Formatter('%(asctime)s %(message)s'))
+logger.handlers = [fh, ch]
 @app.before_request
 def log_request():
     if request.path.startswith('/model-key') or request.path.startswith('/set-key') or request.path == '/chat':
@@ -74,6 +80,10 @@ def set_model_key():
     api_key = data.get("key", "").strip()
     if not model_key:
         return jsonify({"ok": False, "error": "模型标识不能为空"})
+    # 禁止为本地模拟模型配置 Key
+    entry = pool.all_models.get(model_key)
+    if entry and not entry.base_url:
+        return jsonify({"ok": False, "error": "本地模拟模型不需要 Key"})
     if not api_key:
         pool.remove_model_key(model_key)
         return jsonify({"ok": True, "model": model_key, "has_key": False})
@@ -111,9 +121,20 @@ def set_key():
     if key:
         pool.api_key = key
         resolved = pool.resolve(model_key) or model_key
+        model_entry = pool.all_models.get(resolved)
+        if model_entry and not model_entry.base_url:
+            for k, v in pool.all_models.items():
+                if v.base_url:
+                    resolved = k
+                    break
         pool.set_default(resolved)
-        return jsonify({"ok": True, "model": pool.get_model("搜索Agent").name})
-    return jsonify({"ok": False, "error": "Key不能为空"})
+        return jsonify({"ok": True, "model": pool.all_models[pool.default_key].name})
+    else:
+        # 空 Key → 清除 Key 并回退到本地模拟
+        pool.api_key = ""
+        pool._clients.clear()
+        pool.set_default("local")
+        return jsonify({"ok": True, "model": "本地模拟", "local": True})
 
 # ── 对话 ──
 @app.route("/chat", methods=["POST", "OPTIONS"])
@@ -391,7 +412,7 @@ def _model_cmd(arg):
 
 
 def _model():
-    return pool.get_model("搜索Agent").name
+    return pool.all_models[pool.default_key].name
 
 
 

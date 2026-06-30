@@ -69,14 +69,14 @@ print(f"\\n[AUTO_TEST] {{tests_passed}}/{{tests_total}} passed")
 
     @staticmethod
     def pre_push_validate(project_dir: str = None) -> dict:
-        """推送前自动验证：语法 + 运行时导入检查"""
-        import importlib.util
+        """推送前自动验证：语法 + 子进程导入检查（每个文件 3 秒超时）"""
+        import subprocess as _sp
         d = project_dir or _WS
         py_files = []
         for root, dirs, files in os.walk(d):
             dirs[:] = [x for x in dirs if x not in ('.git', '.sandbox', '__pycache__', '.memory', '.memdir', '.venv')]
             for f in files:
-                if f.endswith('.py'):
+                if f.endswith('.py') and not f.startswith('.') and f != 'importlib.py':
                     py_files.append(os.path.join(root, f))
 
         results = {"total": len(py_files), "syntax_passed": 0, "syntax_failed": [],
@@ -87,17 +87,19 @@ print(f"\\n[AUTO_TEST] {{tests_passed}}/{{tests_total}} passed")
                     code = src.read()
                 compile(code, f, 'exec')
                 results["syntax_passed"] += 1
-                # 运行时导入检查：用 compile+import 验证模块可加载
-                try:
-                    spec = importlib.util.spec_from_file_location("_auto_check", f)
-                    if spec and spec.loader:
-                        mod = importlib.util.module_from_spec(spec)
-                        spec.loader.exec_module(mod)
-                        results["import_passed"] += 1
-                    else:
-                        results["import_passed"] += 1  # 无法检测，不算失败
-                except Exception as e:
-                    results["import_failed"].append({"file": f, "error": str(e)[:100]})
+                _mod = os.path.splitext(f)[0]
+                _try = _sp.run(
+                    [sys.executable, "-c", "import importlib.util; spec=importlib.util.spec_from_file_location('_c','%s'); mod=importlib.util.module_from_spec(spec); spec.loader.exec_module(mod)" % f],
+                    capture_output=True, timeout=3,
+                    cwd=d, env={**os.environ, "PYTHONPATH": d},
+                    text=True)
+                if _try.returncode == 0:
+                    results["import_passed"] += 1
+                else:
+                    _err = _try.stderr.strip().split('\n')[-1] if _try.stderr else "import check failed"
+                    results["import_failed"].append({"file": f, "error": _err[:120]})
+            except _sp.TimeoutExpired:
+                results["import_failed"].append({"file": f, "error": "import timed out (>3s)"})
             except SyntaxError as e:
                 results["syntax_failed"].append({"file": f, "error": str(e)})
             except Exception as e:

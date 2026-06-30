@@ -1372,6 +1372,11 @@ function renderModelList(models) {
 function pickModel(key, name) {
   currentModel = key;
   document.getElementById('panelModel').textContent = name;
+  // 联动模型Key配置区：选中模型时自动映射到上方输入框
+  document.getElementById('perKeyModel').value = name;
+  document.getElementById('perKeyModel').dataset.modelKey = key;
+  document.getElementById('perKeyInput').value = '';
+  document.getElementById('perKeyInput').placeholder = (allModels.find(m=>m.key===key)||{}).has_key ? '已配置Key，重新输入覆盖' : 'sk-xxxxxxxx';
   filterModels();
   buildModelChips();
   // 切换模型后自动应用对应的独立 Key
@@ -1521,6 +1526,8 @@ function autoDetectUrl() {
     'api.siliconflow.cn': 'SiliconFlow',
     'openrouter.ai': 'OpenRouter',
     'api.together.xyz': 'Together AI',
+    'integrate.api.nvidia.com': 'NVIDIA',
+    'ai.api.nvidia.com': 'NVIDIA',
   };
   for (const [host, name] of Object.entries(map)) {
     if (url.includes(host)) {
@@ -1548,11 +1555,12 @@ async function addCustomModel() {
       currentModel = d.model.key;
       document.getElementById('customModelForm').style.display = 'none';
       showToast('已添加: ' + name);
+      document.getElementById('modelList').scrollIntoView({behavior:'smooth'});
       await loadModels();
     } else {
       showToast('添加失败: ' + (d.error||'错误'));
     }
-  } catch(e) { showToast('添加失败'); }
+  } catch(e) { showToast('添加失败: ' + (e.message||'网络错误')); console.error(e); }
 }
 
 async function delModel(key) {

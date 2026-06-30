@@ -12,6 +12,16 @@ _MEMDIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".memdir")
 os.makedirs(_MEMDIR, exist_ok=True)
 _ALLOWED_BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
+# ── 请求日志（调试用）──
+import logging
+logging.basicConfig(filename=os.path.join(os.path.dirname(os.path.abspath(__file__)), 'req.log'),
+                    level=logging.INFO, format='%(asctime)s %(message)s')
+@app.before_request
+def log_request():
+    if request.path.startswith('/model-key') or request.path.startswith('/set-key') or request.path == '/chat':
+        data = request.get_json(silent=True) or {}
+        logging.info(f"{request.method} {request.path} data={data}")
+
 @app.after_request
 def cors(resp):
     resp.headers["Access-Control-Allow-Origin"] = "*"
@@ -406,5 +416,5 @@ def _snapshot_cmd(arg):
 
 
 if __name__ == "__main__":
-    print("玄姝多Agent API → http://0.0.0.0:8900")
-    app.run(host="0.0.0.0", port=8900, debug=False)
+    print("玄姝多Agent API → http://0.0.0.0:8901")
+    app.run(host="0.0.0.0", port=8901, debug=False)

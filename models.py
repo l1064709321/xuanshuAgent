@@ -345,7 +345,7 @@ class ModelPool:
         last_error = None
         for i, key in enumerate(ordered):
             model = self.all_models[key]
-            client = self._get_client(model.base_url)
+            client = self._get_client(model.base_url, key)
             if client is None:
                 tried.append((key, "无API连接"))
                 continue

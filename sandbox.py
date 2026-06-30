@@ -116,10 +116,15 @@ for _m in _SAFE_STDLIB:
 
 # 禁止危险内置函数
 _orig_open = open
+_sandbox_real = os.path.realpath('{sandbox_dir}')
 def _safe_open(file, mode='r', *args, **kwargs):
     if 'w' in mode or 'a' in mode or '+' in mode:
         raise PermissionError("沙箱禁止写入文件")
-    if file.startswith('/') and not file.startswith('{sandbox_dir}'):
+    try:
+        _real = os.path.realpath(file) if os.path.isabs(file) else os.path.realpath(os.path.join('{sandbox_dir}', file))
+    except Exception:
+        raise PermissionError("沙箱禁止访问外部路径")
+    if not _real.startswith(_sandbox_real + os.sep) and _real != _sandbox_real:
         raise PermissionError("沙箱禁止访问外部路径")
     return _orig_open(file, mode, *args, **kwargs)
 

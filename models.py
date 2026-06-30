@@ -257,32 +257,8 @@ class ModelPool:
         return self._clients[cache_key]
 
     def call_llm(self, agent: str, messages: list, tools: list = None) -> dict:
-        model = self.get_model(agent)
-        model_key = self.get_key(agent)
-        client = self._get_client(model.base_url, model_key)
-
-        if client is None:
-            last = messages[-1]["content"][:60] if messages else ""
-            return {
-                "choices": [{"message": {"content": f"[{model.name}] {last}... (连API)", "tool_calls": None}}],
-                "usage": {"total_tokens": 0},
-                "_model": model.name,
-            }
-
-        params = {"model": model.model_id, "messages": messages[-20:]}
-        if tools:
-            params["tools"] = tools
-        try:
-            resp = client.chat.completions.create(**params)
-            d = resp.model_dump()
-            d["_model"] = model.name
-            return d
-        except Exception as e:
-            return {
-                "choices": [{"message": {"role": "assistant", "content": f"[{model.name}] API错误: {e}"}}],
-                "usage": {"total_tokens": 0},
-                "_model": model.name,
-            }
+        """单次调用，内部委托到 call_llm_with_fallback（不启用兜底）"""
+        return self.call_llm_with_fallback(agent, messages, tools, fallback_models=[], max_fallbacks=0)
 
     # ═══ 多模型兜底 ═══
 

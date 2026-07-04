@@ -75,6 +75,10 @@ BUILTIN_MODELS: Dict[str, ModelEntry] = {
         "https://open.bigmodel.cn/api/paas/v4/", "智谱", "最新旗舰 MoE 744B/40B 1M上下文 MIT开源", ("glm52", "glm5.2", "glm", "glm5", "zhipu")),
     "glm-4-air": ModelEntry("glm-4-air", "GLM-4-Air", "glm-4-air",
         "https://open.bigmodel.cn/api/paas/v4/", "智谱", "轻量低成本", ("glm4a", "glmair")),
+    "glm-4.7-flash": ModelEntry("glm-4.7-flash", "GLM-4.7-Flash", "glm-4.7-flash",
+        "https://open.bigmodel.cn/api/paas/v4/", "智谱", "永久免费 203K上下文", ("glm47f", "glmfree", "zhipufree")),
+    "glm-4.7": ModelEntry("glm-4.7", "GLM-4.7", "glm-4.7",
+        "https://open.bigmodel.cn/api/paas/v4/", "智谱", "旗舰付费 200B 203K上下文", ("glm47",)),
     # ── 月之暗面 ──
     "moonshot-v1": ModelEntry("moonshot-v1", "Moonshot-v1", "moonshot-v1-8k",
         "https://api.moonshot.cn/v1", "月之暗面", "200万字上下文", ("moonshot", "kimi1")),
@@ -90,7 +94,13 @@ BUILTIN_MODELS: Dict[str, ModelEntry] = {
         "https://api.baichuan-ai.com/v1", "百川", "通用多模态", ("bc4", "百川")),
     # ── Minimax ──
     "abab6.5": ModelEntry("abab6.5", "abab6.5", "abab6.5s-chat",
-        "https://api.minimax.chat/v1", "Minimax", "多模态语音", ("minimax", "abab")),
+        "https://api.minimax.chat/v1", "Minimax", "多模态语音(旧)", ("minimax", "abab")),
+    "minimax-m3": ModelEntry("minimax-m3", "MiniMax-M3", "MiniMax-M3",
+        "https://api.minimaxi.com/v1", "Minimax", "最新原生多模态 1M上下文", ("m3", "mm3")),
+    "minimax-m2.7": ModelEntry("minimax-m2.7", "MiniMax-M2.7", "MiniMax-M2.7",
+        "https://api.minimaxi.com/v1", "Minimax", "自主迭代旗舰 自我进化", ("m2.7", "mm27", "minimax27")),
+    "minimax-m2.7-fast": ModelEntry("minimax-m2.7-fast", "MiniMax-M2.7-Fast", "MiniMax-M2.7-highspeed",
+        "https://api.minimaxi.com/v1", "Minimax", "高速版 效果不变", ("m27f", "mm27fast")),
     # ── 零一万物 ──
     "yi-large": ModelEntry("yi-large", "Yi-Large", "yi-large",
         "https://api.lingyiwanwu.com/v1", "零一万物", "千亿参数", ("yi", "零一")),
@@ -116,23 +126,196 @@ BUILTIN_MODELS: Dict[str, ModelEntry] = {
     # ── Cohere ──
     "command-r-plus": ModelEntry("command-r-plus", "Command R+", "command-r-plus",
         "https://api.cohere.ai/v1", "Cohere", "企业级RAG", ("cr+", "cohere")),
+    # ── NVIDIA ──
+    "nemotron-super": ModelEntry("nemotron-super", "Nemotron-Super", "nvidia/nemotron-3-super-120b-a12b",
+        "https://integrate.api.nvidia.com/v1", "NVIDIA", "120B 免费 1M上下文", ("nemotron", "nvidia", "nemo")),
+    "nv-minimax-m2.7": ModelEntry("nv-minimax-m2.7", "NV MiniMax-M2.7", "minimaxai/minimax-m2.7",
+        "https://integrate.api.nvidia.com/v1", "NVIDIA", "MiniMax自主迭代 免费", ("nvmm27", "nv-minimax27")),
+    "nv-minimax-m3": ModelEntry("nv-minimax-m3", "NV MiniMax-M3", "minimaxai/minimax-m3",
+        "https://integrate.api.nvidia.com/v1", "NVIDIA", "原生多模态 1M上下文 免费", ("nvmm3",)),
+    # ── Groq ──
+    "groq-llama4": ModelEntry("groq-llama4", "Groq Llama-4", "llama-4-maverick",
+        "https://api.groq.com/openai/v1", "聚合平台", "超快推理 免费额度", ("groq", "gllama")),
+    # ── Reka ──
+    "reka-flash": ModelEntry("reka-flash", "Reka Flash", "reka-flash",
+        "https://api.reka.ai/v1", "Reka", "多模态快速", ("reka",)),
+    # ── AI21 ──
+    "jamba-1.6": ModelEntry("jamba-1.6", "Jamba 1.6", "jamba-1.6-large",
+        "https://api.ai21.com/v1", "AI21", "256K Mamba混合架构", ("jamba", "j16")),
     # ── 聚合平台 ──
-    "siliconflow": ModelEntry("siliconflow", "SiliconFlow(聚合)", "deepseek-ai/DeepSeek-V3",
-        "https://api.siliconflow.cn/v1", "聚合平台", "支持多模型，用/model切换model_id", ("sf", "硅基")),
-    "openrouter": ModelEntry("openrouter", "OpenRouter(聚合)", "openai/gpt-4o",
-        "https://openrouter.ai/api/v1", "聚合平台", "海外聚合 200+模型", ("or",)),
+    "siliconflow": ModelEntry("siliconflow", "SiliconFlow(聚合)", "deepseek-ai/DeepSeek-V4-Flash",
+        "https://api.siliconflow.cn/v1", "聚合平台", "国产模型聚合 免费额度", ("sf", "硅基")),
+    "sf-qwen3.7": ModelEntry("sf-qwen3.7", "SF Qwen3.7-Max", "Qwen/Qwen3.7-Max",
+        "https://api.siliconflow.cn/v1", "聚合平台", "硅基 Qwen3.7旗舰", ("sfqw", "sfqwen")),
+    "sf-glm-5.2": ModelEntry("sf-glm-5.2", "SF GLM-5.2", "THUDM/glm-5.2",
+        "https://api.siliconflow.cn/v1", "聚合平台", "硅基 GLM-5.2 MIT开源", ("sfglm",)),
+    "sf-glm-4.7-flash": ModelEntry("sf-glm-4.7-flash", "SF GLM-4.7-Flash", "THUDM/glm-4.7-flash",
+        "https://api.siliconflow.cn/v1", "聚合平台", "硅基 GLM免费 无限制", ("sfglmfree",)),
+    "sf-deepseek-v4-pro": ModelEntry("sf-deepseek-v4-pro", "SF DeepSeek-V4-Pro", "deepseek-ai/DeepSeek-V4-Pro",
+        "https://api.siliconflow.cn/v1", "聚合平台", "硅基 DeepSeek V4旗舰", ("sfv4p",)),
+    "sf-deepseek-r1": ModelEntry("sf-deepseek-r1", "SF DeepSeek-R1", "deepseek-ai/DeepSeek-R1",
+        "https://api.siliconflow.cn/v1", "聚合平台", "硅基 深度推理", ("sfr1",)),
+    "sf-qwq-32b": ModelEntry("sf-qwq-32b", "SF QwQ-32B", "Qwen/QwQ-32B",
+        "https://api.siliconflow.cn/v1", "聚合平台", "硅基 推理专用 免费", ("sfqwq",)),
+    "sf-qwen3.7-plus": ModelEntry("sf-qwen3.7-plus", "SF Qwen3.7-Plus", "Qwen/Qwen3.7-Plus",
+        "https://api.siliconflow.cn/v1", "聚合平台", "硅基 Qwen3.7高性价比", ("sfqwp",)),
+    "sf-qwen-coder": ModelEntry("sf-qwen-coder", "SF Qwen-Coder", "Qwen/Qwen3-Coder",
+        "https://api.siliconflow.cn/v1", "聚合平台", "硅基 代码专用", ("sfqc",)),
+    "sf-llama4": ModelEntry("sf-llama4", "SF Llama-4", "meta-llama/Llama-4-Maverick",
+        "https://api.siliconflow.cn/v1", "聚合平台", "硅基 Llama-4 免费", ("sfl4",)),
+    "sf-mistral-large": ModelEntry("sf-mistral-large", "SF Mistral-Large", "mistralai/Mistral-Large",
+        "https://api.siliconflow.cn/v1", "聚合平台", "硅基 Mistral旗舰", ("sfml",)),
+    "sf-internlm3": ModelEntry("sf-internlm3", "SF InternLM3", "internlm/internlm3-8b-instruct",
+        "https://api.siliconflow.cn/v1", "聚合平台", "硅基 书生·浦语 免费", ("sflm3",)),
+    # ── SiliconFlow 免费模型 ──
+    "sf-deepseek-r1-distill-qwen7b": ModelEntry("sf-deepseek-r1-distill-qwen7b", "SF R1-Distill-Qwen7B", "deepseek-ai/DeepSeek-R1-Distill-Qwen-7B",
+        "https://api.siliconflow.cn/v1", "聚合平台", "免费 R1蒸馏7B", ("sfr1d7",)),
+    "sf-deepseek-r1-qwen3-8b": ModelEntry("sf-deepseek-r1-qwen3-8b", "SF R1-Qwen3-8B", "deepseek-ai/DeepSeek-R1-0528-Qwen3-8B",
+        "https://api.siliconflow.cn/v1", "聚合平台", "免费 R1最新蒸馏", ("sfr1q3",)),
+    "sf-deepseek-ocr": ModelEntry("sf-deepseek-ocr", "SF DeepSeek-OCR", "deepseek-ai/DeepSeek-OCR",
+        "https://api.siliconflow.cn/v1", "聚合平台", "免费 OCR专用", ("sfocr",)),
+    "sf-qwen3-8b": ModelEntry("sf-qwen3-8b", "SF Qwen3-8B", "Qwen/Qwen3-8B",
+        "https://api.siliconflow.cn/v1", "聚合平台", "免费 Qwen3基础", ("sfq38",)),
+    "sf-qwen3-235b": ModelEntry("sf-qwen3-235b", "SF Qwen3-235B-MoE", "Qwen/Qwen3-235B-A22B-Instruct",
+        "https://api.siliconflow.cn/v1", "聚合平台", "Qwen3 旗舰MoE付费", ("sfq3235",)),
+    "sf-qwen3-30b": ModelEntry("sf-qwen3-30b", "SF Qwen3-30B-MoE", "Qwen/Qwen3-30B-A3B",
+        "https://api.siliconflow.cn/v1", "聚合平台", "Qwen3 小MoE", ("sfq330",)),
+    "sf-qwen3-coder-480b": ModelEntry("sf-qwen3-coder-480b", "SF Qwen3-Coder-480B", "Qwen/Qwen3-Coder-480B-A35B",
+        "https://api.siliconflow.cn/v1", "聚合平台", "代码王者 480B MoE", ("sfqc480",)),
+    "sf-qwen2.5-7b": ModelEntry("sf-qwen2.5-7b", "SF Qwen2.5-7B", "Qwen/Qwen2.5-7B-Instruct",
+        "https://api.siliconflow.cn/v1", "聚合平台", "免费 Qwen2.5", ("sfq257",)),
+    "sf-qwen2.5-coder-7b": ModelEntry("sf-qwen2.5-coder-7b", "SF Qwen2.5-Coder-7B", "Qwen/Qwen2.5-Coder-7B-Instruct",
+        "https://api.siliconflow.cn/v1", "聚合平台", "免费 代码专用", ("sfq25c",)),
+    "sf-qwen2.5-vl-72b": ModelEntry("sf-qwen2.5-vl-72b", "SF Qwen2.5-VL-72B", "Qwen/Qwen2.5-VL-72B-Instruct",
+        "https://api.siliconflow.cn/v1", "聚合平台", "视觉旗舰 付费", ("sfvl72",)),
+    "sf-qwen3-vl-235b": ModelEntry("sf-qwen3-vl-235b", "SF Qwen3-VL-235B", "Qwen/Qwen3-VL-235B-A22B",
+        "https://api.siliconflow.cn/v1", "聚合平台", "视觉MoE旗舰", ("sfvl235",)),
+    "sf-qwen3-omni": ModelEntry("sf-qwen3-omni", "SF Qwen3-Omni", "Qwen/Qwen3-Omni",
+        "https://api.siliconflow.cn/v1", "聚合平台", "全模态(图+视+音)", ("sfomni",)),
+    "sf-glm-4.1v-9b": ModelEntry("sf-glm-4.1v-9b", "SF GLM-4.1V-9B", "THUDM/GLM-4.1V-9B-Thinking",
+        "https://api.siliconflow.cn/v1", "聚合平台", "免费 视觉推理", ("sfglmv",)),
+    "sf-glm-z1-9b": ModelEntry("sf-glm-z1-9b", "SF GLM-Z1-9B", "THUDM/GLM-Z1-9B-0414",
+        "https://api.siliconflow.cn/v1", "聚合平台", "免费 GLM推理", ("sfglmz",)),
+    "sf-glm-4-9b": ModelEntry("sf-glm-4-9b", "SF GLM-4-9B", "THUDM/GLM-4-9B-0414",
+        "https://api.siliconflow.cn/v1", "聚合平台", "免费 GLM-4基础", ("sfglm4",)),
+    "sf-glm-4-9b-chat": ModelEntry("sf-glm-4-9b-chat", "SF GLM-4-9B-Chat", "THUDM/glm-4-9b-chat",
+        "https://api.siliconflow.cn/v1", "聚合平台", "免费 GLM-4对话", ("sfglmc",)),
+    "sf-kimi-k2-thinking": ModelEntry("sf-kimi-k2-thinking", "SF Kimi-K2-Thinking", "moonshotai/Kimi-K2-Thinking",
+        "https://api.siliconflow.cn/v1", "聚合平台", "K2思考版 付费", ("sfk2t",)),
+    "sf-kimi-k2.5": ModelEntry("sf-kimi-k2.5", "SF Kimi-K2.5 Pro", "moonshotai/Kimi-K2.5",
+        "https://api.siliconflow.cn/v1", "聚合平台", "K2.5最新 付费", ("sfk25",)),
+    "sf-minimax-m1": ModelEntry("sf-minimax-m1", "SF MiniMax-M1", "MiniMaxAI/MiniMax-M1-80k",
+        "https://api.siliconflow.cn/v1", "聚合平台", "MiniMax M1 付费", ("sfmm1",)),
+    "sf-r1-distill-qwen14b": ModelEntry("sf-r1-distill-qwen14b", "SF R1-Distill-Qwen14B", "deepseek-ai/DeepSeek-R1-Distill-Qwen-14B",
+        "https://api.siliconflow.cn/v1", "聚合平台", "R1蒸馏14B 付费", ("sfr14",)),
+    "sf-r1-distill-qwen32b": ModelEntry("sf-r1-distill-qwen32b", "SF R1-Distill-Qwen32B", "deepseek-ai/DeepSeek-R1-Distill-Qwen-32B",
+        "https://api.siliconflow.cn/v1", "聚合平台", "R1蒸馏32B 付费", ("sfr32",)),
+    "sf-r1-distill-llama70b": ModelEntry("sf-r1-distill-llama70b", "SF R1-Distill-Llama70B", "deepseek-ai/DeepSeek-R1-Distill-Llama-70B",
+        "https://api.siliconflow.cn/v1", "聚合平台", "R1蒸馏70B 付费", ("sfr70",)),
+    "sf-hunyuan-mt-7b": ModelEntry("sf-hunyuan-mt-7b", "SF Hunyuan-MT-7B", "tencent/Hunyuan-MT-7B",
+        "https://api.siliconflow.cn/v1", "聚合平台", "免费 混元翻译", ("sfhymt",)),
+    "sf-paddleocr": ModelEntry("sf-paddleocr", "SF PaddleOCR-VL", "PaddlePaddle/PaddleOCR-VL",
+        "https://api.siliconflow.cn/v1", "聚合平台", "免费 百度OCR", ("sfpocr",)),
+    "sf-bge-m3": ModelEntry("sf-bge-m3", "SF BGE-M3(嵌入)", "BAAI/bge-m3",
+        "https://api.siliconflow.cn/v1", "聚合平台", "免费 多语言嵌入", ("sfbge",)),
+    "sf-qwen3-emb-8b": ModelEntry("sf-qwen3-emb-8b", "SF Qwen3-Emb-8B", "Qwen/Qwen3-Embedding-8B",
+        "https://api.siliconflow.cn/v1", "聚合平台", "嵌入大版", ("sfemb8",)),
+    "sf-qwen-image": ModelEntry("sf-qwen-image", "SF Qwen-Image", "Qwen/Qwen-Image",
+        "https://api.siliconflow.cn/v1", "聚合平台", "通义文生图", ("sfqimg",)),
+    "sf-deepseek-v3.1": ModelEntry("sf-deepseek-v3.1", "SF DeepSeek-V3.1", "deepseek-ai/DeepSeek-V3.1",
+        "https://api.siliconflow.cn/v1", "聚合平台", "V3.1混合思考", ("sfv31",)),
+    "openrouter": ModelEntry("openrouter", "OpenRouter(聚合)", "openai/gpt-5.5",
+        "https://openrouter.ai/api/v1", "聚合平台", "海外聚合 200+模型 免费模型多", ("or",)),
+    "or-deepseek-v4": ModelEntry("or-deepseek-v4", "OR DeepSeek-V4", "deepseek/deepseek-v4-flash:free",
+        "https://openrouter.ai/api/v1", "聚合平台", "OR DeepSeek-V4免费", ("orv4", "ords")),
+    "or-deepseek-v4-pro": ModelEntry("or-deepseek-v4-pro", "OR DeepSeek-V4-Pro", "deepseek/deepseek-v4-pro",
+        "https://openrouter.ai/api/v1", "聚合平台", "OR DeepSeek V4旗舰", ("orv4p",)),
+    "or-gemini-flash": ModelEntry("or-gemini-flash", "OR Gemini Flash", "google/gemini-3-flash-preview:free",
+        "https://openrouter.ai/api/v1", "聚合平台", "OR Gemini Flash免费", ("orgf", "orgem")),
+    "or-gemini-pro": ModelEntry("or-gemini-pro", "OR Gemini Pro", "google/gemini-3.1-pro-preview",
+        "https://openrouter.ai/api/v1", "聚合平台", "OR Gemini Pro旗舰", ("orgp",)),
+    "or-llama4": ModelEntry("or-llama4", "OR Llama-4", "meta-llama/llama-4-maverick:free",
+        "https://openrouter.ai/api/v1", "聚合平台", "OR Llama-4 免费", ("orl4",)),
+    "or-mistral-large": ModelEntry("or-mistral-large", "OR Mistral-Large", "mistralai/mistral-large:free",
+        "https://openrouter.ai/api/v1", "聚合平台", "OR Mistral Large免费", ("orml",)),
+    "or-qwen3.7": ModelEntry("or-qwen3.7", "OR Qwen3.7-Max", "qwen/qwen3.7-max",
+        "https://openrouter.ai/api/v1", "聚合平台", "OR Qwen3.7旗舰", ("orqw",)),
+    "or-claude-sonnet": ModelEntry("or-claude-sonnet", "OR Claude Sonnet", "anthropic/claude-sonnet-4.6",
+        "https://openrouter.ai/api/v1", "聚合平台", "OR Claude Sonnet", ("orcs",)),
+    "or-nemotron-super": ModelEntry("or-nemotron-super", "OR Nemotron-Super-120B", "nvidia/nemotron-3-super-120b-a12b:free",
+        "https://openrouter.ai/api/v1", "聚合平台", "免费 120B MoE", ("ornem",)),
+    "or-gpt-oss-120b": ModelEntry("or-gpt-oss-120b", "OR GPT-OSS-120B", "openai/gpt-oss-120b:free",
+        "https://openrouter.ai/api/v1", "聚合平台", "免费 OpenAI开源", ("orgptoss",)),
+    "or-gpt-oss-20b": ModelEntry("or-gpt-oss-20b", "OR GPT-OSS-20B", "openai/gpt-oss-20b:free",
+        "https://openrouter.ai/api/v1", "聚合平台", "免费 小版开源", ("orgptoss20",)),
+    "or-qwen3-coder": ModelEntry("or-qwen3-coder", "OR Qwen3-Coder", "qwen/qwen3-coder:free",
+        "https://openrouter.ai/api/v1", "聚合平台", "免费 代码王者", ("orqc",)),
+    "or-qwen3-next-80b": ModelEntry("or-qwen3-next-80b", "OR Qwen3-Next-80B", "qwen/qwen3-next-80b-a3b-instruct:free",
+        "https://openrouter.ai/api/v1", "聚合平台", "免费 Qwen3-Next", ("orqnext",)),
+    "or-hermes-405b": ModelEntry("or-hermes-405b", "OR Hermes-3-405B", "nousresearch/hermes-3-llama-3.1-405b:free",
+        "https://openrouter.ai/api/v1", "聚合平台", "免费 Nous 405B", ("orh405",)),
+    "or-llama-3.3-70b": ModelEntry("or-llama-3.3-70b", "OR Llama-3.3-70B", "meta-llama/llama-3.3-70b-instruct:free",
+        "https://openrouter.ai/api/v1", "聚合平台", "免费 Llama3.3", ("orl33",)),
+    "or-llama-3.2-3b": ModelEntry("or-llama-3.2-3b", "OR Llama-3.2-3B", "meta-llama/llama-3.2-3b-instruct:free",
+        "https://openrouter.ai/api/v1", "聚合平台", "免费 轻量Llama", ("orl32",)),
+    "or-gemma-4-26b": ModelEntry("or-gemma-4-26b", "OR Gemma-4-26B", "google/gemma-4-26b-a4b-it:free",
+        "https://openrouter.ai/api/v1", "聚合平台", "免费 Gemma4", ("orgm4",)),
+    "or-gemma-4-31b": ModelEntry("or-gemma-4-31b", "OR Gemma-4-31B", "google/gemma-4-31b-it:free",
+        "https://openrouter.ai/api/v1", "聚合平台", "免费 Gemma4大版", ("orgm4b",)),
+    "or-gemma-3-27b": ModelEntry("or-gemma-3-27b", "OR Gemma-3-27B", "google/gemma-3-27b-it:free",
+        "https://openrouter.ai/api/v1", "聚合平台", "免费 Gemma3", ("orgm3",)),
+    "or-gemma-3-12b": ModelEntry("or-gemma-3-12b", "OR Gemma-3-12B", "google/gemma-3-12b-it:free",
+        "https://openrouter.ai/api/v1", "聚合平台", "免费 Gemma3小", ("orgm3s",)),
+    "or-minimax-m2.5": ModelEntry("or-minimax-m2.5", "OR MiniMax-M2.5", "minimax/minimax-m2.5:free",
+        "https://openrouter.ai/api/v1", "聚合平台", "免费 MiniMax", ("ormm25",)),
+    "or-step-3.5-flash": ModelEntry("or-step-3.5-flash", "OR Step-3.5-Flash", "stepfun/step-3.5-flash:free",
+        "https://openrouter.ai/api/v1", "聚合平台", "免费 阶跃星辰", ("orstep",)),
+    "or-trinity-large": ModelEntry("or-trinity-large", "OR Trinity-Large", "arcee-ai/trinity-large-preview:free",
+        "https://openrouter.ai/api/v1", "聚合平台", "免费 Arcee旗舰", ("ortrinity",)),
+    "or-lfm-2.5-thinking": ModelEntry("or-lfm-2.5-thinking", "OR LFM-2.5-Thinking", "liquid/lfm-2.5-1.2b-thinking:free",
+        "https://openrouter.ai/api/v1", "聚合平台", "免费 液态思考", ("orlfm",)),
+    "or-lfm-2.5": ModelEntry("or-lfm-2.5", "OR LFM-2.5", "liquid/lfm-2.5-1.2b-instruct:free",
+        "https://openrouter.ai/api/v1", "聚合平台", "免费 液态小模型", ("orlfmi",)),
+    "or-nemotron-nano-30b": ModelEntry("or-nemotron-nano-30b", "OR Nemotron-Nano-30B", "nvidia/nemotron-3-nano-30b-a3b:free",
+        "https://openrouter.ai/api/v1", "聚合平台", "免费 NVIDIA小版", ("ornn30",)),
+    "or-nemotron-nano-9b": ModelEntry("or-nemotron-nano-9b", "OR Nemotron-Nano-9B", "nvidia/nemotron-nano-9b-v2:free",
+        "https://openrouter.ai/api/v1", "聚合平台", "免费 NVIDIA迷你", ("ornn9",)),
+    "or-nemotron-nano-12b-vl": ModelEntry("or-nemotron-nano-12b-vl", "OR Nemotron-Nano-12B-VL", "nvidia/nemotron-nano-12b-v2-vl:free",
+        "https://openrouter.ai/api/v1", "聚合平台", "免费 视觉版", ("ornn12",)),
+    "or-glm-4.5-air": ModelEntry("or-glm-4.5-air", "OR GLM-4.5-Air", "z-ai/glm-4.5-air:free",
+        "https://openrouter.ai/api/v1", "聚合平台", "免费 智谱轻量", ("orglm45",)),
+    "or-dolphin-mistral-24b": ModelEntry("or-dolphin-mistral-24b", "OR Dolphin-Mistral-24B", "cognitivecomputations/dolphin-mistral-24b-venice-edition:free",
+        "https://openrouter.ai/api/v1", "聚合平台", "免费 未审查版", ("ordolphin",)),
+    "or-lyria-3-pro": ModelEntry("or-lyria-3-pro", "OR Lyria-3-Pro", "google/lyria-3-pro-preview",
+        "https://openrouter.ai/api/v1", "聚合平台", "Google音乐模型", ("orlyria",)),
+    "or-owl-alpha": ModelEntry("or-owl-alpha", "OR Owl-Alpha", "openrouter/owl-alpha",
+        "https://openrouter.ai/api/v1", "聚合平台", "OR自有模型", ("orowl",)),
+    "or-gemini-2.5-pro": ModelEntry("or-gemini-2.5-pro", "OR Gemini-2.5-Pro", "google/gemini-2.5-pro",
+        "https://openrouter.ai/api/v1", "聚合平台", "Gemini 2.5旗舰", ("org25p",)),
+    "or-gemini-2.5-flash": ModelEntry("or-gemini-2.5-flash", "OR Gemini-2.5-Flash", "google/gemini-2.5-flash:free",
+        "https://openrouter.ai/api/v1", "聚合平台", "免费 Gemini2.5快", ("org25f",)),
     "together": ModelEntry("together", "Together AI(聚合)", "meta-llama/Llama-4-Maverick",
         "https://api.together.xyz/v1", "聚合平台", "开源模型托管", ("tai",)),
-    # ── 本地模拟 ──
+    # ── 本地模型 ──
     "local": ModelEntry("local", "本地模拟", "local", "", "本地",
         "不调API 测试用", ("mock", "test")),
+    "ollama": ModelEntry("ollama", "Ollama 本地", "qwen3:latest",
+        "http://localhost:11434/v1", "本地", "Ollama本地推理", ("ollama",)),
+    "lmstudio": ModelEntry("lmstudio", "LM Studio 本地", "local-model",
+        "http://localhost:1234/v1", "本地", "LM Studio本地推理", ("lms", "studio")),
+    "vllm": ModelEntry("vllm", "vLLM 本地", "default",
+        "http://localhost:8000/v1", "本地", "vLLM本地推理", ("vllm",)),
+    "localai": ModelEntry("localai", "LocalAI 本地", "gpt-4",
+        "http://localhost:8080/v1", "本地", "LocalAI本地推理", ("lai",)),
+    "textgen": ModelEntry("textgen", "TextGen 本地", "default",
+        "http://localhost:5000/v1", "本地", "TextGen本地推理", ("tg", "ooba")),
 }
 
 
 class ModelPool:
     """模型池 — 管理API连接复用 + Agent-模型绑定 + 自定义模型"""
 
-    def __init__(self, default_key: str = "local", api_key: str = ""):
+    def __init__(self, default_key: str = "nemotron-super", api_key: str = ""):
         self.default_key = default_key
         self._api_key = api_key
         self._clients: Dict[str, OpenAI] = {}
@@ -140,12 +323,7 @@ class ModelPool:
         self._custom: Dict[str, ModelEntry] = {}  # 用户自定义模型
         self._per_model_keys: Dict[str, str] = {}  # model key → api_key
         # 多模型兜底链：按优先级依次尝试，直至成功
-        self._fallback_chain: list = [
-            "deepseek-v4-pro", "deepseek-v4-flash",
-            "qwen3.7-max", "qwen3.7-plus",
-            "glm-5.2", "gpt-4o-mini",
-            "gemini-3-flash",
-        ]
+        self._fallback_chain: list = []
         # 失败模型冷却：记录失败时间，冷却期内跳过
         self._cooldown: Dict[str, float] = {}
         self._cooldown_seconds: float = 60.0  # 1分钟冷却
@@ -326,12 +504,48 @@ class ModelPool:
                 tried.append((key, "无API连接"))
                 continue
 
-            params = {"model": model.model_id, "messages": messages[-20:]}
+            params = {"model": model.model_id, "messages": messages[-20:], "max_tokens": 4096}
             if tools:
                 params["tools"] = tools
+            # NVIDIA MiniMax 必须走 streaming，否则超时或空返回
+            if key.startswith("nv-minimax"):
+                params["stream"] = True
             try:
-                resp = client.chat.completions.create(**params)
-                d = resp.model_dump()
+                if params.get("stream"):
+                    stream = client.chat.completions.create(**params)
+                    full_content = ""
+                    tool_calls_data = {}
+                    final_model = ""
+                    for chunk in stream:
+                        if not chunk.choices:
+                            continue
+                        delta = chunk.choices[0].delta
+                        if delta.content:
+                            full_content += delta.content
+                        if delta.tool_calls:
+                            for tc in delta.tool_calls:
+                                idx = tc.index
+                                if idx not in tool_calls_data:
+                                    tool_calls_data[idx] = {"id": tc.id or f"call_{idx}", "function": {"name": "", "arguments": ""}}
+                                if tc.id:
+                                    tool_calls_data[idx]["id"] = tc.id
+                                if tc.function and tc.function.name:
+                                    tool_calls_data[idx]["function"]["name"] += tc.function.name
+                                if tc.function and tc.function.arguments:
+                                    tool_calls_data[idx]["function"]["arguments"] += tc.function.arguments
+                        if chunk.model:
+                            final_model = chunk.model
+                    tc_list = [tool_calls_data[k] for k in sorted(tool_calls_data.keys())] if tool_calls_data else None
+                    d = {
+                        "id": "", "choices": [{"message": {"role": "assistant", "content": full_content}}],
+                        "created": 0, "model": final_model, "object": "chat.completion",
+                        "usage": {}, "system_fingerprint": None, "moderation": None, "service_tier": None,
+                    }
+                    if tc_list:
+                        d["choices"][0]["message"]["tool_calls"] = tc_list
+                else:
+                    resp = client.chat.completions.create(**params)
+                    d = resp.model_dump()
                 d["_model"] = model.name
                 d["_tried"] = tried
                 d["_fallback_used"] = (i > 0)

@@ -851,7 +851,7 @@ Spec:"""
 
 验证报告:"""
 
-    def __init__(self, pool: ModelPool, verbose: bool = True, coordinator_mode: bool = True, fallback_mode: bool = True):
+    def __init__(self, pool: ModelPool, verbose: bool = True, coordinator_mode: bool = True, fallback_mode: bool = False):
         self.pool = pool
         self.log = Logger(enabled=verbose)
         self.children: Dict[str, ChildBot] = {}
@@ -948,6 +948,8 @@ Spec:"""
         "删除文件", "删除文件夹", "删掉", "移除",
         "复制文件", "移动文件", "重命名",
         "列出文件", "列出目录", "读取文件", "读文件", "读取",
+        "建一个文件", "建文件", "新建文件", "生成文件", "生成一个文件",
+        "建一个", "写一个文件", "写个文件", "创建一个文件",
     ]
 
     def _is_file_op(self, query: str) -> bool:
@@ -1004,12 +1006,27 @@ Spec:"""
                 resp = self._llm_call("__file_op__", msgs)
                 text = resp["choices"][0]["message"]["content"].strip()
                 import re as _re, json as _json
-                m = _re.search(r'\{[^{}]*"tool"[^{}]*\}', text, _re.DOTALL)
-                if not m:
+                # 用平衡括号提取完整 JSON（支持嵌套 {} ）
+                start = text.find("{")
+                if start == -1:
                     self.log.sys(f"LLM解析失败(attempt {attempt+1}): {text[:100]}")
                     history = f"\n[上次解析失败，请重新输出正确的 JSON]"
                     continue
-                call = _json.loads(m.group(0))
+                depth = 0
+                end = -1
+                for i in range(start, len(text)):
+                    if text[i] == "{":
+                        depth += 1
+                    elif text[i] == "}":
+                        depth -= 1
+                        if depth == 0:
+                            end = i + 1
+                            break
+                if end == -1 or '"tool"' not in text[start:end]:
+                    self.log.sys(f"LLM解析失败(attempt {attempt+1}): {text[:100]}")
+                    history = f"\n[上次解析失败，请重新输出正确的 JSON]"
+                    continue
+                call = _json.loads(text[start:end])
                 tool_name = call.get("tool", "")
                 args = call.get("args", {})
                 if tool_name not in self._file_tools:
@@ -1566,7 +1583,7 @@ Spec:"""
         兜底模式下主模型失败会依次尝试备用模型，返回结果中 _tried 记录尝试链。"""
         if self.fallback_mode:
             return self.pool.call_llm_with_fallback(agent, messages, tools, fallback_models=extra_fallbacks)
-        return self._llm_call(agent, messages, tools)
+        return self.pool.call_llm(agent, messages, tools)
 
     def _build_child_msgs(self, child: ChildBot, user_input: str,
                           extra_context: str = "", image: str = None) -> list:
@@ -1645,7 +1662,7 @@ Spec:"""
             resp = self._llm_call(child.name, messages, tools)
             latency = time.time() - t0
 
-            usage = resp.get("usage", {})
+            usage = resp.get("usage") or {}
             model = resp.get("_model", "?")
             tokens = usage.get("total_tokens", 0)
             self.log.llm(model, tokens, latency)

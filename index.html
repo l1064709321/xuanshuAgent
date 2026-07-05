@@ -2,860 +2,712 @@
 <html lang="zh">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1.0,user-scalable=no,viewport-fit=cover">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover">
 <title>玄姝Agent</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
-/* ========== 变量 ========== */
+/* ===== CSS Variables ===== */
 :root {
-  --bg: #08080f;
-  --glass: rgba(18,18,40,0.72);
-  --glass-hover: rgba(28,28,55,0.85);
-  --glass-border: rgba(255,255,255,0.06);
-  --glass-active: rgba(99,102,241,0.14);
-  --primary: #6366f1;
-  --primary-glow: rgba(99,102,241,0.35);
-  --primary-text: #818cf8;
-  --success: #22c55e;
-  --warning: #f59e0b;
-  --danger: #ef4444;
-  --text: #e4e4e7;
+  --bg: #0a0a0f;
+  --bg-elevated: #12121a;
+  --surface: #1a1a26;
+  --surface-hover: #222233;
+  --border: rgba(255,255,255,0.06);
+  --border-strong: rgba(255,255,255,0.10);
+  
+  --glass: rgba(22,22,38,0.78);
+  --glass-hover: rgba(32,32,52,0.88);
+  --glass-border: rgba(255,255,255,0.07);
+  --glass-active: rgba(129,140,248,0.12);
+  
+  --primary: #818cf8;
+  --primary-hover: #6366f1;
+  --primary-glow: rgba(129,140,248,0.25);
+  --primary-text: #a5b4fc;
+  --primary-bg: rgba(129,140,248,0.08);
+  
+  --success: #34d399;
+  --success-bg: rgba(52,211,153,0.10);
+  --warning: #fbbf24;
+  --danger: #f87171;
+  
+  --text: #ecedee;
+  --text-secondary: #a1a1aa;
   --text-dim: #71717a;
   --text-muted: #52525b;
-  --radius: 14px;
+  
+  --radius: 16px;
   --radius-sm: 10px;
-  --font: 'Inter',-apple-system,'PingFang SC','Microsoft YaHei',sans-serif;
-  --mono: 'JetBrains Mono',monospace;
-  --transition: .28s cubic-bezier(.22,.61,.36,1);
-  --shadow: 0 8px 40px rgba(0,0,0,0.5);
+  --radius-xs: 8px;
+  --radius-full: 9999px;
+  
+  --font: 'Inter', -apple-system, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  --mono: 'JetBrains Mono', 'SF Mono', 'Cascadia Code', 'Consolas', monospace;
+  
+  --transition: 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-slow: 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.3);
+  --shadow: 0 4px 24px rgba(0,0,0,0.4);
+  --shadow-lg: 0 12px 48px rgba(0,0,0,0.5);
 }
 
-* { margin:0; padding:0; box-sizing:border-box; }
-html,body {
+*, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+
+html, body {
   height: 100dvh;
   overflow: hidden;
   font-family: var(--font);
   background: var(--bg);
   color: var(--text);
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
   -webkit-tap-highlight-color: transparent;
+  font-size: 16px;
+  line-height: 1.5;
 }
 
-/* ========== 全局光晕 ========== */
+/* ===== Global Accessibility ===== */
+:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+  border-radius: 3px;
+}
+[tabindex]:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Skip link */
+.skip-link {
+  position: fixed; top: -100px; left: 12px; z-index: 10000;
+  padding: 10px 20px; background: var(--primary); color: #fff;
+  border-radius: var(--radius-xs); font-size: 14px; font-weight: 600;
+  text-decoration: none; transition: top var(--transition);
+}
+.skip-link:focus { top: 12px; }
+
+/* Ambient background glow */
 body::before {
   content: '';
-  position: fixed;
-  inset: 0;
+  position: fixed; inset: 0; z-index: 0; pointer-events: none;
   background:
-    radial-gradient(ellipse 600px 400px at 20% 30%, rgba(99,102,241,0.08), transparent),
-    radial-gradient(ellipse 500px 500px at 80% 70%, rgba(99,102,241,0.05), transparent);
-  pointer-events: none;
-  z-index: 0;
+    radial-gradient(ellipse 800px 500px at 15% 20%, rgba(129,140,248,0.04), transparent),
+    radial-gradient(ellipse 600px 400px at 85% 80%, rgba(129,140,248,0.03), transparent),
+    radial-gradient(ellipse 400px 300px at 50% 50%, rgba(52,211,153,0.02), transparent);
 }
 
-/* ========== 布局 ========== */
+/* ===== Layout ===== */
 .app {
-  position: relative;
-  z-index: 1;
+  position: relative; z-index: 1;
   display: flex;
   height: 100dvh;
 }
 
-/* ── 左侧边栏 ── */
+/* ---- Left Sidebar ---- */
 .left-sidebar {
-  width: 260px;
-  flex-shrink: 0;
-  background: var(--glass);
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
-  border-right: 1px solid var(--glass-border);
-  display: flex;
-  flex-direction: column;
-  transition: width 0.3s ease;
-  overflow: hidden;
-  white-space: nowrap;
+  width: 260px; flex-shrink: 0;
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  display: flex; flex-direction: column;
+  transition: width var(--transition-slow), min-width var(--transition-slow);
+  overflow: hidden; white-space: nowrap;
 }
-.left-sidebar.collapsed {
-  width: 0;
-  min-width: 0;
-  border-right: none;
-}
+.left-sidebar.collapsed { width: 0; min-width: 0; border-right: none; }
+
 .sidebar-header {
   padding: 20px 18px 14px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+  display: flex; align-items: center; justify-content: space-between;
 }
 .sidebar-header .logo {
-  font-size: 15px;
-  font-weight: 700;
-  color: var(--primary-text);
-  letter-spacing: -0.3px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
+  font-size: 15px; font-weight: 700;
+  color: var(--primary-text); letter-spacing: -0.3px;
+  display: flex; align-items: center; gap: 8px;
 }
 .sidebar-header .logo::before {
-  content: '';
-  width: 8px; height: 8px;
-  border-radius: 50%;
-  background: var(--primary);
-  box-shadow: 0 0 12px var(--primary-glow);
+  content: ''; width: 8px; height: 8px; border-radius: 50%;
+  background: var(--primary); box-shadow: 0 0 10px var(--primary-glow);
 }
 
 .sidebar-profile {
-  padding: 10px 14px 14px;
-  border-bottom: 1px solid var(--glass-border);
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border);
+  display: flex; flex-direction: column; gap: 10px;
 }
-
 .sidebar-avatar-wrap {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
 }
-
 .sidebar-avatar {
-  width: 56px;
-  height: 56px;
-  border-radius: 50%;
-  background: var(--glass-active);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 22px;
-  font-weight: 700;
-  color: var(--primary-text);
-  background-size: cover;
-  background-position: center;
-  border: 2px solid var(--glass-border);
+  width: 60px; height: 60px; border-radius: 50%;
+  background: var(--primary-bg);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 24px; font-weight: 700; color: var(--primary-text);
+  background-size: cover; background-position: center;
+  border: 2px solid var(--border-strong);
+  transition: border-color var(--transition);
 }
+.sidebar-avatar:hover { border-color: var(--primary); }
 
-.sidebar-mem-section {
-  flex: 1;
-  min-height: 0;
-}
+.sidebar-mem-section { flex: 1; min-height: 0; }
 
 .session-list {
-  flex: 1;
-  overflow-y: auto;
-  padding: 0 10px;
+  flex: 1; overflow-y: auto; padding: 0 10px;
 }
 .session-list::-webkit-scrollbar { width: 3px; }
-.session-list::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.06); border-radius: 3px; }
+.session-list::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,0.04); border-radius: 3px;
+}
 
 .session-item {
-  padding: 10px 14px;
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-  font-size: 13px;
-  color: var(--text-dim);
-  transition: all var(--transition);
-  margin-bottom: 2px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  padding: 10px 14px; border-radius: var(--radius-xs);
+  cursor: pointer; font-size: 13px; color: var(--text-dim);
+  transition: background-color var(--transition), color var(--transition); margin-bottom: 2px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
-.session-item:hover { background: var(--glass-hover); color: var(--text); }
+.session-item:hover { background: var(--surface-hover); color: var(--text-secondary); }
 .session-item.active {
-  background: var(--glass-active);
-  color: var(--primary-text);
-  font-weight: 500;
+  background: var(--glass-active); color: var(--primary-text); font-weight: 500;
 }
 
 .sidebar-footer {
-  padding: 14px 18px;
-  border-top: 1px solid var(--glass-border);
-  display: flex;
-  align-items: center;
-  gap: 10px;
+  padding: 14px 18px; border-top: 1px solid var(--border);
+  display: flex; align-items: center; gap: 10px;
 }
 .status-indicator {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  font-size: 11px;
-  color: var(--text-dim);
-  flex: 1;
+  display: flex; align-items: center; gap: 7px;
+  font-size: 11px; color: var(--text-dim); flex: 1;
 }
 .status-dot {
-  width: 7px; height: 7px;
-  border-radius: 50%;
-  flex-shrink: 0;
+  width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0;
 }
-.status-dot.online { background: var(--success); box-shadow: 0 0 8px rgba(34,197,94,0.4); }
+.status-dot.online { background: var(--success); box-shadow: 0 0 8px rgba(52,211,153,0.35); }
 .status-dot.offline { background: var(--text-muted); }
-.status-dot.error { background: var(--danger); }
+.status-dot.error { background: var(--danger); box-shadow: 0 0 8px rgba(248,113,113,0.35); }
 
 .settings-btn {
-  padding: 6px 10px;
-  border-radius: 8px;
-  border: 1px solid var(--glass-border);
-  background: transparent;
-  color: var(--text-dim);
-  font-size: 16px;
-  cursor: pointer;
-  transition: all var(--transition);
-  line-height: 1;
+  padding: 6px 10px; border-radius: var(--radius-xs);
+  border: 1px solid var(--border); background: transparent;
+  color: var(--text-dim); font-size: 16px; cursor: pointer;
+  transition: color var(--transition), border-color var(--transition); line-height: 1;
 }
 .settings-btn:hover { color: var(--text); border-color: var(--primary); }
 
 .avatar-btn {
-  width: 30px; height: 30px;
-  border-radius: 50%;
-  background: var(--primary);
-  color: #fff;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  background-size: cover;
-  background-position: center;
-  background-repeat: no-repeat;
-  transition: all var(--transition);
-  user-select: none;
+  width: 30px; height: 30px; border-radius: 50%;
+  background: var(--primary); color: #fff; font-size: 14px;
+  font-weight: 600; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0; background-size: cover; background-position: center;
+  background-repeat: no-repeat; transition: transform var(--transition), box-shadow var(--transition); user-select: none;
 }
-.avatar-btn:hover { transform: scale(1.1); box-shadow: 0 0 14px var(--primary-glow); }
+.avatar-btn:hover { transform: scale(1.08); box-shadow: 0 0 14px var(--primary-glow); }
 
 .avatar-large {
-  width: 80px; height: 80px;
-  border-radius: 50%;
-  background-size: cover;
-  background-position: center;
-  background-repeat: no-repeat;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin: 0 auto 12px;
-  font-size: 28px;
-  font-weight: 700;
-  color: #fff;
-  background-color: var(--primary);
+  width: 80px; height: 80px; border-radius: 50%;
+  background-size: cover; background-position: center; background-repeat: no-repeat;
+  display: flex; align-items: center; justify-content: center;
+  margin: 0 auto 12px; font-size: 28px; font-weight: 700;
+  color: #fff; background-color: var(--primary);
 }
 
 .avatar-upload-btn {
-  display: block;
-  margin: 8px auto 0;
-  padding: 6px 18px;
-  border-radius: 20px;
-  border: 1px solid var(--glass-border);
-  background: transparent;
-  color: var(--text-dim);
-  font-size: 12px;
-  font-family: var(--font);
-  cursor: pointer;
-  transition: all var(--transition);
+  display: block; margin: 8px auto 0; padding: 6px 18px;
+  border-radius: var(--radius-full); border: 1px solid var(--border);
+  background: transparent; color: var(--text-dim); font-size: 12px;
+  font-family: var(--font); cursor: pointer; transition: color var(--transition), border-color var(--transition);
 }
 .avatar-upload-btn:hover { color: var(--text); border-color: var(--primary); }
 
-/* ── 中间主区域 ── */
+/* ---- Main Area ---- */
 .main-area {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
+  flex: 1; display: flex; flex-direction: column; min-width: 0;
+  background: var(--bg);
 }
 
 .toolbar {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 16px;
-  background: var(--glass);
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
-  border-bottom: 1px solid var(--glass-border);
-  flex-shrink: 0;
-  overflow-x: auto;
-  overflow-y: hidden;
-  scrollbar-width: none;
-  -ms-overflow-style: none;
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px 16px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0; overflow-x: auto; overflow-y: hidden;
+  scrollbar-width: none; -ms-overflow-style: none;
 }
 .toolbar::-webkit-scrollbar { display: none; }
 
 .brand-logo {
-  display: inline-flex;
-  align-items: center;
-  font-size: 15px;
-  font-weight: 700;
-  color: var(--primary-text);
-  letter-spacing: 2px;
-  flex-shrink: 0;
-  cursor: default;
+  display: inline-flex; align-items: center;
+  font-size: 15px; font-weight: 700;
+  color: var(--primary-text); letter-spacing: 1px;
+  flex-shrink: 0; cursor: default;
 }
 
 .toolbar-avatar {
-  width: 32px; height: 32px;
-  border-radius: 50%;
-  background: var(--primary);
-  color: #fff;
-  font-size: 14px;
-  font-weight: 700;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  background-size: cover;
-  background-position: center;
-  transition: transform .2s, box-shadow .2s;
-  user-select: none;
+  width: 32px; height: 32px; border-radius: 50%;
+  background: var(--primary); color: #fff; font-size: 14px;
+  font-weight: 700; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0; background-size: cover; background-position: center;
+  transition: transform .2s, box-shadow .2s; user-select: none;
 }
 .toolbar-avatar:hover { transform: scale(1.1); box-shadow: 0 0 12px var(--primary-glow); }
 
 .model-chips {
-  display: flex;
-  gap: 5px;
-  align-items: center;
-  flex-shrink: 0;
+  display: flex; gap: 8px; align-items: center; flex-shrink: 0;
 }
 
 .model-bar {
-  display: flex;
-  gap: 6px;
-  align-items: center;
+  display: flex; gap: 6px; align-items: center;
   padding: 8px 16px;
-  background: var(--glass);
-  border-top: 1px solid var(--glass-border);
-  overflow-x: auto;
-  overflow-y: hidden;
-  scrollbar-width: none;
-  -ms-overflow-style: none;
-  flex-shrink: 0;
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  overflow-x: auto; overflow-y: hidden;
+  scrollbar-width: none; -ms-overflow-style: none; flex-shrink: 0;
 }
 .model-bar::-webkit-scrollbar { display: none; }
 
 .model-chip {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  padding: 5px 10px;
-  border-radius: 16px;
-  font-size: 11px;
-  font-weight: 500;
-  font-family: var(--font);
-  cursor: pointer;
-  border: 1px solid var(--glass-border);
-  background: transparent;
-  color: var(--text-dim);
-  white-space: nowrap;
-  transition: all var(--transition);
-  user-select: none;
-  -webkit-user-select: none;
+  display: flex; align-items: center; gap: 6px;
+  padding: 6px 12px; border-radius: var(--radius-full);
+  font-size: 12px; font-weight: 500; font-family: var(--font);
+  cursor: pointer; border: 1px solid var(--border);
+  background: transparent; color: var(--text-secondary);
+  white-space: nowrap; transition: border-color var(--transition), color var(--transition), background-color var(--transition);
+  user-select: none; -webkit-user-select: none;
 }
-.model-chip:hover { border-color: rgba(255,255,255,0.15); color: var(--text); }
+.model-chip:hover { border-color: var(--border-strong); color: var(--text); }
 .model-chip.active {
-  border-color: var(--primary);
-  color: var(--primary-text);
-  background: var(--glass-active);
-  box-shadow: 0 0 8px rgba(99,102,241,0.2);
+  border-color: var(--primary); color: var(--primary-text);
+  background: var(--primary-bg);
+  box-shadow: 0 0 10px rgba(129,140,248,0.15);
 }
 .model-chip .chip-dot {
-  width: 6px; height: 6px;
-  border-radius: 50%;
-  flex-shrink: 0;
+  width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0;
 }
 .chip-dot.ok { background: var(--success); }
 .chip-dot.no { background: var(--text-muted); }
 
 .toolbar .token-badge {
-  margin-left: auto;
-  font-size: 11px;
-  color: var(--text-dim);
+  margin-left: auto; font-size: 11px; color: var(--text-dim);
   font-family: var(--mono);
-  background: rgba(255,255,255,0.03);
-  padding: 4px 10px;
-  border-radius: 20px;
-  border: 1px solid var(--glass-border);
-  cursor: pointer;
-  flex-shrink: 0;
+  background: rgba(255,255,255,0.03); padding: 4px 10px;
+  border-radius: var(--radius-full); border: 1px solid var(--border);
+  cursor: pointer; flex-shrink: 0;
 }
-.token-badge:hover { color: var(--text); }
+.token-badge:hover { color: var(--text-secondary); }
 
 .toolbar-btn {
-  width: 32px; height: 32px;
-  border-radius: 50%;
-  background: transparent;
-  border: 1px solid var(--glass-border);
-  color: var(--text-dim);
-  font-size: 15px;
-  cursor: pointer;
+  width: 44px; height: 44px; border-radius: 50%;
+  background: transparent; border: 1px solid var(--border);
+  color: var(--text-dim); font-size: 16px; cursor: pointer;
   display: flex; align-items: center; justify-content: center;
-  transition: all var(--transition);
-  flex-shrink: 0;
+  transition: color var(--transition), border-color var(--transition); flex-shrink: 0;
 }
-.toolbar-btn:hover { color: var(--text); border-color: var(--primary); transform: scale(1.1); }
+.toolbar-btn:hover { color: var(--text); border-color: var(--primary); }
 
+/* ---- Conversation / Messages ---- */
 .conversation {
-  flex: 1;
-  overflow-y: auto;
-  padding: 20px;
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
+  flex: 1; overflow-y: auto; padding: 20px;
+  display: flex; flex-direction: column; gap: 16px;
   scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
 }
-.conversation::-webkit-scrollbar { width: 4px; }
-.conversation::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.05); border-radius: 4px; }
+.conversation::-webkit-scrollbar { width: 6px; }
+.conversation::-webkit-scrollbar-track { background: transparent; }
+.conversation::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,0.05); border-radius: 3px;
+}
+.conversation::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.10); }
 
-/* ── 气泡 ── */
-.bubble {
-  max-width: 82%;
-  padding: 12px 16px;
-  border-radius: 16px;
-  font-size: 14px;
-  line-height: 1.7;
-  word-break: break-word;
-  animation: slideUp .35s cubic-bezier(.2,.8,.2,1);
+/* Welcome state */
+.welcome {
+  flex: 1; display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: 12px; padding: 40px 20px; text-align: center;
+  animation: fadeIn 0.5s ease;
 }
-@keyframes slideUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+.welcome-icon {
+  width: 64px; height: 64px; border-radius: 16px;
+  background: var(--primary-bg);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 28px; border: 1px solid var(--border-strong);
+  margin-bottom: 4px;
+}
+.welcome-title {
+  font-size: 22px; font-weight: 700;
+  color: var(--text); letter-spacing: -0.5px;
+}
+.welcome-sub {
+  font-size: 14px; color: var(--text-secondary);
+}
+.welcome-hints {
+  display: flex; flex-wrap: wrap; gap: 8px; justify-content: center;
+  margin-top: 12px;
+}
+.welcome-hints span {
+  padding: 6px 14px; border-radius: var(--radius-full);
+  border: 1px solid var(--border);
+  font-size: 12px; color: var(--text-dim);
+  transition: border-color var(--transition), color var(--transition);
+}
+.welcome-hints span:hover { border-color: var(--primary); color: var(--primary-text); }
+
+/* Message bubble - refined */
+.bubble {
+  max-width: 80%; padding: 12px 16px;
+  border-radius: 20px;
+  font-size: 14px; line-height: 1.65;
+  word-break: break-word;
+  animation: msgIn 0.28s cubic-bezier(0.22, 0.61, 0.36, 1);
+  position: relative;
+}
+@keyframes msgIn {
+  from { opacity: 0; transform: translateY(6px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
 .bubble.user {
   align-self: flex-end;
   background: var(--primary);
   color: #fff;
-  border-bottom-right-radius: 6px;
+  border-bottom-right-radius: 8px;
+  box-shadow: 0 4px 14px rgba(129,140,248,0.2);
 }
+
 .bubble.agent {
   align-self: flex-start;
-  background: var(--glass);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid var(--glass-border);
-  border-bottom-left-radius: 6px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-bottom-left-radius: 8px;
 }
+
 .bubble.system {
   align-self: center;
-  background: transparent;
-  color: var(--text-dim);
-  font-size: 12px;
-  padding: 6px 12px;
-  border: 1px solid var(--glass-border);
-  border-radius: 20px;
+  background: transparent; color: var(--text-dim);
+  font-size: 12px; padding: 6px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-full);
 }
 
-/* 对话容器滚动条 */
-.conversation::-webkit-scrollbar { width: 6px; }
-.conversation::-webkit-scrollbar-track { background: transparent; }
-.conversation::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 3px; }
-.conversation::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.15); }
+/* Code blocks */
+.code-block {
+  background: #0d0d14; border: 1px solid var(--border);
+  border-radius: var(--radius-xs); padding: 12px 14px;
+  margin: 10px 0; overflow-x: auto;
+  font-family: var(--mono); font-size: 12px; line-height: 1.5;
+  white-space: pre; color: var(--text-secondary);
+}
+.inline-code {
+  background: rgba(255,255,255,0.06); padding: 2px 6px;
+  border-radius: 4px; font-family: var(--mono); font-size: 12px;
+}
+.md-h2 { font-size: 15px; font-weight: 600; margin: 10px 0 6px; color: var(--text); }
+.md-h3 { font-size: 13px; font-weight: 600; margin: 8px 0 4px; color: var(--text-secondary); }
+.md-ul { padding-left: 18px; margin: 6px 0; }
+.md-ul li { margin: 3px 0; }
+.md-hr { border: none; border-top: 1px solid var(--border); margin: 10px 0; }
 
-/* ── 工具卡片 ── */
+/* Agent label inside bubble */
+.agent-label {
+  display: flex; align-items: center; gap: 8px;
+  margin-bottom: 10px; padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+}
+.agent-icon {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 22px; height: 22px; border-radius: 6px;
+  background: var(--primary-bg); font-size: 11px;
+}
+.agent-name {
+  font-weight: 600; font-size: 12px;
+  color: var(--primary-text); letter-spacing: 0.3px;
+}
+.agent-body { line-height: 1.7; }
+
+/* Tool card inside message */
 .tool-card {
-  background: rgba(99,102,241,0.06);
-  border: 1px solid rgba(99,102,241,0.15);
+  background: rgba(129,140,248,0.05);
+  border: 1px solid rgba(129,140,248,0.12);
   border-radius: var(--radius-sm);
-  padding: 10px 14px;
-  margin-top: 10px;
-  font-size: 12px;
+  padding: 10px 14px; margin-top: 10px; font-size: 12px;
 }
 .tool-card .tool-header {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  color: var(--primary-text);
-  font-weight: 600;
-  margin-bottom: 6px;
-  font-family: var(--mono);
-  font-size: 11px;
+  display: flex; align-items: center; gap: 6px;
+  color: var(--primary-text); font-weight: 600;
+  margin-bottom: 6px; font-family: var(--mono); font-size: 11px;
 }
 .tool-card .tool-params {
-  color: var(--text-dim);
-  font-family: var(--mono);
-  font-size: 11px;
-  margin-bottom: 4px;
-  padding: 4px 8px;
-  background: rgba(0,0,0,0.3);
-  border-radius: 6px;
-  word-break: break-all;
+  color: var(--text-dim); font-family: var(--mono); font-size: 11px;
+  margin-bottom: 4px; padding: 6px 8px;
+  background: rgba(0,0,0,0.3); border-radius: 6px; word-break: break-all;
 }
 .tool-card .tool-result {
-  color: var(--text-dim);
-  font-size: 12px;
-  max-height: 120px;
-  overflow-y: auto;
-  white-space: pre-wrap;
+  color: var(--text-secondary); font-size: 12px;
+  max-height: 120px; overflow-y: auto; white-space: pre-wrap;
 }
 
-/* ── 打字动画 ── */
+/* Typing indicator */
 .typing {
-  align-self: flex-start;
-  display: flex;
-  gap: 5px;
-  padding: 14px 18px;
-  background: var(--glass);
-  border: 1px solid var(--glass-border);
-  border-radius: var(--radius);
-  border-bottom-left-radius: 6px;
+  align-self: flex-start; display: flex; gap: 5px;
+  padding: 14px 18px; background: var(--surface);
+  border: 1px solid var(--border); border-radius: var(--radius);
+  border-bottom-left-radius: 8px;
 }
 .typing span {
-  width: 7px; height: 7px;
-  background: var(--primary);
-  border-radius: 50%;
-  animation: bounce 1.4s infinite ease-in-out;
+  width: 7px; height: 7px; background: var(--primary);
+  border-radius: 50%; animation: bounce 1.4s infinite ease-in-out;
 }
 .typing span:nth-child(2) { animation-delay: .18s; }
 .typing span:nth-child(3) { animation-delay: .36s; }
 
-/* ── 输入栏 ── */
+/* ---- Input Area ---- */
 .input-area {
-  position: relative;
-  padding: 12px 20px;
+  padding: 12px 16px;
   padding-bottom: max(12px, env(safe-area-inset-bottom));
-  background: var(--glass);
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
-  border-top: 1px solid var(--glass-border);
+  background: var(--surface);
+  border-top: 1px solid var(--border);
   flex-shrink: 0;
 }
 .input-row {
-  display: flex;
-  gap: 10px;
-  align-items: center;
-  max-width: 800px;
-  margin: 0 auto;
+  display: flex; gap: 10px; align-items: center;
+  max-width: 768px; margin: 0 auto;
 }
 .input-row input {
-  flex: 1;
-  padding: 12px 18px;
-  border-radius: 28px;
-  border: 1px solid var(--glass-border);
-  background: rgba(0,0,0,0.3);
-  color: var(--text);
-  font-size: 14px;
-  font-family: var(--font);
+  flex: 1; padding: 12px 18px;
+  border-radius: var(--radius-full);
+  border: 1.5px solid var(--border);
+  background: var(--bg);
+  color: var(--text); font-size: 14px; font-family: var(--font);
   outline: none;
   transition: border-color var(--transition), box-shadow var(--transition);
 }
 .input-row input:focus {
   border-color: var(--primary);
-  box-shadow: 0 0 0 3px rgba(99,102,241,0.15);
+  box-shadow: 0 0 0 3px rgba(129,140,248,0.12);
 }
 .input-row input::placeholder { color: var(--text-muted); }
-.send-btn {
-  width: 44px; height: 44px;
-  border-radius: 50%;
-  border: none;
-  background: var(--primary);
-  color: #fff;
-  font-size: 18px;
-  cursor: pointer;
-  transition: all var(--transition);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-.send-btn:hover { background: #6366f1; transform: scale(1.05); }
-.send-btn:active { transform: scale(0.95); }
-.send-btn:disabled { background: var(--glass-border); color: var(--text-dim); cursor: not-allowed; transform: none; }
 
-/* ── 文件浏览按钮 ── */
-.file-browse-btn {
-  width: 44px; height: 44px;
-  border-radius: 50%;
-  border: 1px solid var(--glass-border);
-  background: var(--glass);
-  color: var(--primary-text);
-  font-size: 22px;
-  cursor: pointer;
-  transition: all var(--transition);
-  display: flex;
-  align-items: center;
-  justify-content: center;
+.send-btn {
+  width: 44px; height: 44px; border-radius: 50%;
+  border: none; background: var(--primary); color: #fff;
+  font-size: 18px; cursor: pointer;
+  transition: background-color var(--transition), box-shadow var(--transition);
+  display: flex; align-items: center; justify-content: center;
   flex-shrink: 0;
-  line-height: 1;
 }
-.file-browse-btn:hover { background: var(--glass-hover); border-color: var(--primary); }
+.send-btn:hover { background: var(--primary-hover); box-shadow: 0 4px 14px var(--primary-glow); }
+.send-btn:active { transform: scale(0.94); }
+.send-btn:disabled {
+  background: var(--border); color: var(--text-dim);
+  cursor: not-allowed; transform: none; box-shadow: none;
+}
+
+/* File browse */
+.file-browse-btn {
+  width: 44px; height: 44px; border-radius: 50%;
+  border: 1.5px solid var(--border); background: var(--bg);
+  color: var(--primary-text); font-size: 22px; cursor: pointer;
+  transition: color var(--transition), border-color var(--transition), background-color var(--transition);
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0; line-height: 1;
+}
+.file-browse-btn:hover { border-color: var(--primary); background: var(--primary-bg); }
 .file-browse-btn.active { background: var(--primary); color: #fff; border-color: var(--primary); }
 
-/* ── 文件浏览器弹窗 ── */
+/* File browser popup */
 .file-browser-popup {
-  position: absolute;
-  bottom: 100%;
-  left: 0; right: 0;
-  margin: 0 14px 8px 14px;
-  max-height: 340px;
-  background: var(--glass);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid var(--glass-border);
-  border-radius: 16px;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  z-index: 100;
+  position: absolute; bottom: 100%; left: 0; right: 0;
+  margin: 0 8px 8px 8px; max-height: 340px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius); overflow: hidden;
+  display: flex; flex-direction: column; z-index: 100;
+  box-shadow: var(--shadow-lg);
 }
 .file-browser-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 10px 14px;
-  border-bottom: 1px solid var(--glass-border);
-  gap: 10px;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 14px; border-bottom: 1px solid var(--border); gap: 10px;
 }
 .file-browser-header span {
-  font-size: 13px;
-  color: var(--primary-text);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  flex: 1;
-  min-width: 0;
+  font-size: 13px; color: var(--primary-text);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  flex: 1; min-width: 0;
 }
 .file-browser-close {
-  width: 28px; height: 28px;
-  border-radius: 50%;
-  border: none;
-  background: transparent;
-  color: var(--text-dim);
-  font-size: 16px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  transition: all var(--transition);
+  width: 28px; height: 28px; border-radius: 50%;
+  border: none; background: transparent; color: var(--text-dim);
+  font-size: 16px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0; transition: color var(--transition), background-color var(--transition);
 }
-.file-browser-close:hover { background: var(--glass-hover); color: var(--text); }
+.file-browser-close:hover { background: var(--surface-hover); color: var(--text); }
 .file-browser-list {
-  overflow-y: auto;
-  padding: 6px;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
+  overflow-y: auto; padding: 6px;
+  display: flex; flex-direction: column; gap: 2px;
 }
 .file-browser-list .fb-item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 10px 12px;
-  border-radius: 10px;
-  border: 1px solid transparent;
-  cursor: pointer;
-  font-size: 13px;
-  transition: all var(--transition);
-  gap: 8px;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 12px; border-radius: var(--radius-xs);
+  border: 1px solid transparent; cursor: pointer;
+  font-size: 13px; transition: border-color var(--transition), color var(--transition), background-color var(--transition); gap: 8px;
 }
-.file-browser-list .fb-item:hover { background: var(--glass-hover); border-color: var(--glass-border); }
+.file-browser-list .fb-item:hover { background: var(--surface-hover); border-color: var(--border); }
 .file-browser-list .fb-item .fb-name {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  align-items: center;
-  gap: 8px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px;
 }
 .file-browser-list .fb-item .fb-size {
-  font-size: 11px;
-  color: var(--text-dim);
-  flex-shrink: 0;
+  font-size: 11px; color: var(--text-dim); flex-shrink: 0;
 }
-.file-browser-list .fb-up {
-  font-weight: 500;
-  color: var(--primary);
-}
+.file-browser-list .fb-up { font-weight: 500; color: var(--primary); }
 
-/* ── 右侧面板 ── */
+/* ---- Right Panel ---- */
 .right-panel {
-  width: 320px;
-  flex-shrink: 0;
-  background: var(--glass);
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
-  border-left: 1px solid var(--glass-border);
-  display: flex;
-  flex-direction: column;
-  transition: transform var(--transition);
+  width: 320px; flex-shrink: 0;
+  background: var(--surface);
+  border-left: 1px solid var(--border);
+  display: flex; flex-direction: column;
+  transition: transform var(--transition-slow);
 }
 .panel-tabs {
-  display: flex;
-  border-bottom: 1px solid var(--glass-border);
+  display: flex; border-bottom: 1px solid var(--border);
 }
 .panel-tab {
-  flex: 1;
-  padding: 12px;
-  text-align: center;
-  font-size: 12px;
-  font-weight: 500;
-  color: var(--text-dim);
-  cursor: pointer;
-  border-bottom: 2px solid transparent;
-  transition: all var(--transition);
+  flex: 1; padding: 12px; text-align: center;
+  font-size: 12px; font-weight: 500; color: var(--text-dim);
+  cursor: pointer; border-bottom: 2px solid transparent;
+  transition: color var(--transition), border-color var(--transition);
+  font-family: var(--font);
 }
-.panel-tab.active {
-  color: var(--primary-text);
-  border-bottom-color: var(--primary);
-}
+.panel-tab.active { color: var(--primary-text); border-bottom-color: var(--primary); }
+
 .panel-content {
-  flex: 1;
-  overflow-y: auto;
-  padding: 16px;
+  flex: 1; overflow-y: auto; padding: 16px;
+  -webkit-overflow-scrolling: touch;
 }
 .panel-content::-webkit-scrollbar { width: 3px; }
-.panel-content::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.06); border-radius: 3px; }
-
-.panel-section {
-  margin-bottom: 20px;
+.panel-content::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,0.04); border-radius: 3px;
 }
+
+.panel-section { margin-bottom: 20px; }
 .panel-section h3 {
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  color: var(--text-muted);
-  margin-bottom: 10px;
-  font-weight: 600;
+  font-size: 11px; text-transform: uppercase; letter-spacing: 1px;
+  color: var(--text-muted); margin-bottom: 10px; font-weight: 600;
 }
 
-/* ── 设置面板 ── */
+/* Settings */
 .setting-row {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  margin-bottom: 14px;
+  display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px;
 }
 .setting-label {
-  font-size: 12px;
-  color: var(--text-dim);
-  font-weight: 500;
+  font-size: 12px; color: var(--text-secondary); font-weight: 500;
 }
 .setting-row input {
-  width: 100%;
-  padding: 10px 14px;
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--glass-border);
-  background: rgba(0,0,0,0.3);
-  color: var(--text);
-  font-size: 13px;
-  font-family: var(--mono);
-  outline: none;
-  transition: border-color var(--transition);
+  width: 100%; padding: 10px 14px; border-radius: var(--radius-xs);
+  border: 1.5px solid var(--border); background: var(--bg);
+  color: var(--text); font-size: 13px; font-family: var(--mono);
+  outline: none; transition: border-color var(--transition);
 }
 .setting-row input:focus { border-color: var(--primary); }
 
 .apply-btn {
-  width: 100%;
-  padding: 10px;
-  border-radius: var(--radius-sm);
-  border: none;
-  background: var(--primary);
-  color: #fff;
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all var(--transition);
-  margin-top: 4px;
+  width: 100%; padding: 10px; border-radius: var(--radius-xs);
+  border: none; background: var(--primary); color: #fff;
+  font-size: 13px; font-weight: 600; cursor: pointer;
+  transition: background-color var(--transition); margin-top: 4px;
+  font-family: var(--font);
 }
-.apply-btn:hover { background: #4f46e5; }
+.apply-btn:hover { background: var(--primary-hover); }
 .apply-btn.ghost {
-  background: transparent;
-  border: 1px solid var(--glass-border);
+  background: transparent; border: 1px solid var(--border);
   color: var(--text-dim);
 }
 .apply-btn.ghost:hover { color: var(--text); border-color: var(--primary); }
 
-/* ── Toast ── */
+/* Toast */
 .toast {
-  position: fixed;
-  top: 24px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: var(--glass);
-  backdrop-filter: blur(20px);
+  position: fixed; top: 24px; left: 50%; transform: translateX(-50%);
+  background: var(--glass); backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   border: 1px solid var(--glass-border);
-  padding: 10px 24px;
-  border-radius: 24px;
-  font-size: 12px;
-  color: var(--text);
-  z-index: 500;
+  padding: 10px 24px; border-radius: var(--radius-full);
+  font-size: 13px; color: var(--text); z-index: 500;
   animation: toastIn .3s ease, toastOut .3s ease 2.2s forwards;
-  box-shadow: var(--shadow);
+  box-shadow: var(--shadow-lg);
 }
 
-/* ── 遮罩层 ── */
+/* Mobile overlay */
 .mobile-overlay {
-  display: none;
-  position: fixed;
-  inset: 0;
-  background: rgba(0,0,0,0.6);
-  z-index: 50;
-  backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,0.55); z-index: 50;
+  backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
 }
 
-/* ── 动画 ── */
-@keyframes slideUp { from { opacity:0; transform:translateY(10px); } }
+/* Animations */
 @keyframes bounce { 0%,80%,100% { transform:scale(0); } 40% { transform:scale(1); } }
 @keyframes toastIn { from { opacity:0; transform:translateX(-50%) translateY(-10px); } }
 @keyframes toastOut { to { opacity:0; transform:translateX(-50%) translateY(-10px); } }
 
-/* ========== 移动端适配 ========== */
+/* ===== Mobile Adaptation ===== */
 @media (max-width: 768px) {
+  .app { flex-direction: column; }
+
   .left-sidebar {
-    width: 260px;
-    transition: width 0.3s ease;
+    width: 260px; transition: width var(--transition-slow);
   }
   .left-sidebar.collapsed { width: 0; min-width: 0; }
 
   .right-panel {
-    position: fixed;
-    right: 0; top: 0; bottom: 0;
-    z-index: 100;
-    transform: translateX(100%);
-    width: 300px;
-    box-shadow: var(--shadow);
+    position: fixed; right: 0; top: 0; bottom: 0;
+    z-index: 100; transform: translateX(100%);
+    width: 300px; box-shadow: var(--shadow-lg);
+    border-left: 1px solid var(--border);
+    transition: transform var(--transition-slow);
   }
   .right-panel.open { transform: translateX(0); }
 
   .mobile-overlay.active { display: block; }
 
   .toolbar { padding: 8px 14px; }
-  .conversation { padding: 14px; }
-  .input-area { padding: 10px 14px; padding-bottom: max(10px, env(safe-area-inset-bottom)); }
+  .conversation { padding: 14px; gap: 12px; }
+  .input-area { padding: 10px 12px; padding-bottom: max(10px, env(safe-area-inset-bottom)); }
 
-  .bubble { max-width: 90%; }
+  .bubble { max-width: 88%; font-size: 14px; }
+  .input-row input { font-size: 16px; } /* prevent iOS zoom */
 
-  /* 底部导航 */
+  /* Bottom nav */
   .bottom-nav {
     display: flex;
-    background: var(--glass);
-    backdrop-filter: blur(24px);
-    -webkit-backdrop-filter: blur(24px);
-    border-top: 1px solid var(--glass-border);
+    background: var(--surface);
+    border-top: 1px solid var(--border);
     flex-shrink: 0;
   }
   .bottom-nav-item {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 2px;
+    flex: 1; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 2px;
     padding: 8px 0;
     padding-bottom: max(8px, env(safe-area-inset-bottom));
-    font-size: 10px;
-    color: var(--text-dim);
-    cursor: pointer;
-    transition: color var(--transition);
-    border: none;
-    background: none;
-    font-family: var(--font);
+    font-size: 10px; color: var(--text-dim);
+    cursor: pointer; transition: color var(--transition);
+    border: none; background: none; font-family: var(--font);
   }
   .bottom-nav-item.active { color: var(--primary-text); }
   .bottom-nav-item .nav-icon { font-size: 18px; }
 
   .main-area { order: 1; }
   .bottom-nav { order: 2; }
-  .app { flex-direction: column; }
 }
 
 @media (min-width: 769px) {
@@ -863,79 +715,63 @@ body::before {
   .app { flex-direction: row; }
 }
 
-/* ── 权限弹窗 ── */
+/* Permission dialog */
 .permission-overlay {
-  display: none;
-  position: fixed; inset: 0; z-index: 9999;
-  background: rgba(0,0,0,0.55);
-  backdrop-filter: blur(4px);
+  display: none; position: fixed; inset: 0; z-index: 9999;
+  background: rgba(0,0,0,0.55); backdrop-filter: blur(4px);
   align-items: center; justify-content: center;
 }
 .permission-overlay.show { display: flex; }
 .permission-dialog {
-  background: var(--glass);
-  border: 1px solid var(--glass-border);
-  border-radius: var(--radius);
-  padding: 28px 32px;
-  max-width: 380px; width: 90%;
-  text-align: center;
-  box-shadow: var(--shadow);
-  animation: permFadeIn .3s ease;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 28px 32px;
+  max-width: 380px; width: 90%; text-align: center;
+  box-shadow: var(--shadow-lg); animation: permIn .3s ease;
 }
-@keyframes permFadeIn {
+@keyframes permIn {
   from { opacity: 0; transform: scale(0.92) translateY(12px); }
-  to   { opacity: 1; transform: scale(1) translateY(0); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
 }
-.permission-dialog .perm-icon {
-  font-size: 40px; margin-bottom: 12px;
-}
+.permission-dialog .perm-icon { font-size: 40px; margin-bottom: 12px; }
 .permission-dialog h3 {
   font-size: 16px; font-weight: 600; margin: 0 0 8px 0; color: var(--text);
 }
 .permission-dialog p {
-  font-size: 13px; color: var(--text-dim); margin: 0 0 24px 0; line-height: 1.6;
+  font-size: 13px; color: var(--text-secondary); margin: 0 0 24px 0; line-height: 1.6;
 }
 .perm-detail {
   width: 100%; margin: 0 0 12px 0;
-  border: 1px solid var(--glass-border); border-radius: var(--radius-sm);
-  background: var(--glass-bg); overflow: hidden;
+  border: 1px solid var(--border); border-radius: var(--radius-sm);
+  background: var(--bg); overflow: hidden;
 }
 .perm-row {
   display: flex; padding: 8px 12px; font-size: 13px;
 }
-.perm-row + .perm-row { border-top: 1px solid var(--glass-border); }
-.perm-label {
-  color: var(--text-dim); min-width: 64px; flex-shrink: 0; font-weight: 500;
-}
-.perm-value {
-  color: var(--text); word-break: break-all;
-}
+.perm-row + .perm-row { border-top: 1px solid var(--border); }
+.perm-label { color: var(--text-dim); min-width: 64px; flex-shrink: 0; font-weight: 500; }
+.perm-value { color: var(--text); word-break: break-all; }
 .perm-path {
-  font-family: 'SF Mono', 'Cascadia Code', 'Consolas', monospace;
-  font-size: 12px; background: var(--glass-hover); padding: 1px 6px; border-radius: 3px;
+  font-family: var(--mono); font-size: 12px;
+  background: var(--surface-hover); padding: 1px 6px; border-radius: 3px;
 }
 .perm-reason {
   font-size: 12px; color: var(--text-dim); margin: 0 0 20px 0; line-height: 1.5;
 }
-.perm-btns {
-  display: flex; gap: 10px; justify-content: center;
-}
+.perm-btns { display: flex; gap: 10px; justify-content: center; }
 .perm-btns button {
-  padding: 10px 28px; border-radius: var(--radius-sm);
-  font-size: 14px; font-weight: 500; cursor: pointer; border: 1px solid var(--glass-border);
-  transition: var(--transition);
+  padding: 10px 28px; border-radius: var(--radius-xs);
+  font-size: 14px; font-weight: 500; cursor: pointer;
+  border: 1px solid var(--border); transition: var(--transition);
+  font-family: var(--font);
 }
-.perm-allow {
-  background: var(--primary); color: #fff; border-color: var(--primary) !important;
-}
-.perm-allow:hover { background: #5b21b6; }
-.perm-deny {
-  background: transparent; color: var(--text-dim);
-}
-.perm-deny:hover { background: var(--glass-hover); color: var(--text); }
+.perm-allow { background: var(--primary); color: #fff; border-color: var(--primary) !important; }
+.perm-allow:hover { background: var(--primary-hover); }
+.perm-deny { background: transparent; color: var(--text-dim); }
+.perm-deny:hover { background: var(--surface-hover); color: var(--text); }
 </style>
 </head>
 <body>
+<a href="#msg-input" class="skip-link">跳到输入框</a>
 
 <!-- 权限弹窗 -->
 <div class="permission-overlay" id="permOverlay">
@@ -988,7 +824,7 @@ body::before {
         </div>
       </div>
     </div>
-    <div class="session-list" id="sessionList"><div class="session-item active">当前对话</div></div>
+    <div class="session-list" id="sessionList"><div class="session-item active" tabindex="0" role="button" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click()}">当前对话</div></div>
     <div class="sidebar-footer">
       <div class="status-indicator">
         <span class="status-dot offline" id="statusDot"></span>
@@ -1004,18 +840,24 @@ body::before {
       <div class="toolbar-avatar" id="toolbarAvatar" onclick="toggleLeft()" title="个人主页">玄</div>
       <span style="flex:1"></span>
       <span class="token-badge" id="tokenBadge" title="Token用量">0 tk</span>
-      <button class="toolbar-btn" onclick="toggleRight()" title="设置">⚙</button>
+      <button class="toolbar-btn" onclick="toggleRight()" title="设置" aria-label="打开设置面板">⚙</button>
     </div>
 
     <div class="conversation" id="conv">
-      <div class="bubble system">
+      <div class="welcome" id="welcome">
+        <div class="welcome-icon">⚡</div>
+        <div class="welcome-title">玄姝 Agent</div>
+        <div class="welcome-sub">多模型智能助手 · 已就绪</div>
+        <div class="welcome-hints">
+          <span>联网搜索</span><span>代码分析</span><span>文件管理</span><span>工具调用</span>
+        </div>
       </div>
     </div>
 
     <div class="input-area">
       <div class="input-row">
-        <button class="file-browse-btn" id="fileBrowseBtn" title="浏览本地文件">+</button>
-        <input id="input" type="text" placeholder="输入消息…" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();send()}" autocomplete="off">
+        <button class="file-browse-btn" id="fileBrowseBtn" title="浏览本地文件" aria-label="浏览本地文件">+</button>
+        <input id="msg-input" type="text" placeholder="输入消息…" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();send()}" autocomplete="off">
         <span id="imagePreview" style="display:none;margin-right:8px"></span>
         <button class="send-btn" onclick="send()">↑</button>
       </div>
@@ -1025,7 +867,7 @@ body::before {
     <div class="file-browser-popup" id="fileBrowserPopup" style="display:none">
       <div class="file-browser-header">
         <span id="fbBreadcrumb">📁 /</span>
-        <button class="file-browser-close" id="fileBrowseClose">✕</button>
+        <button class="file-browser-close" id="fileBrowseClose" aria-label="关闭文件浏览器">✕</button>
       </div>
       <div class="file-browser-list" id="fbFileList"></div>
     </div>
@@ -1036,9 +878,9 @@ body::before {
   <!-- ===== 右侧面板 ===== -->
   <aside class="right-panel" id="rightPanel">
     <div class="panel-tabs">
-      <div class="panel-tab active" onclick="switchPanelTab(this,'settings')">设置</div>
-      <div class="panel-tab" onclick="switchPanelTab(this,'tools')">工具</div>
-      <div class="panel-tab" onclick="switchPanelTab(this,'agents')">Agent</div>
+      <div class="panel-tab active" tabindex="0" role="tab" aria-selected="true" onclick="switchPanelTab(this,'settings')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();switchPanelTab(this,'settings')}">设置</div>
+      <div class="panel-tab" tabindex="0" role="tab" aria-selected="false" onclick="switchPanelTab(this,'tools')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();switchPanelTab(this,'tools')}">工具</div>
+      <div class="panel-tab" tabindex="0" role="tab" aria-selected="false" onclick="switchPanelTab(this,'agents')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();switchPanelTab(this,'agents')}">Agent</div>
     </div>
 
     <!-- 设置标签 -->
@@ -1054,6 +896,7 @@ body::before {
       <div class="panel-section">
         <h3>API Key</h3>
         <div class="setting-row">
+          <label for="keyInput" style="display:block;font-size:12px;color:var(--text-dim);margin-bottom:4px">OpenAI API Key</label>
           <input id="keyInput" type="password" placeholder="sk-xxxxxxxx" autocomplete="off">
         </div>
         <button class="apply-btn" onclick="applyKey()">应用 Key</button>
@@ -1061,37 +904,32 @@ body::before {
       </div>
 
       <div class="panel-section">
-        <h3>模型 Key 配置</h3>
-        <div style="display:flex;gap:6px;margin-bottom:6px">
-          <input id="perKeyModel" type="text" readonly placeholder="点击下方模型选择" style="flex:1;padding:8px 12px;border-radius:8px;border:1px solid var(--glass-border);background:var(--glass);color:var(--text);font-size:12px">
-          <button class="apply-btn ghost" onclick="document.getElementById('perKeyModel').value='';document.getElementById('perKeyInput').value=''" style="padding:8px 12px;font-size:11px;flex-shrink:0">清</button>
-        </div>
-        <div style="display:flex;gap:6px;margin-bottom:6px">
-          <input id="perKeyInput" type="password" placeholder="sk-xxxxxxxx" style="flex:1;padding:8px 12px;border-radius:8px;border:1px solid var(--glass-border);background:var(--glass);color:var(--text);font-size:12px">
-          <button class="apply-btn" onclick="applyPerModelKey()" style="padding:8px 14px;font-size:12px;flex-shrink:0">配置</button>
-        </div>
-        <button class="apply-btn ghost" onclick="clearAllModelKeys()" style="margin-top:4px;width:100%;font-size:11px">清除所有独立 Key</button>
+        <button class="apply-btn ghost" onclick="clearAllModelKeys()" style="width:100%;font-size:11px">清除所有独立 Key</button>
       </div>
 
       <div class="panel-section">
         <h3>模型选择</h3>
+        <label for="modelSearch" style="display:block;font-size:12px;color:var(--text-dim);margin-bottom:2px">搜索模型</label>
         <input id="modelSearch" type="text" placeholder="搜索模型…" oninput="filterModels()" style="width:100%;padding:10px 14px;border-radius:10px;border:1px solid var(--glass-border);background:var(--glass);color:var(--text);font-size:13px;margin-bottom:8px">
+        <label for="providerFilter" style="display:block;font-size:12px;color:var(--text-dim);margin-bottom:2px">筛选厂商</label>
         <select id="providerFilter" onchange="filterModels()" style="width:100%;padding:10px 14px;border-radius:10px;border:1px solid var(--glass-border);background:var(--glass);color:var(--text);font-size:13px;margin-bottom:8px">
           <option value="">全部厂商</option>
         </select>
         <div id="modelList" style="max-height:280px;overflow-y:auto;display:flex;flex-direction:column;gap:4px"></div>
-        <button class="apply-btn ghost" onclick="showCustomModel()" style="margin-top:10px;width:100%;touch-action:manipulation">+ 自定义模型</button>
-      </div>
-
-      <div class="panel-section" id="customModelForm" style="display:none">
-        <h3>添加自定义模型</h3>
-        <input id="customName" placeholder="模型名称 (如 MyModel)" style="width:100%;padding:10px 14px;border-radius:10px;border:1px solid var(--glass-border);background:var(--glass);color:var(--text);font-size:13px;margin-bottom:6px">
-        <input id="customUrl" placeholder="API Base URL (如 https://api.xxx.com/v1)" oninput="autoDetectUrl()" style="width:100%;padding:10px 14px;border-radius:10px;border:1px solid var(--glass-border);background:var(--glass);color:var(--text);font-size:13px;margin-bottom:6px">
-        <input id="customModelId" placeholder="Model ID (如 gpt-4o，默认同名称)" style="width:100%;padding:10px 14px;border-radius:10px;border:1px solid var(--glass-border);background:var(--glass);color:var(--text);font-size:13px;margin-bottom:6px">
-        <div id="urlDetect" style="font-size:11px;color:var(--text-dim);margin-bottom:8px"></div>
-        <div style="display:flex;gap:8px">
-          <button class="apply-btn" onclick="addCustomModel()" style="flex:1">添加</button>
-          <button class="apply-btn ghost" onclick="document.getElementById('customModelForm').style.display='none'" style="flex:1">取消</button>
+        <button class="apply-btn ghost" id="showCustomBtn" onclick="showCustomModel()" style="margin-top:10px;width:100%;touch-action:manipulation">+ 自定义模型</button>
+        <div id="customModelForm" style="display:none;margin-top:12px;padding-top:12px;border-top:1px solid var(--glass-border)">
+          <h3 style="margin-top:0">添加自定义模型</h3>
+          <label for="customName" style="display:block;font-size:12px;color:var(--text-dim);margin-bottom:2px">模型名称</label>
+          <input id="customName" placeholder="模型名称 (如 MyModel)" style="width:100%;padding:10px 14px;border-radius:10px;border:1px solid var(--glass-border);background:var(--glass);color:var(--text);font-size:13px;margin-bottom:6px">
+          <label for="customUrl" style="display:block;font-size:12px;color:var(--text-dim);margin-bottom:2px">API Base URL</label>
+          <input id="customUrl" placeholder="API Base URL (如 https://api.xxx.com/v1)" oninput="autoDetectUrl()" autocomplete="url" style="width:100%;padding:10px 14px;border-radius:10px;border:1px solid var(--glass-border);background:var(--glass);color:var(--text);font-size:13px;margin-bottom:6px">
+          <label for="customModelId" style="display:block;font-size:12px;color:var(--text-dim);margin-bottom:2px">Model ID</label>
+          <input id="customModelId" placeholder="Model ID (如 gpt-4o，默认同名称)" style="width:100%;padding:10px 14px;border-radius:10px;border:1px solid var(--glass-border);background:var(--glass);color:var(--text);font-size:13px;margin-bottom:6px">
+          <div id="urlDetect" style="font-size:11px;color:var(--text-dim);margin-bottom:8px"></div>
+          <div style="display:flex;gap:8px">
+            <button class="apply-btn" onclick="addCustomModel()" style="flex:1">添加</button>
+            <button class="apply-btn ghost" onclick="hideCustomModel()" style="flex:1">取消</button>
+          </div>
         </div>
       </div>
 
@@ -1190,7 +1028,7 @@ let savedKey = '';           // 已成功应用的全局Key（input清空后保�
 let totalTokens = 0;
 let currentSessionId = 'sess_' + Date.now();
 const conv = document.getElementById('conv');
-const inp = document.getElementById('input');
+const inp = document.getElementById('msg-input');
 let pendingImage = null;  // 待发送的屏幕截图 base64
 
 // 截图粘贴支持 — Ctrl+V 将剪贴板图片转为 base64
@@ -1233,9 +1071,10 @@ function closeAllPanels() {
   document.getElementById('overlay').classList.remove('active');
 }
 function switchPanelTab(el, tab) {
-  document.querySelectorAll('.panel-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.panel-tab').forEach(t => { t.classList.remove('active'); t.setAttribute('aria-selected', 'false'); });
   el.classList.add('active');
-  ['settings','browser','tools','agents'].forEach(id => {
+  el.setAttribute('aria-selected', 'true');
+  ['settings','tools','agents'].forEach(id => {
     document.getElementById('tab-' + id).style.display = id === tab ? '' : 'none';
   });
 }
@@ -1313,6 +1152,7 @@ function onModelChange(val) {
 // ========== 模型管理 ==========
 let allModels = [];
 let allProviders = [];
+let modelKeyValues = {};
 
 async function loadModels() {
   try {
@@ -1324,7 +1164,17 @@ async function loadModels() {
     buildProviderFilter();
     filterModels();
     buildModelChips();
+    loadKeyValues();
   } catch(e) { console.log('加载模型列表失败'); }
+}
+
+async function loadKeyValues() {
+  try {
+    const r = await fetch(API + '/model-key/status');
+    const d = await r.json();
+    modelKeyValues = d.keys || {};
+    filterModels();
+  } catch(e) { modelKeyValues = {}; }
 }
 
 function buildProviderFilter() {
@@ -1352,7 +1202,6 @@ function filterModels() {
 function renderModelList(models) {
   const list = document.getElementById('modelList');
   if (!models.length) { list.innerHTML = '<div style="padding:12px;color:var(--text-muted);text-align:center">无匹配模型</div>'; return; }
-  // 按厂商分组
   const groups = {};
   models.forEach(m => {
     if (!groups[m.provider]) groups[m.provider] = [];
@@ -1365,16 +1214,53 @@ function renderModelList(models) {
       provider+' <span style="font-weight:400;margin-left:4px">'+count+'个</span></div>';
     html += items.map(m => {
       const isActive = m.key === currentModel;
-      const style = isActive ? 'border-color:var(--primary)!important;background:var(--glass-active);box-shadow:0 0 12px var(--primary-glow)' : '';
-      const marker = isActive ? '<span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--primary);margin-right:6px;flex-shrink:0"></span>' : '<span style="display:inline-block;width:6px;height:6px;margin-right:6px;flex-shrink:0"></span>';
-      const desc = m.description ? '<span style="color:var(--text-muted)">'+m.description+'</span>' : '';
-      const delBtn = m.custom ? '<button onclick="event.stopPropagation();delModel(\''+m.key+'\')" title="删除" style="background:none;border:none;color:var(--danger);cursor:pointer;font-size:14px;padding:0 4px">×</button>' : '';
-      const keyBtn = '<button onclick="event.stopPropagation();pickModelForKey(\''+m.key+'\',\''+m.name+'\')" title="'+(m.has_key?'已配置Key':'配置Key')+'" style="background:none;border:none;color:'+(m.has_key?'var(--success)':'var(--text-muted)')+';cursor:pointer;font-size:12px;padding:0 4px">'+(m.has_key?'🔑':'🔒')+'</button>';
-      return '<div onclick="pickModel(\''+m.key+'\',\''+m.name+'\')" style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;border-radius:8px;border:1px solid var(--glass-border);cursor:pointer;font-size:12px;transition:all var(--transition);'+style+'">'+
+      const border = isActive ? 'var(--primary)' : 'var(--glass-border)';
+      const bg = isActive ? 'background:var(--glass-active);box-shadow:0 0 12px var(--primary-glow);' : '';
+      const marker = isActive ? '<span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--primary);margin-right:8px;flex-shrink:0"></span>'
+        : '<span style="display:inline-block;width:7px;height:7px;margin-right:8px;flex-shrink:0"></span>';
+      const desc = m.description ? ' <span style="color:var(--text-muted)">'+m.description+'</span>' : '';
+      const delBtn = m.custom ? '<button onclick="event.stopPropagation();delModel(\''+m.key+'\')" title="删除" style="background:none;border:none;color:var(--danger);cursor:pointer;font-size:16px;padding:0 4px;line-height:1">×</button>' : '';
+      const areaId = 'k_' + m.key.replace(/[^a-zA-Z0-9]/g, '_');
+      const esName = m.name.replace(/'/g,"\\'");
+
+      if (m.has_key) {
+        const keyVal = modelKeyValues[m.key] || '';
+        const masked = keyVal ? maskKeyText(keyVal) : '••••••••';
+        return '<div onclick="pickModel(\''+m.key+'\',\''+esName+'\')" style="padding:10px 12px;border-radius:10px;border:1px solid '+border+';cursor:pointer;font-size:12px;transition:all var(--transition);'+bg+'">'+
+          '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">'+
+          '<div style="display:flex;align-items:center;flex:1;min-width:0">'+marker+
+          '<span style="font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+m.name+'</span>'+desc+'</div>'+
+          '<div style="display:flex;align-items:center;gap:6px;flex-shrink:0;margin-left:8px">'+
+          '<span style="font-size:10px;color:var(--success);background:var(--success-bg);padding:2px 8px;border-radius:10px;white-space:nowrap">已配置</span>'+delBtn+'</div></div>'+
+          '<div style="display:flex;align-items:center;gap:6px;font-size:10px">'+
+          '<code style="font-family:var(--mono);color:var(--text-secondary);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+masked+'</code>'+
+          (keyVal ? '<button onclick="event.stopPropagation();copyModelKey(\''+m.key+'\')" title="复制Key" style="background:none;border:none;color:var(--primary-text);cursor:pointer;font-size:11px;white-space:nowrap">📋 复制</button>' : '')+
+          '</div></div>';
+      }
+
+      const keyArea = '<div id="'+areaId+'" style="display:none;margin-top:10px;padding-top:10px;border-top:1px solid var(--border)" onclick="event.stopPropagation()">'+
+        '<div style="display:flex;gap:6px;align-items:flex-start">'+
+        '<div style="position:relative;flex:1">'+
+        '<input id="'+areaId+'_inp" type="password" placeholder="输入 API Key" '+
+        'style="width:100%;padding:8px 34px 8px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:13px;font-family:var(--mono);transition:border-color var(--transition)" '+
+        'onkeydown="if(event.key===\'Enter\'){applyInlineKey(\''+areaId+'\',\''+m.key+'\',\''+esName+'\')}" '+
+        'oninput="clearKeyStatus(\''+areaId+'\')">'+
+        '<span onclick="toggleKeyVis(\''+areaId+'\')" title="显示/隐藏" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);cursor:pointer;color:var(--text-dim);font-size:14px;user-select:none;line-height:1">👁</span>'+
+        '</div>'+
+        '<button onclick="applyInlineKey(\''+areaId+'\',\''+m.key+'\',\''+esName+'\')" id="'+areaId+'_btn" '+
+        'style="padding:8px 14px;border-radius:8px;border:none;background:var(--primary);color:#fff;font-size:13px;cursor:pointer;white-space:nowrap;font-family:var(--font);transition:opacity var(--transition)">验证连接</button>'+
+        '</div>'+
+        '<div id="'+areaId+'_status" style="font-size:11px;margin-top:6px;min-height:18px"></div>'+
+        '</div>';
+
+      return '<div onclick="toggleInlineKey(\''+areaId+'\')" style="padding:10px 12px;border-radius:10px;border:1px solid '+border+';cursor:pointer;font-size:12px;transition:all var(--transition);'+bg+'">'+
+        '<div style="display:flex;justify-content:space-between;align-items:center">'+
         '<div style="display:flex;align-items:center;flex:1;min-width:0">'+marker+
-        '<div style="min-width:0"><div style="font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+m.name+' '+desc+'</div>'+
+        '<div style="min-width:0"><div style="font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+m.name+desc+'</div>'+
         '<div style="color:var(--text-dim);font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+m.base_url+'</div></div></div>'+
-        '<div style="display:flex;align-items:center;gap:2px">'+keyBtn+delBtn+'</div></div>';
+        '<div style="display:flex;align-items:center;gap:6px;flex-shrink:0;margin-left:8px">'+
+        '<span style="color:var(--text-muted);font-size:11px;white-space:nowrap">🔒 未配置</span>'+delBtn+'</div></div>'+
+        keyArea+'</div>';
     }).join('');
   }
   list.innerHTML = html;
@@ -1383,14 +1269,8 @@ function renderModelList(models) {
 function pickModel(key, name) {
   currentModel = key;
   document.getElementById('panelModel').textContent = name;
-  // 联动模型Key配置区：选中模型时自动映射到上方输入框
-  document.getElementById('perKeyModel').value = name;
-  document.getElementById('perKeyModel').dataset.modelKey = key;
-  document.getElementById('perKeyInput').value = '';
-  document.getElementById('perKeyInput').placeholder = (allModels.find(m=>m.key===key)||{}).has_key ? '已配置Key，重新输入覆盖' : 'sk-xxxxxxxx';
   filterModels();
   buildModelChips();
-  // 切换模型后自动应用对应的独立 Key
   applyModelSwitch();
 }
 
@@ -1415,7 +1295,7 @@ function buildModelChips() {
       const active = m.key === currentModel ? ' active' : '';
       const dot = m.has_key ? 'ok' : 'no';
       const shortName = m.name.length > 10 ? m.name.slice(0, 9) + '…' : m.name;
-      return '<div class="model-chip'+active+'" onclick="switchChip(\''+m.key+'\')" title="'+(m.has_key?'已配Key':'未配Key')+' | '+m.provider+'">'+
+      return '<div class="model-chip'+active+'" tabindex="0" role="button" aria-pressed="'+(active?'true':'false')+'" onclick="switchChip(\''+m.key+'\')" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();switchChip(\''+m.key+'\')}" title="'+(m.has_key?'已配Key':'未配Key')+' | '+m.provider+'">'+
         '<span class="chip-dot '+dot+'"></span>'+
         '<span>'+shortName+'</span>'+
         '</div>';
@@ -1452,19 +1332,28 @@ async function applyModelSwitch() {
   }
 }
 
-// 为指定模型配置 Key（从设置面板）
-function pickModelForKey(key, name) {
-  document.getElementById('perKeyModel').value = name;
-  document.getElementById('perKeyModel').dataset.modelKey = key;
-  document.getElementById('perKeyInput').focus();
+function toggleInlineKey(areaId) {
+  const area = document.getElementById(areaId);
+  if (!area) return;
+  const isHidden = area.style.display === 'none' || !area.style.display;
+  area.style.display = isHidden ? '' : 'none';
+  if (isHidden) {
+    const inp = document.getElementById(areaId + '_inp');
+    if (inp) setTimeout(() => inp.focus(), 100);
+  }
 }
 
-async function applyPerModelKey() {
-  const key = document.getElementById('perKeyInput').value.trim();
-  const modelKey = document.getElementById('perKeyModel').dataset.modelKey;
-  const modelName = document.getElementById('perKeyModel').value;
-  if (!key || !modelKey) { showToast('请先选择模型并输入 Key'); return; }
-  setStatus('offline', '验证中…');
+async function applyInlineKey(areaId, modelKey, modelName) {
+  const inp = document.getElementById(areaId + '_inp');
+  const btn = document.getElementById(areaId + '_btn');
+  const status = document.getElementById(areaId + '_status');
+  if (!inp) return;
+  const key = inp.value.trim();
+  if (!key) { showToast('请输入 API Key'); return; }
+  btn.disabled = true;
+  btn.textContent = '验证中…';
+  btn.style.opacity = '0.7';
+  status.innerHTML = '<span style="color:var(--warning)">⏳ 正在验证连接…</span>';
   try {
     const r = await fetch(API + '/model-key', {
       method: 'POST', headers: {'Content-Type':'application/json'},
@@ -1475,20 +1364,69 @@ async function applyPerModelKey() {
       currentModel = d.current_model || modelKey;
       hasKey = true;
       setStatus('online', '已连接 ' + modelName);
-      showToast('已配置 ' + modelName);
-      document.getElementById('perKeyInput').value = '';
-      loadModels();  // 刷新模型列表和工具栏
+      status.innerHTML = '<span style="color:var(--success)">✅ 连接成功 — ' + modelName + '</span>';
+      modelKeyValues[modelKey] = key;
+      if (inp) { inp.style.borderColor = 'var(--success)'; inp.value = ''; }
+      btn.style.display = 'none';
+      setTimeout(() => loadModels(), 600);
     } else {
       setStatus('error', d.error || '配置失败');
+      status.innerHTML = '<span style="color:var(--danger)">❌ ' + (d.error || '验证失败') + '</span>';
+      if (inp) inp.style.borderColor = 'var(--danger)';
+      btn.disabled = false;
+      btn.textContent = '重试';
+      btn.style.opacity = '1';
       showToast('失败: ' + (d.error || '未知错误'));
     }
   } catch(e) {
-    setStatus('error', 'API 未启动');
-    showToast('API 服务未启动 (端口8900)');
+    status.innerHTML = '<span style="color:var(--danger)">❌ 网络错误 — API 服务未启动</span>';
+    if (inp) inp.style.borderColor = 'var(--danger)';
+    btn.disabled = false;
+    btn.textContent = '重试';
+    btn.style.opacity = '1';
   }
 }
 
+function maskKeyText(key) {
+  if (!key || key.length < 8) return '••••';
+  return key.slice(0, 6) + '•••' + key.slice(-4);
+}
+
+function toggleKeyVis(areaId) {
+  const inp = document.getElementById(areaId + '_inp');
+  if (!inp) return;
+  inp.type = inp.type === 'password' ? 'text' : 'password';
+}
+
+function clearKeyStatus(areaId) {
+  const inp = document.getElementById(areaId + '_inp');
+  const status = document.getElementById(areaId + '_status');
+  if (inp) inp.style.borderColor = 'var(--border)';
+  if (status) status.innerHTML = '';
+  const btn = document.getElementById(areaId + '_btn');
+  if (btn) { btn.textContent = '验证连接'; btn.disabled = false; btn.style.opacity = '1'; }
+}
+
+async function copyModelKey(modelKey) {
+  const val = modelKeyValues[modelKey];
+  if (!val) { showToast('Key 信息不可用'); return; }
+  try {
+    await navigator.clipboard.writeText(val);
+    showToast('Key 已复制到剪贴板');
+  } catch(e) {
+    // fallback for older browsers
+    const ta = document.createElement('textarea');
+    ta.value = val; ta.style.position = 'fixed'; ta.style.left = '-9999px';
+    document.body.appendChild(ta); ta.select();
+    document.execCommand('copy'); document.body.removeChild(ta);
+    showToast('Key 已复制');
+  }
+}
+
+// ========== 模型切换时应用 Key ==========
+
 async function clearAllModelKeys() {
+  if (!confirm('确定要清除所有模型的独立 Key 配置吗？此操作不可撤销。')) return;
   // 逐个清除
   for (const m of allModels) {
     if (m.has_key) {
@@ -1505,14 +1443,19 @@ async function clearAllModelKeys() {
 }
 
 function showCustomModel() {
+  document.getElementById('showCustomBtn').style.display = 'none';
   const form = document.getElementById('customModelForm');
   form.style.display = '';
   document.getElementById('customName').value = '';
   document.getElementById('customUrl').value = '';
   document.getElementById('customModelId').value = '';
   document.getElementById('urlDetect').textContent = '';
-  // 滚动到表单可见区域，确保移动端能看到
-  setTimeout(() => form.scrollIntoView({behavior:'smooth',block:'nearest'}), 100);
+  form.scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+
+function hideCustomModel() {
+  document.getElementById('customModelForm').style.display = 'none';
+  document.getElementById('showCustomBtn').style.display = '';
 }
 
 function autoDetectUrl() {
@@ -1567,9 +1510,8 @@ async function addCustomModel() {
     const d = await r.json();
     if (d.ok) {
       currentModel = d.model.key;
-      document.getElementById('customModelForm').style.display = 'none';
+      hideCustomModel();
       showToast('已添加: ' + name);
-      document.getElementById('modelList').scrollIntoView({behavior:'smooth'});
       await loadModels();
     } else {
       showToast('添加失败: ' + (d.error||'错误'));
@@ -1642,20 +1584,18 @@ async function send() {
 }
 
 function addBubble(role, content, agentName) {
+  // 隐藏欢迎页
+  const welcome = document.getElementById('welcome');
+  if (welcome) welcome.style.display = 'none';
+
   const d = document.createElement('div');
   d.className = 'bubble ' + role;
-  // 格式化 Markdown：**粗体**、`代码`、--- 分割线
-  let html = content
-    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
-    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-    .replace(/`([^`]+)`/g, '<code style="background:rgba(255,255,255,0.08);padding:2px 6px;border-radius:4px;font-family:var(--mono);font-size:12px">$1</code>')
-    .replace(/^---$/gm, '<hr style="border:none;border-top:1px solid var(--glass-border);margin:8px 0">')
-    .replace(/\n/g, '<br>');
+  let html = renderMarkdown(content);
   if (agentName) {
-    d.innerHTML = '<div class="agent-label" style="display:flex;align-items:center;gap:6px;margin-bottom:8px">'+
-      '<span style="display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:6px;background:var(--primary);font-size:11px">⚡</span>'+
-      '<span style="font-weight:600;font-size:13px;color:var(--primary-text)">'+agentName+'</span></div>'+
-      '<div style="line-height:1.7">'+html+'</div>';
+    d.innerHTML = '<div class="agent-label">'+
+      '<span class="agent-icon">⚡</span>'+
+      '<span class="agent-name">'+agentName+'</span></div>'+
+      '<div class="agent-body">'+html+'</div>';
   } else if (role==='system') {
     d.innerHTML = '<div style="text-align:center">'+html+'</div>';
   } else {
@@ -1664,6 +1604,44 @@ function addBubble(role, content, agentName) {
   conv.appendChild(d);
   d.scrollIntoView({behavior:'smooth'});
   saveConv();
+}
+
+function renderMarkdown(text) {
+  // Escape HTML
+  let html = text
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+  // Code blocks (``` ... ```)
+  html = html.replace(/```(\w*)\n([\s\S]*?)```/g, function(_, lang, code) {
+    return '<pre class="code-block"><code>' + code.replace(/\n$/, '') + '</code></pre>';
+  });
+
+  // Inline code
+  html = html.replace(/`([^`]+)`/g, '<code class="inline-code">$1</code>');
+
+  // Bold
+  html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+
+  // Headers (### ...)
+  html = html.replace(/^### (.+)$/gm, '<h3 class="md-h3">$1</h3>');
+  html = html.replace(/^## (.+)$/gm, '<h2 class="md-h2">$1</h2>');
+
+  // Unordered lists
+  html = html.replace(/^[*-] (.+)$/gm, '<li>$1</li>');
+  html = html.replace(/(<li>[\s\S]*?<\/li>)/g, function(m) {
+    // wrap consecutive li into ul
+    return '<ul class="md-ul">' + m + '</ul>';
+  });
+  // fix: merge adjacent ul tags
+  html = html.replace(/<\/ul>\n<ul class="md-ul">/g, '\n');
+
+  // Horizontal rule
+  html = html.replace(/^---$/gm, '<hr class="md-hr">');
+
+  // Line breaks
+  html = html.replace(/\n/g, '<br>');
+
+  return html;
 }
 
 function addTyping() {
@@ -1774,12 +1752,14 @@ function fbRenderList(entries, parent) {
   }
   let html = '';
   if (parent) {
-    html += '<div class="fb-item fb-up" onclick="fbBrowse(\'' + parent.replace(/'/g, "\\'") + '\')"><span class="fb-name">📂 ..</span></div>';
+    html += '<div class="fb-item fb-up" tabindex="0" onclick="fbBrowse(\'' + parent.replace(/'/g, "\\'") + '\')" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();fbBrowse(\'' + parent.replace(/'/g, "\\'") + '\')}"><span class="fb-name">📂 ..</span></div>';
   }
   entries.forEach(e => {
     const icon = e.dir ? '📁' : '📄';
     const size = formatSize(e.size);
-    html += '<div class="fb-item" onclick="' + (e.dir ? 'fbBrowse(' : 'fbSelectFile(') + '\'' + e.path.replace(/'/g, "\\'") + '\')">' +
+    const action = e.dir ? 'fbBrowse' : 'fbSelectFile';
+    const path = e.path.replace(/'/g, "\\'");
+    html += '<div class="fb-item" tabindex="0" onclick="' + action + '(\'' + path + '\')" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();' + action + '(\'' + path + '\')}">' +
       '<span class="fb-name">' + icon + ' ' + e.name + '</span>' +
       '<span class="fb-size">' + size + '</span></div>';
   });
@@ -1787,9 +1767,9 @@ function fbRenderList(entries, parent) {
 }
 
 function fbSelectFile(path) {
-  document.getElementById('input').value = path;
+  document.getElementById('msg-input').value = path;
   toggleFileBrowser();
-  document.getElementById('input').focus();
+  document.getElementById('msg-input').focus();
 }
 
 // ========== 文件浏览器 ==========

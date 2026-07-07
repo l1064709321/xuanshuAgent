@@ -111,6 +111,12 @@ class MemdirStore:
 # 全局记忆文件夹实例
 memdir = MemdirStore(_MEMDIR)
 
+# ── Memory 双文件分离（Hermes Agent 风格）──
+MEMORY_FILE = "MEMORY.md"        # Agent 自身经验（洞察/教训/决策）
+USER_FILE   = "USER.md"          # 用户画像（偏好/习惯/设定）
+MEMORY_MAX_CHARS = 8000          # MEMORY.md 字符硬限制
+USER_MAX_CHARS   = 3000          # USER.md 字符硬限制
+
 
 # ── Constitution 人格宪法（受 Anthropic CAI + DeepMind ToM 启发）──
 CONSTITUTION_TEMPLATE = """## 你的身份
@@ -866,8 +872,12 @@ Spec:"""
         self._context_summary: str = ""
         # Agent 自主记忆（MEMORY.md 中积累的长期经验）
         self._agent_memory: str = ""
+        # 用户画像（USER.md — 偏好/习惯/设定）
+        self._user_profile: str = ""
+        # Memory 脏标记：disk 比缓存新时置 True
+        self._memory_dirty: bool = False
         self._init_children()
-        self._load_context()  # 从磁盘恢复上下文 + 加载 MEMORY.md
+        self._load_context()  # 从磁盘恢复上下文 + 加载 MEMORY.md + USER.md
 
     def _init_children(self):
         # ── 共享记忆文件夹工具 ──
@@ -1587,7 +1597,15 @@ Spec:"""
 
     def _build_child_msgs(self, child: ChildBot, user_input: str,
                           extra_context: str = "", image: str = None) -> list:
-        """构建子Agent消息列表 — v4: 指向 memdir/MEMORY.md 自举"""
+        """构建子Agent消息列表 — v5: Codex CLI PromptSlot 四分组注入
+        Slot 1: DEVELOPER_POLICY — 硬规则、边界、约束（最高优先级）
+        Slot 2: CONTEXTUAL — 对话上下文、知识库、记忆（参考信息）
+        Slot 3: USER_PROFILE — 用户画像（从 USER.md 提取偏好）
+        用户消息独立为 user role
+        """
+        messages = []
+
+        # ── Slot 1: 硬规则与约束（boot prompt + knowledge）──
         boot_prompt = (
             f"{child.system_prompt}\n\n"
             f"## 启动指令\n"
@@ -1598,28 +1616,33 @@ Spec:"""
             f"只有当你在多轮对话中反复发现某条行为准则确实有效，"
             f"才用 memdir_write 追加到 MEMORY.md 的「长期演化日志」章节。"
         )
-        messages = [{"role": "system", "content": boot_prompt}]
+        policy_lines = [boot_prompt]
         if child.knowledge:
             kb_text = "\n\n".join(child.knowledge)
-            messages.append({"role": "system", "content": f"[知识库]\n{kb_text}"})
-        # ── 注入最近对话上下文（让子Agent知道刚才说了什么）──
+            policy_lines.append(f"[知识库]\n{kb_text}")
+        messages.append({"role": "system", "content": "\n\n".join(policy_lines)})
+
+        # ── Slot 2: 上下文信息（对话提炼 + 长期摘要 + 记忆文件夹 + Skill）──
+        ctx_parts = []
+
+        # 2a. 最近对话提炼
         recent = self.shared_msgs[-8:]
         if recent:
-            # 提炼：用 LLM 提取关键决策和约束，过滤废话
             distilled = self._distill_context(recent)
-            ctx_lines = ["[## 对话关键要点提炼]" + (f"\n{distilled}" if distilled else "")]
-            ctx_lines.append("\n[## 最近原始对话]")
+            ctx_block = "[## 对话关键要点]" + (f"\n{distilled}" if distilled else "")
+            ctx_block += "\n\n[## 最近原始对话]\n"
             for m in recent:
                 role_label = "用户" if m["role"] == "user" else "助手"
-                ctx_lines.append(f"【{role_label}】{m['content']}")
-            messages.append({"role": "system", "content": "\n".join(ctx_lines)})
-        # ── 注入长期上下文摘要（跨会话记忆）──
+                ctx_block += f"【{role_label}】{m['content']}\n"
+            ctx_parts.append(ctx_block)
+
+        # 2b. 长期上下文摘要
         if self._context_summary:
-            messages.append({"role": "system",
-                "content": f"[长期上下文摘要 - 这是此前对话中提炼的关键信息]\n{self._context_summary}"})
-        # ── 注入 Agent 自主记忆（MEMORY.md — 自己的成长经验）──
+            ctx_parts.append(
+                f"[长期上下文摘要 - 这是此前对话中提炼的关键信息]\n{self._context_summary}")
+
+        # 2c. Agent 自主记忆（MEMORY.md — 关键词匹配）
         if self._agent_memory:
-            # 从 MEMORY.md 中搜索与当前查询相关的经验（关键词匹配）
             query_keywords = set(user_input.lower().split())
             relevant_entries = []
             for line in self._agent_memory.split("\n"):
@@ -1629,23 +1652,47 @@ Spec:"""
                     if hits >= 1 or len(query_keywords) <= 3:
                         relevant_entries.append(line.strip())
             if relevant_entries:
-                memory_hint = "\n".join(relevant_entries[:8])  # 最多8条
-                messages.append({"role": "system",
-                    "content": f"[Agent 自主记忆 — 与当前问题相关的过往经验]\n{memory_hint}"})
-        # ── 注入记忆文件夹上下文 ──
+                memory_hint = "\n".join(relevant_entries[:8])
+                ctx_parts.append(
+                    f"[Agent 自主记忆 — 与当前问题相关的过往经验]\n{memory_hint}")
+
+        # 2d. 记忆文件夹上下文
         mem_results = memdir.search(user_input)
         if mem_results:
             mem_lines = ["[记忆文件夹 - 匹配记录]"]
             for r in mem_results[:5]:
                 mem_lines.append(f"### {r['rel']}\n{r['preview'][:500]}")
-            messages.append({"role": "system", "content": "\n".join(mem_lines)})
-        # ── 注入学习到的 Skill ──
+            ctx_parts.append("\n".join(mem_lines))
+
+        # 2e. 学习到的 Skill
         skill_text = self._inject_skills(child, user_input)
         if skill_text:
-            messages.append({"role": "system", "content": skill_text})
+            ctx_parts.append(skill_text)
+
+        # 2f. extra_context
+        if extra_context:
+            ctx_parts.append(extra_context)
+
+        if ctx_parts:
+            messages.append({"role": "system",
+                "content": "[上下文信息]\n\n" + "\n\n---\n\n".join(ctx_parts)})
+
+        # ── Slot 3: 用户画像（从 USER.md 提取偏好）──
+        if self._user_profile:
+            profile_lines = []
+            for line in self._user_profile.split("\n"):
+                line = line.strip()
+                if line.startswith("[") and "]" in line:
+                    tag = line.split("]")[0] + "]"
+                    content = line.split("]", 1)[-1].split("|")[0].strip()
+                    profile_lines.append(f"- {tag} {content}")
+            if profile_lines:
+                messages.append({"role": "system",
+                    "content": "[用户画像 — 偏好与习惯]\n" + "\n".join(profile_lines[:5])})
+
+        # ── 用户消息 ──
         content = f"{extra_context}\n---\n{user_input}" if extra_context else user_input
         if image:
-            # OpenAI vision 格式：content 为数组，文本 + 图片
             content = [
                 {"type": "text", "text": content},
                 {"type": "image_url", "image_url": {"url": image}}
@@ -2188,7 +2235,7 @@ DAG（只输出节点列表）:"""
             "context_summary": self._context_summary,
             "model": getattr(self, "model_name", ""),
             "coordinator_mode": self.coordinator_mode,
-            "has_memory": os.path.exists(os.path.join(_MEMDIR, "MEMORY.md")),
+            "has_memory": os.path.exists(os.path.join(_MEMDIR, MEMORY_FILE)),
             "memory_size": len(self._agent_memory) if self._agent_memory else 0,
         }
         # 如果内存为空但磁盘有存档，则从磁盘补齐
@@ -2204,7 +2251,7 @@ DAG（只输出节点列表）:"""
         return result
 
     def _load_context(self):
-        """从磁盘恢复父Bot对话上下文（shared_msgs + agent_contexts + summary + agent_memory）"""
+        """从磁盘恢复父Bot对话上下文（shared_msgs + agent_contexts + summary + agent_memory + user_profile）"""
         try:
             if os.path.exists(self._CONTEXT_FILE):
                 with open(self._CONTEXT_FILE, "r") as f:
@@ -2218,11 +2265,18 @@ DAG（只输出节点列表）:"""
             self.log.sys(f"上下文恢复失败(将新建): {e}")
         # 加载 Agent 自主记忆（MEMORY.md）
         try:
-            self._agent_memory = memdir.read("MEMORY.md") or ""
+            self._agent_memory = memdir.read(MEMORY_FILE) or ""
             if self._agent_memory:
                 self.log.sys(f"已加载自主记忆: MEMORY.md ({len(self._agent_memory)}字)")
         except Exception:
             self._agent_memory = ""
+        # 加载用户画像（USER.md）
+        try:
+            self._user_profile = memdir.read(USER_FILE) or ""
+            if self._user_profile:
+                self.log.sys(f"已加载用户画像: USER.md ({len(self._user_profile)}字)")
+        except Exception:
+            self._user_profile = ""
 
     def _save_context(self):
         """持久化父Bot对话上下文到磁盘"""
@@ -2369,85 +2423,103 @@ DAG（只输出节点列表）:"""
             self.log.sys(f"对话归档失败: {e}")
 
     def _auto_memorize(self):
-        """Agent 自主记忆 v2 —— 分类提取、去重、评分、压缩的完整闭环。
-        每 5 轮触发，提取可复用经验；每 15 轮额外做记忆巩固（查漏补缺）。
-        写入 MEMORY.md，格式：[类别] [置信度] 经验内容 [来源证据]"""
+        """Hermes Agent 双文件分离：Agent 经验 → MEMORY.md，用户画像 → USER.md。
+        每 5 轮触发，提取可复用经验；每 15 轮额外做记忆巩固。
+        容量硬控：MEMORY.md ≤8000字，USER.md ≤3000字，超限裁剪最旧段落。
+        """
         try:
             recent = self.shared_msgs[-20:]
             raw = "\n".join(
                 f"{'用户' if m['role']=='user' else '助手'}: {m['content'][:400]}"
                 for m in recent
             )
-            # ── 阶段1：从最近对话中提取候选记忆 ──
-            prompt = f"""你是一个自主学习的 Agent。从以下最近对话中提取值得长期记忆的经验。
 
-分类提取（每种最多2条）：
-- [偏好] 用户明确表达的偏好、习惯、要求（如实记录，不要推断）
-- [洞察] 从本次互动中悟出的技术方法、最佳实践、判断依据
-- [教训] 本次出过的错、绕过的方法、发现的能力边界
-- [决策] 重要决策的原因（为什么选A不选B）
+            # ── 阶段1a: 提取 Agent 经验（洞察/教训/决策）──
+            agent_prompt = f"""从以下对话中提取 Agent 自身可复用的经验（非用户信息）：
+- [洞察] 技术方法、最佳实践、判断依据
+- [教训] 出错经历、绕过方法、能力边界
+- [决策] 为什么选A不选B
 
-每条格式：`[类别] 经验内容（≤50字） | 来源：对话中哪句话验证了这条`
-必须是本次对话中有实际证据支撑的，不是推测。如果某个类别确实没有，留空。
-如果没有任何值得长期记忆的内容，输出"无"。
+每条 ≤50字，必须有对话证据。无则输出「无」。
+{raw[:4000]}"""
+            agent_resp = self._llm_call("__memorize__", [{"role":"user", "content": agent_prompt}])
+            agent_candidates = agent_resp["choices"][0]["message"]["content"].strip()
 
-最近对话({len(recent)//2}轮):
-{raw[:4000]}
+            # ── 阶段1b: 提取用户画像（偏好/设定）──
+            user_prompt = f"""从以下对话中提取关于用户的信息（不要 Agent 自身经验）：
+- [偏好] 用户明确表达的习惯、好恶
+- [设定] 用户告知的个人信息（姓名/职业/设备/环境）
+- [目标] 用户的长期目标或项目
 
-候选记忆:"""
-            msgs = [{"role": "user", "content": prompt}]
-            resp = self._llm_call("__memorize__", msgs)
-            candidates = resp["choices"][0]["message"]["content"].strip()
-            if not candidates or candidates.startswith("无"):
-                return
+每条 ≤50字，如实记录不推断。无则输出「无」。
+{raw[:4000]}"""
+            user_resp = self._llm_call("__memorize__", [{"role":"user", "content": user_prompt}])
+            user_candidates = user_resp["choices"][0]["message"]["content"].strip()
 
-            # ── 阶段2：去重（与现有记忆比对，相似度>70%则合并或跳过）──
-            existing = memdir.read("MEMORY.md") or ""
-            lines = candidates.strip().split("\n")
-            accepted = []
-            for line in lines:
-                line = line.strip()
-                if not line or not line.startswith("["):
-                    continue
-                # 提取关键词（取[]后的前5个词）
-                content = line.split("]", 1)[-1].split("|")[0].strip() if "]" in line else line
-                words = set(content.lower().split()[:6])
-                # 检查与现有记忆的重叠度
-                is_dup = False
-                for old_line in existing.split("\n"):
-                    if old_line.strip().startswith("[") and "]" in old_line:
-                        old_content = old_line.split("]", 1)[-1].split("|")[0].strip()
-                        old_words = set(old_content.lower().split()[:6])
-                        overlap = len(words & old_words) / max(len(words | old_words), 1)
-                        if overlap > 0.7:
-                            is_dup = True
-                            break
-                if not is_dup:
-                    # 追加置信度标记
-                    accepted.append(f"{line} [×1]")
+            # ── 阶段2: 去重写入双文件 ──
+            if agent_candidates and agent_candidates != "无":
+                self._append_to_memory_file(MEMORY_FILE, agent_candidates, MEMORY_MAX_CHARS)
+            if user_candidates and user_candidates != "无":
+                self._append_to_memory_file(USER_FILE, user_candidates, USER_MAX_CHARS)
 
-            if not accepted:
-                return
-
-            # ── 阶段3：写入 MEMORY.md ──
-            ts = time.strftime("%Y-%m-%d %H:%M")
-            section = f"\n\n## {ts}\n" + "\n".join(accepted)
-            memdir.write("MEMORY.md", existing + section)
-            self.log.sys(f"🧠 自主记忆: +{len(accepted)}条")
-            self._agent_memory = existing + section  # 刷新内存缓存
-
-            # ── 阶段4：每 15 轮做一次记忆巩固（合并相似条目、淘汰过时）──
+            # ── 阶段3: 每 15 轮做一次记忆巩固 ──
             if len(self.shared_msgs) >= 30 and len(self.shared_msgs) % 30 == 0:
                 self._memory_consolidate()
 
         except Exception as e:
             self.log.sys(f"自主记忆失败(无影响): {e}")
 
+    def _append_to_memory_file(self, filename: str, candidates: str, max_chars: int):
+        """追加去重 + 容量硬控（超过限制裁剪最早段落）。
+        同时刷新对应的内存缓存（_agent_memory 或 _user_profile）。"""
+        existing = memdir.read(filename) or ""
+
+        lines = candidates.strip().split("\n")
+        accepted = []
+        for line in lines:
+            line = line.strip()
+            if not line or not line.startswith("["):
+                continue
+            # 提取内容核心（取 [] 后的前 30 字去重）
+            inner = line.split("]", 1)[-1].split("|")[0].strip() if "]" in line else line
+            core = inner[:30]
+            if core in existing:
+                continue
+            accepted.append(line)
+
+        if not accepted:
+            return
+
+        ts = time.strftime("%Y-%m-%d %H:%M")
+        section = f"\n\n## {ts}\n" + "\n".join(accepted)
+        new_content = existing + section
+
+        # ── 容量硬控：超过限制时从最早段落裁剪 ──
+        if len(new_content) > max_chars:
+            sections = new_content.split("\n## ")
+            header = sections[0]
+            remaining = max_chars - len(header) - 2
+            kept_sections = []
+            for sec in reversed(sections[1:]):
+                sec_with_header = "\n## " + sec
+                if sum(len(s) for s in kept_sections) + len(sec_with_header) <= remaining:
+                    kept_sections.insert(0, sec_with_header)
+                else:
+                    break
+            new_content = header + "".join(kept_sections)
+
+        memdir.write(filename, new_content)
+        if filename == MEMORY_FILE:
+            self._agent_memory = new_content
+        elif filename == USER_FILE:
+            self._user_profile = new_content
+        self.log.sys(f"🧠 {filename}: +{len(accepted)}条（{len(new_content)}/{max_chars}字）")
+
     def _memory_consolidate(self):
         """记忆巩固——合并相似经验、升级高置信度条目、淘汰过时记忆。
         每 15 轮触发一次，保持 MEMORY.md 精炼。"""
         try:
-            memory = memdir.read("MEMORY.md") or ""
+            memory = memdir.read(MEMORY_FILE) or ""
             if len(memory) < 500:
                 return  # 太少，不需要巩固
             prompt = f"""你是一个记忆管理 Agent。以下是你自己的长期记忆文件。请进行精简优化：
@@ -2469,7 +2541,7 @@ DAG（只输出节点列表）:"""
             resp = self._llm_call("__consolidate__", msgs)
             consolidated = resp["choices"][0]["message"]["content"].strip()
             if consolidated and len(consolidated) > 100:
-                memdir.write("MEMORY.md", consolidated)
+                memdir.write(MEMORY_FILE, consolidated)
                 self._agent_memory = consolidated
                 removed = len(memory) - len(consolidated)
                 self.log.sys(f"🧠 记忆巩固: {len(memory)}→{len(consolidated)}字（精简{removed}字）")

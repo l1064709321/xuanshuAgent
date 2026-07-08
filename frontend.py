@@ -1,5 +1,5 @@
 """玄姝多Agent API — Flask 后端 + 前端托管，单端口 8901"""
-import os, sys, json, mimetypes, base64
+import os, sys, json, mimetypes, base64, subprocess
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from flask import Flask, request, jsonify, send_file
 from core import ParentBot
@@ -151,14 +151,15 @@ def chat():
         arg = parts[1] if len(parts) > 1 else ""
         # /screen 及所有权限命令交给 core 层处理（Agent 自主权限判断），不走 _cmd 路由
         if action == "/screen" or arg in ("allow", "deny"):
-            reply = bot.chat(msg)
-            return jsonify({"reply": reply, "cmd": True, "model": _model()})
+            result = bot.chat(msg)
+            return jsonify({"reply": result["reply"], "thinking": result.get("thinking", []), "cmd": True, "model": _model()})
         return jsonify({"reply": _cmd(action, arg), "cmd": True, "model": _model()})
 
     agent_name = bot._route(msg)
-    reply = bot.chat(msg, image)
+    result = bot.chat(msg, image)
     return jsonify({
-        "reply": reply,
+        "reply": result["reply"],
+        "thinking": result.get("thinking", []),
         "agent": agent_name,
         "model": _model(),
         "coordinator_mode": bot.coordinator_mode,
@@ -434,6 +435,198 @@ def _snapshot_cmd(arg):
         count = bot.import_all_snapshots()
         return f"快照导入完成，新增 {count} 条记忆" if count else "无需更新或导入失败"
     return "用法: /snapshot export|import"
+
+
+# ── 技能管理 (Skills CRUD) ──
+import uuid
+from datetime import datetime
+
+_SKILLSDIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".skills")
+os.makedirs(_SKILLSDIR, exist_ok=True)
+
+def _skill_path(agent, sid):
+    adir = os.path.join(_SKILLSDIR, agent.replace('/', '_').replace('..', ''))
+    os.makedirs(adir, exist_ok=True)
+    return os.path.join(adir, f"{sid}.json")
+
+@app.route("/skills/list", methods=["POST"])
+def skills_list():
+    data = request.get_json() or {}
+    agent = (data.get("agent") or "").strip()
+    query = (data.get("query") or "").lower()
+    result = []
+    if agent:
+        adir = os.path.join(_SKILLSDIR, agent.replace('/', '_').replace('..', ''))
+        if os.path.isdir(adir):
+            for fname in sorted(os.listdir(adir)):
+                if fname.endswith('.json'):
+                    try:
+                        with open(os.path.join(adir, fname), 'r') as f:
+                            sk = json.load(f)
+                        if query and query not in sk.get('name', '').lower() and query not in sk.get('content', '').lower():
+                            continue
+                        result.append({"id": sk['id'], "name": sk['name'], "agent": sk['agent'], "created_at": sk.get('created_at', '')})
+                    except Exception:
+                        pass
+    else:
+        for root, dirs, files in os.walk(_SKILLSDIR):
+            for fname in files:
+                if fname.endswith('.json'):
+                    try:
+                        with open(os.path.join(root, fname), 'r') as f:
+                            sk = json.load(f)
+                        if query and query not in sk.get('name', '').lower() and query not in sk.get('content', '').lower():
+                            continue
+                        result.append({"id": sk['id'], "name": sk['name'], "agent": sk['agent'], "created_at": sk.get('created_at', '')})
+                    except Exception:
+                        pass
+    return jsonify({"skills": result})
+
+@app.route("/skills/read", methods=["POST"])
+def skills_read():
+    data = request.get_json() or {}
+    agent = (data.get("agent") or "").strip()
+    sid = (data.get("id") or "").strip()
+    if not agent or not sid:
+        return jsonify({"error": "agent 和 id 不能为空"}), 400
+    fp = _skill_path(agent, sid)
+    if not os.path.exists(fp):
+        return jsonify({"error": "技能不存在"}), 404
+    with open(fp, 'r') as f:
+        return jsonify(json.load(f))
+
+@app.route("/skills/create", methods=["POST"])
+def skills_create():
+    data = request.get_json() or {}
+    agent = (data.get("agent") or "").strip()
+    name = (data.get("name") or "").strip()
+    content = (data.get("content") or "").strip()
+    if not agent or not name:
+        return jsonify({"ok": False, "error": "agent 和 name 不能为空"})
+    sid = str(uuid.uuid4())[:8]
+    sk = {
+        "id": sid, "name": name, "agent": agent,
+        "content": content, "created_at": datetime.now().isoformat()
+    }
+    with open(_skill_path(agent, sid), 'w') as f:
+        json.dump(sk, f, ensure_ascii=False, indent=2)
+    return jsonify({"ok": True, "id": sid})
+
+@app.route("/skills/delete", methods=["POST"])
+def skills_delete():
+    data = request.get_json() or {}
+    agent = (data.get("agent") or "").strip()
+    sid = (data.get("id") or "").strip()
+    if not agent or not sid:
+        return jsonify({"ok": False, "error": "agent 和 id 不能为空"})
+    fp = _skill_path(agent, sid)
+    if os.path.exists(fp):
+        os.remove(fp)
+    return jsonify({"ok": True})
+
+
+# ── 工具适配器 (/api/*) ──
+def _available_tools():
+    """检测本地可用的命令行工具"""
+    tools = {}
+    check_list = [
+        ("python3", "Python 3", "dnf install python3"),
+        ("git", "Git", "dnf install git"),
+        ("curl", "cURL", "dnf install curl"),
+        ("ffmpeg", "FFmpeg", "dnf install ffmpeg"),
+        ("node", "Node.js", "dnf install nodejs"),
+        ("sqlite3", "SQLite", "dnf install sqlite"),
+        ("pandoc", "Pandoc", "dnf install pandoc"),
+        ("jq", "jq (JSON processor)", "dnf install jq"),
+        ("unzip", "unzip", "dnf install unzip"),
+        ("tree", "tree", "dnf install tree"),
+    ]
+    for cmd, desc, hint in check_list:
+        found = False
+        path = ""
+        for p in [f"/usr/bin/{cmd}", f"/usr/local/bin/{cmd}", f"/bin/{cmd}"]:
+            if os.path.exists(p) and os.access(p, os.X_OK):
+                found = True
+                path = p
+                break
+        tools[cmd] = {"available": found, "path": path, "description": desc, "install_hint": hint if not found else ""}
+    return tools
+
+@app.route("/api/check_env", methods=["GET"])
+def api_check_env():
+    return jsonify(_available_tools())
+
+@app.route("/api/presets", methods=["GET"])
+def api_presets():
+    tool = request.args.get("tool", "")
+    presets_db = {
+        "curl": {
+            "get": {"label": "GET 请求", "desc": "发送 GET 请求获取网页内容",
+                    "params": [{"key": "url", "label": "URL", "placeholder": "https://example.com"}]},
+            "post_json": {"label": "POST JSON", "desc": "发送带 JSON 数据的 POST 请求",
+                          "params": [{"key": "url", "label": "URL", "placeholder": "https://api.example.com"},
+                                     {"key": "data", "label": "JSON 数据", "placeholder": '{"key":"value"}'}]},
+            "download": {"label": "下载文件", "desc": "下载文件到本地",
+                         "params": [{"key": "url", "label": "文件链接", "placeholder": "https://example.com/file.zip"}]},
+        },
+        "git": {
+            "clone": {"label": "克隆仓库", "desc": "克隆远程 Git 仓库",
+                      "params": [{"key": "url", "label": "仓库地址", "placeholder": "https://github.com/user/repo.git"}]},
+            "status": {"label": "查看状态", "desc": "查看当前仓库文件变更状态"},
+            "log": {"label": "提交记录", "desc": "查看最近提交历史"},
+        },
+        "ffmpeg": {
+            "convert": {"label": "格式转换", "desc": "转换视频/音频格式",
+                        "params": [{"key": "input", "label": "输入文件", "placeholder": "input.mp4"},
+                                   {"key": "output", "label": "输出文件", "placeholder": "output.avi"}]},
+        },
+        "python3": {
+            "script": {"label": "运行脚本", "desc": "执行 Python 脚本",
+                       "params": [{"key": "file", "label": "脚本路径", "placeholder": "script.py"}]},
+            "eval": {"label": "单行代码", "desc": "执行一行 Python 代码",
+                     "params": [{"key": "code", "label": "Python 代码", "placeholder": "print('hello')"}]},
+        },
+        "node": {
+            "script": {"label": "运行脚本", "desc": "执行 Node.js 脚本",
+                       "params": [{"key": "file", "label": "脚本路径", "placeholder": "app.js"}]},
+        },
+        "sqlite3": {
+            "query": {"label": "SQL 查询", "desc": "对数据库执行查询",
+                      "params": [{"key": "db", "label": "数据库文件", "placeholder": "data.db"},
+                                 {"key": "sql", "label": "SQL 语句", "placeholder": "SELECT * FROM users;"}]},
+        },
+        "pandoc": {
+            "convert": {"label": "文档转换", "desc": "转换文档格式",
+                        "params": [{"key": "input", "label": "输入文件", "placeholder": "input.md"},
+                                   {"key": "output", "label": "输出文件", "placeholder": "output.docx"}]},
+        },
+        "jq": {
+            "filter": {"label": "JSON 过滤", "desc": "用 jq 表达式过滤 JSON",
+                       "params": [{"key": "file", "label": "JSON 文件", "placeholder": "data.json"},
+                                  {"key": "expr", "label": "表达式", "placeholder": ".[].name"}]},
+        },
+    }
+    return jsonify(presets_db.get(tool, {}))
+
+@app.route("/api/run", methods=["POST"])
+def api_run():
+    data = request.get_json() or {}
+    tool = (data.get("tool") or "").strip()
+    command = (data.get("command") or "").strip()
+    if not command:
+        return jsonify({"stdout": "", "stderr": "命令不能为空", "command": "", "returncode": -1})
+    try:
+        result = subprocess.run(command, shell=True, capture_output=True, text=True, timeout=30)
+        return jsonify({
+            "stdout": result.stdout[:5000],
+            "stderr": result.stderr[:5000],
+            "command": command,
+            "returncode": result.returncode,
+        })
+    except subprocess.TimeoutExpired:
+        return jsonify({"stdout": "", "stderr": "执行超时 (30s)", "command": command, "returncode": -1})
+    except Exception as e:
+        return jsonify({"stdout": "", "stderr": str(e), "command": command, "returncode": -1})
 
 
 if __name__ == "__main__":

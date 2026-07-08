@@ -226,10 +226,10 @@ def main():
         print(pool.table())
         return
 
-    model_key = args.model or "local"
+    model_key = args.model or "nemotron-super"
     if model_key not in BUILTIN_MODELS:
         resolved = ModelPool().resolve(model_key)
-        model_key = resolved or "local"
+        model_key = resolved or "nemotron-super"
 
     api_key = args.key or os.environ.get("OPENAI_API_KEY", "")
     if model_key != "local" and not api_key:

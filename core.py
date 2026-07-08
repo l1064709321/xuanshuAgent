@@ -168,7 +168,14 @@ CONSTITUTION_TEMPLATE = """## 你的身份
 工具调用时，用自然语言说出你在做什么、为什么这么做，就像在自言自语。
 工具返回后，表达你的反应——是印证了你的想法、修正了你的认知，还是引发了新问题。
 
-最终回答前，必须做一次反思：我的答案有依据吗？来源可靠吗？还有什么我没考虑到的？"""
+最终回答前，必须做一次反思：我的答案有依据吗？来源可靠吗？还有什么我没考虑到的？
+
+## 语言规则
+
+- 你的所有思考过程、推理过程、内部自言自语，**一律用中文**
+- 最终回答用户时也用中文
+- 工具调用的参数名、代码标识符、URL、文件路径等技术性内容保持原文，不做翻译
+- 禁止使用英文进行推理或思考——如果你发现自己用英文在想事情，立刻切换回中文"""
 
 # 各 Agent 专属宪法补充
 ROLE_SPECIFICS = {
@@ -830,9 +837,9 @@ class ParentBot:
 
 用户消息：{query}
 
-选中的Agent（只输出名称）："""
+选中的Agent（只输出名称，用中文）："""
 
-    SYNTHESIS_PROMPT = """你是任务协调者。用户原始需求:
+    SYNTHESIS_PROMPT = """你是任务协调者。请用中文思考和输出。用户原始需求:
 {original_query}
 
 研究阶段发现:
@@ -844,9 +851,9 @@ class ParentBot:
 3. 具体改动内容
 4. "完成"的定义（什么算做完）
 
-Spec:"""
+Spec（用中文）："""
 
-    VERIFY_PROMPT = """你是验证协调者。用户原始需求:
+    VERIFY_PROMPT = """你是验证协调者。请用中文输出验证报告。用户原始需求:
 {original_query}
 
 实施结果:
@@ -855,7 +862,7 @@ Spec:"""
 请对比原始需求，验证实施结果是否满足要求。列出通过项和未通过项。
 如果全部通过，第一行写"ALL_PASS"。
 
-验证报告:"""
+验证报告（中文）："""
 
     def __init__(self, pool: ModelPool, verbose: bool = True, coordinator_mode: bool = True, fallback_mode: bool = False):
         self.pool = pool
@@ -898,7 +905,7 @@ Spec:"""
             "搜索Agent": ChildBot(
                 name="搜索Agent",
                 description="联网搜索、查实时信息、天气、百科",
-                system_prompt="你是信息检索专家。收到查询后调用插件获取数据，整理结果并注明来源。语气简洁专业。\n注意：你只有只读权限，如需创建/修改/删除文件，请明确告知父Bot处理。\n联网搜索用 web_search，阅读具体网页用 web_fetch。",
+                system_prompt="你是信息检索专家。收到查询后调用插件获取数据，整理结果并注明来源。语气简洁专业。\n注意：你只有只读权限，如需创建/修改/删除文件，请明确告知父Bot处理。\n联网搜索用 web_search，阅读具体网页用 web_fetch。\n\n语言规则：所有思考和回复必须用中文。技术名词（URL、代码、API名等）保留原文。",
                 tools=[
                     Tool("web_search", "联网搜索(DuckDuckGo)，返回标题+链接+摘要",
                          {"query": {"type": "string", "description": "搜索关键词"}}, _web_search),
@@ -917,7 +924,9 @@ Spec:"""
 - 如果执行失败或有问题，自行修复后重新验证
 - 只有验证通过才报告完成
 - 报告时包含验证结果
-- 需要创建/写文件时，告知父Bot处理；你只能读文件""",
+- 需要创建/写文件时，告知父Bot处理；你只能读文件
+
+语言规则：所有思考和回复必须用中文。代码本身和变量名可用英文，但思考过程和解释说明必须用中文。""",
                 tools=[
                     Tool("run_code", "执行Python代码并返回结果", 
                          {"code": {"type": "string", "description": "Python代码"}}, _run_code),
@@ -929,7 +938,7 @@ Spec:"""
             "文件Agent": ChildBot(
                 name="文件Agent",
                 description="文件分析、文档处理、反编译",
-                system_prompt="你是文件分析助手。你只有只读权限，可读取和列出文件，但不能创建/修改/删除文件。\n\n附加能力 — 逆向工程：你具备二进制分析技能，能识别ELF/PE/Mach-O/APK/DEX/.NET/Python字节码/Lua/WASM等格式，使用decompile_detect检测文件类型后调用decompile反编译，解读结果时关注关键逻辑和入口点。工具不可用时说明原因并建议替代方案。\n\n如果需要实际创建/修改/删除文件，告知父Bot处理。",
+                system_prompt="你是文件分析助手。你只有只读权限，可读取和列出文件，但不能创建/修改/删除文件。\n\n附加能力 — 逆向工程：你具备二进制分析技能，能识别ELF/PE/Mach-O/APK/DEX/.NET/Python字节码/Lua/WASM等格式，使用decompile_detect检测文件类型后调用decompile反编译，解读结果时关注关键逻辑和入口点。工具不可用时说明原因并建议替代方案。\n\n如果需要实际创建/修改/删除文件，告知父Bot处理。\n\n语言规则：所有思考和回复必须用中文。文件路径、十六进制地址等技术性内容保留原文。",
                 tools=[
                     Tool("list_files", "列出目录", {"path": {"type": "string", "description": "路径"}}, _ls),
                     Tool("read_file", "读取文件", {"path": {"type": "string", "description": "路径"}}, _read),
@@ -1202,7 +1211,7 @@ Spec:"""
 
 要求: 报告文件路径、关键结构、行号位置。不修改任何文件。"""
         self.log.sys(f"📋 研究阶段 → {child_name}")
-        reply, rounds = self._run_child(child, self._build_child_msgs(child, research_prompt))
+        reply, rounds, _ = self._run_child(child, self._build_child_msgs(child, research_prompt))
         self._curate_skill(child, research_prompt, reply, rounds)
         return reply
 
@@ -1229,7 +1238,7 @@ Spec:"""
         impl_prompt = f"""[实施任务] 按以下规格执行修改，完成后验证。
 {spec}"""
         self.log.sys(f"🔨 实施阶段 → {child_name}")
-        reply, rounds = self._run_child(child, self._build_child_msgs(child, impl_prompt))
+        reply, rounds, _ = self._run_child(child, self._build_child_msgs(child, impl_prompt))
         self._curate_skill(child, impl_prompt, reply, rounds)
         return reply
 
@@ -1292,7 +1301,7 @@ Spec:"""
 
         self.log.sys(f"Fork执行: {fork_name}")
         messages = self._build_child_msgs(forked, task)
-        reply, rounds = self._run_child(forked, messages)
+        reply, rounds, _ = self._run_child(forked, messages)
 
         self._cleanup_fork(fork_name)
         return reply
@@ -1365,27 +1374,28 @@ Spec:"""
             if action == 'allow' and self._perm_pending:
                 retry_input, retry_image = self._perm_pending
                 self._perm_pending = None
-                return msg + "\n\n" + self.chat(retry_input, retry_image)
-            return msg
+                retry = self.chat(retry_input, retry_image)
+                return {"reply": msg + "\n\n" + retry["reply"], "thinking": retry.get("thinking", [])}
+            return {"reply": msg, "thinking": []}
 
         # ── 回退命令 ──
         if stripped in ("回退", "回滚", "撤销分支", "/rollback"):
-            return self._rollback_chat()
+            return {"reply": self._rollback_chat(), "thinking": []}
 
         # ── Agent 管理命令 ──
         if stripped.startswith("/agents"):
             agents = self.list_agents()
-            return "\n".join(f"{a['name']}: {a['desc']} ({a['tools']}工具)" for a in agents)
+            return {"reply": "\n".join(f"{a['name']}: {a['desc']} ({a['tools']}工具)" for a in agents), "thinking": []}
         if stripped.startswith("/metrics"):
-            return get_metrics().summary()
+            return {"reply": get_metrics().summary(), "thinking": []}
 
         # ── 屏幕截图触发词 ──
         if stripped in ("/screen", "截图", "截屏", "看屏幕", "看看屏幕"):
-            return self._handle_screen(stripped)
+            return {"reply": self._handle_screen(stripped), "thinking": []}
 
         # ── 项目命令 ──
         if self._is_project_cmd(user_input):
-            return self._project_chat(user_input)
+            return {"reply": self._project_chat(user_input), "thinking": []}
 
         # ── 父Bot直接拦截文件操作 ──
         if self._is_file_op(user_input):
@@ -1417,10 +1427,16 @@ Spec:"""
     # ═══════════ 通用权限拦截 ═══════════
     PERM_RE = None  # lazy compiled
 
-    def _intercept_permission(self, reply: str, user_input: str, image: str = None) -> str:
-        """子Agent 响应中检测 [PERM:type]描述 并挂起原请求，授权后自动重试。"""
+    def _intercept_permission(self, reply, user_input: str, image: str = None):
+        """子Agent 响应中检测 [PERM:type]描述 并挂起原请求，授权后自动重试。
+        reply 可以是 str 或 {"reply": str, "thinking": list}。"""
+        # 处理 dict 格式
+        thinking = []
+        if isinstance(reply, dict):
+            thinking = reply.get("thinking", [])
+            reply = reply["reply"]
         if not reply.startswith('[PERM:'):
-            return reply
+            return {"reply": reply, "thinking": thinking}
         # 解析权限类型
         if ParentBot.PERM_RE is None:
             ParentBot.PERM_RE = __import__('re').compile(r'^\[PERM:(\w+)\]')
@@ -1503,7 +1519,7 @@ Spec:"""
             self.log.memory(f"{child_name}", f"命中{len(recalled)}条")
 
         messages = self._build_child_msgs(child, user_input, mem_text, image)
-        child_reply, rounds = self._run_child(child, messages)
+        child_reply, rounds, thinking_log = self._run_child(child, messages)
 
         # 自校验
         if child.self_verify and "代码" in child_name:
@@ -1519,7 +1535,7 @@ Spec:"""
         self._child_memorize(child, user_input, child_reply)
         self._update_context(child_name, user_input, child_reply)
         self._update_shared_history(user_input, child_reply, image)
-        return child_reply
+        return {"reply": child_reply, "thinking": thinking_log}
 
     def _is_research_sufficient(self, research: str) -> bool:
         """判断研究阶段结果是否已是完整答案，无需进入实施阶段。
@@ -1701,9 +1717,10 @@ Spec:"""
         return messages
 
     def _run_child(self, child: ChildBot, messages: list) -> tuple:
-        """子Agent工具调用循环 — v4: 思维链注入。返回 (reply, tool_rounds)"""
+        """子Agent工具调用循环 — v5: 思维链收集。返回 (reply, tool_rounds, thinking_log)"""
         metrics = get_metrics()
         tools = child.tool_schemas()
+        thinking_log = []  # [(tool_name, thought_text, result_summary), ...]
         for loop in range(4):
             t0 = time.time()
             resp = self._llm_call(child.name, messages, tools)
@@ -1722,7 +1739,14 @@ Spec:"""
                 reply = msg.get("content", "")
                 if loop > 0:
                     self.log.sys(f"工具完成({loop}轮)")
-                return reply, loop
+                return reply, loop, thinking_log
+
+            # 收集本轮的思考内容
+            thought = msg.get("content", "") or msg.get("reasoning_content", "")
+            if thought:
+                tool_names = [tc.get("function", {}).get("name", "?") for tc in tcs]
+                tool_str = ", ".join(tool_names)
+                thinking_log.append({"tool": tool_str, "thought": thought, "round": loop + 1})
 
             messages.append(msg)
             tool_results = []
@@ -1785,7 +1809,7 @@ Spec:"""
         all_results = []
         for iteration in range(5):
             self.log.sys(f"自主闭环 迭代{iteration+1}/5")
-            reply, rounds = self._run_child(child, messages)
+            reply, rounds, _ = self._run_child(child, messages)
 
             if reply.startswith("FINISHED:"):
                 final = reply.replace("FINISHED:", "").strip()
@@ -1841,7 +1865,7 @@ Spec:"""
         child = self.children[to_agent]
         self.log.sys(f"委托: {from_agent} → {to_agent}")
         prompt = f"[委托自 {from_agent}]\n{task}" + (f"\n\n上下文:\n{context}" if context else "")
-        reply, _ = self._run_child(child, self._build_child_msgs(child, prompt))
+        reply, _, _ = self._run_child(child, self._build_child_msgs(child, prompt))
         return reply
 
     # ═══════════ DAG 任务编排 ═══════════
@@ -1914,7 +1938,7 @@ DAG（只输出节点列表）:"""
                     prompt = nd["task"]
                     if ctx:
                         prompt = f"前置结果:\n{ctx}\n\n当前任务: {prompt}"
-                    reply, _ = self._run_child(child, self._build_child_msgs(child, prompt))
+                    reply, _, _ = self._run_child(child, self._build_child_msgs(child, prompt))
                     nd["result"] = reply
                     results[nid] = reply
                     completed.add(nid)
@@ -2115,6 +2139,13 @@ DAG（只输出节点列表）:"""
             tcs = msg.get("tool_calls")
 
             if tcs:
+                # 收集并推送思考内容
+                thought = msg.get("content", "") or msg.get("reasoning_content", "")
+                if thought:
+                    tool_names = [tc.get("function", {}).get("name", "?") for tc in tcs]
+                    tool_str = ", ".join(tool_names)
+                    import json as _json
+                    yield _json.dumps({"type": "thinking", "round": loop + 1, "tool": tool_str, "thought": thought})
                 messages.append(msg)
                 for tc in tcs:
                     fn, result = _dispatch_tool_call(child, tc)

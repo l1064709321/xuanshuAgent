@@ -1,4 +1,15 @@
-# 玄姝 (Xuanshu) — 多 Agent 协作系统 v0.1.0
+---
+AIGC:
+    Label: "1"
+    ContentProducer: 001191440300708461136T1XGW3
+    ProduceID: 0e1b95e548a05d7a5680b10b9bcd3bb3_51694caf7b2c11f18401525400bff409
+    ReservedCode1: t5sGGzBnGFDhR8ye+uVQc3B6QKB2CmSQ+4Csn5FJFTFiixYq/6oHvwALDwwUdxZEGIdkqt8YcHeBZ/pUNUMCBSHp1m1GJJUufRoA8i81viZWWerUkbijAmAYpKlXA57Fxg7AJcVEcBL0MooEEosTDg8N0DhImLNCYGwFDLU7LHd2aOw98irFdWgNmT0=
+    ContentPropagator: 001191440300708461136T1XGW3
+    PropagateID: 0e1b95e548a05d7a5680b10b9bcd3bb3_51694caf7b2c11f18401525400bff409
+    ReservedCode2: t5sGGzBnGFDhR8ye+uVQc3B6QKB2CmSQ+4Csn5FJFTFiixYq/6oHvwALDwwUdxZEGIdkqt8YcHeBZ/pUNUMCBSHp1m1GJJUufRoA8i81viZWWerUkbijAmAYpKlXA57Fxg7AJcVEcBL0MooEEosTDg8N0DhImLNCYGwFDLU7LHd2aOw98irFdWgNmT0=
+---
+
+# 玄姝 (Xuanshu) — 多 Agent 协作系统 v0.0.0.2
 
 > 玄姝多 Agent 系统：父 Bot 路由 + 协调者模式 + 子 Bot 独立记忆 + 思考链可视化 + Skill 学习闭环
 
@@ -106,3 +117,4 @@ LLM thinking → _run_child 截取 → thinking_log 列表
   → Verification: 自校验验证结果
   → 返回最终回复
 ```
+*（内容由AI生成，仅供参考）*

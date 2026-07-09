@@ -122,6 +122,7 @@
       <button class="back-to-chat" onclick="navigateTo('#chat')" title="返回对话">&larr; 返回</button>
       <div class="panel-tabs">
         <div class="panel-tab active" tabindex="0" role="tab" aria-selected="true" onclick="switchPanelTab(this,'settings')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();switchPanelTab(this,'settings')}">模型</div>
+        <div class="panel-tab" tabindex="0" role="tab" aria-selected="false" onclick="switchPanelTab(this,'theme')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();switchPanelTab(this,'theme')}">主题</div>
         <div class="panel-tab" tabindex="0" role="tab" aria-selected="false" onclick="switchPanelTab(this,'tools')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();switchPanelTab(this,'tools')}">工具</div>
         <div class="panel-tab" tabindex="0" role="tab" aria-selected="false" onclick="switchPanelTab(this,'agents')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();switchPanelTab(this,'agents')}">Agent</div>
       </div>
@@ -187,6 +188,43 @@
           <div class="section-title">Token 统计</div>
           <div style="font-size:13px;color:var(--text-muted)">累计: <span id="tokenCount">0 tk</span></div>
           <div style="font-size:13px;color:var(--text-muted);margin-top:4px">模型: <span id="panelModel">本地模拟</span></div>
+        </div>
+      </div>
+
+      <div class="panel-content" id="tab-theme" style="display:none">
+        <div class="panel-section">
+          <div class="section-title">背景模式</div>
+          <div class="mode-switch-row">
+            <div class="mode-card active" id="modeDark" onclick="setMode('dark')">
+              <div class="mode-thumb dark-thumb"></div>
+              <span>深色</span>
+            </div>
+            <div class="mode-card" id="modeLight" onclick="setMode('light')">
+              <div class="mode-thumb light-thumb"></div>
+              <span>浅色</span>
+            </div>
+          </div>
+        </div>
+        <div class="panel-section">
+          <div class="section-title">配色方案</div>
+          <div class="accent-palette">
+            <div class="accent-chip active" id="chipCyber" onclick="setAccent('cyber')" title="科幻蓝">
+              <span class="chip-dot" style="background:oklch(0.62 0.20 230)"></span>
+              <span class="chip-label">科幻蓝</span>
+            </div>
+            <div class="accent-chip" id="chipForest" onclick="setAccent('forest')" title="护眼绿">
+              <span class="chip-dot" style="background:oklch(0.50 0.15 145)"></span>
+              <span class="chip-label">护眼绿</span>
+            </div>
+            <div class="accent-chip" id="chipSakura" onclick="setAccent('sakura')" title="樱粉">
+              <span class="chip-dot" style="background:oklch(0.62 0.16 5)"></span>
+              <span class="chip-label">樱粉</span>
+            </div>
+            <div class="accent-chip" id="chipLeather" onclick="setAccent('leather')" title="书封棕">
+              <span class="chip-dot" style="background:oklch(0.50 0.10 55)"></span>
+              <span class="chip-label">书封棕</span>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -399,10 +437,31 @@ function switchPanelTab(el, tab) {
   document.querySelectorAll('.panel-tab').forEach(t => { t.classList.remove('active'); t.setAttribute('aria-selected', 'false'); });
   el.classList.add('active');
   el.setAttribute('aria-selected', 'true');
-  ['settings','tools','agents'].forEach(id => {
+  ['settings','theme','tools','agents'].forEach(id => {
     document.getElementById('tab-' + id).style.display = id === tab ? '' : 'none';
   });
 }
+
+// ========== 主题切换 ==========
+function setMode(mode) {
+  document.documentElement.setAttribute('data-mode', mode);
+  localStorage.setItem('marvis-mode', mode);
+  document.getElementById('modeDark').classList.toggle('active', mode === 'dark');
+  document.getElementById('modeLight').classList.toggle('active', mode === 'light');
+}
+function setAccent(accent) {
+  document.documentElement.setAttribute('data-accent', accent);
+  localStorage.setItem('marvis-accent', accent);
+  ['Cyber','Forest','Sakura','Leather'].forEach(a => {
+    document.getElementById('chip' + a).classList.toggle('active', a.toLowerCase() === accent);
+  });
+}
+(function initTheme() {
+  const savedMode = localStorage.getItem('marvis-mode') || 'dark';
+  const savedAccent = localStorage.getItem('marvis-accent') || 'cyber';
+  setMode(savedMode);
+  setAccent(savedAccent);
+})();
 
 // ========== 连接状态 ==========
 function setStatus(state, label) {

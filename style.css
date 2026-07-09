@@ -279,9 +279,47 @@ input, textarea { font-family: inherit; color: inherit; }
 .more-menu-item:hover { background: var(--ink-hover); }
 .more-menu-div { height: 1px; background: var(--rule); margin: var(--s1) 0; }
 
+/* ── Theme Quick Panel ── */
+.theme-btn.ring { box-shadow: 0 0 0 3px var(--accent-glow); }
+.theme-quick-panel {
+  position: absolute; top: 100%; right: 52px;
+  background: var(--card-bg);
+  border: 1px solid var(--rule);
+  border-radius: 12px;
+  box-shadow: 0 12px 32px rgba(0,0,0,.25);
+  padding: 8px; z-index: 100;
+  display: flex; flex-direction: column; gap: 4px;
+  min-width: 200px;
+}
+.theme-quick-row { display: flex; gap: 4px; }
+.tqp-chip {
+  flex: 1; cursor: pointer; background: var(--ink-muted);
+  border: 1px solid var(--rule); border-radius: 6px;
+  color: var(--text); font-size: 13px;
+  padding: 6px 8px; text-align: center;
+  transition: background .15s;
+}
+.tqp-chip:hover { background: var(--ink-hover); }
+.tqp-chip.active { border-color: var(--accent); background: var(--accent-alpha-15); }
+
 /* ── Page Sections ── */
-.page-section { display: none; flex: 1; overflow-y: auto; }
-.page-section.active { display: flex; flex-direction: column; }
+/* ── Page Stage ── */
+.page-stage {
+  flex: 1; position: relative; overflow: hidden;
+}
+.page-section {
+  position: absolute; inset: 0;
+  opacity: 0; transform: translateY(12px);
+  pointer-events: none;
+  transition: opacity 0.35s cubic-bezier(0.4,0,0.2,1),
+              transform 0.35s cubic-bezier(0.4,0,0.2,1);
+  display: flex; flex-direction: column;
+  overflow-y: auto;
+}
+.page-section.active {
+  opacity: 1; transform: translateY(0);
+  pointer-events: auto;
+}
 .padded { padding: var(--s6); }
 
 /* ── Chat Page ── */

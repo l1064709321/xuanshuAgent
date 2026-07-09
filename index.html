@@ -72,6 +72,25 @@
       <div class="toolbar-avatar" id="toolbarAvatar" onclick="navigateTo('#profile')" title="个人主页">玄</div>
       <span class="u-flex-1"></span>
       <span class="token-badge" id="tokenBadge" title="Token用量">0 tk</span>
+      <button class="toolbar-btn theme-btn" onclick="toggleThemeQuickPanel(event)" title="切换主题" aria-label="主题切换" id="toolbarThemeBtn">&#127912;</button>
+      <div class="theme-quick-panel" id="themeQuickPanel" style="display:none">
+        <div class="theme-quick-row">
+          <button class="tqp-chip" data-accent="cyber" data-mode="light" onclick="applyQuick('cyber','light')">科幻蓝·浅</button>
+          <button class="tqp-chip" data-accent="cyber" data-mode="dark" onclick="applyQuick('cyber','dark')">科幻蓝·深</button>
+        </div>
+        <div class="theme-quick-row">
+          <button class="tqp-chip" data-accent="forest" data-mode="light" onclick="applyQuick('forest','light')">护眼绿·浅</button>
+          <button class="tqp-chip" data-accent="forest" data-mode="dark" onclick="applyQuick('forest','dark')">护眼绿·深</button>
+        </div>
+        <div class="theme-quick-row">
+          <button class="tqp-chip" data-accent="sakura" data-mode="light" onclick="applyQuick('sakura','light')">樱粉·浅</button>
+          <button class="tqp-chip" data-accent="sakura" data-mode="dark" onclick="applyQuick('sakura','dark')">樱粉·深</button>
+        </div>
+        <div class="theme-quick-row">
+          <button class="tqp-chip" data-accent="leather" data-mode="light" onclick="applyQuick('leather','light')">书封棕·浅</button>
+          <button class="tqp-chip" data-accent="leather" data-mode="dark" onclick="applyQuick('leather','dark')">书封棕·深</button>
+        </div>
+      </div>
       <button class="toolbar-btn" onclick="navigateTo('#settings')" title="设置" aria-label="打开设置">&#9881;</button>
       <button class="toolbar-btn" id="toolbarMoreBtn" onclick="toggleMoreMenu(event)" title="更多" aria-label="更多菜单">&#8942;</button>
       <div class="more-menu" id="moreMenu" style="display:none">
@@ -85,6 +104,8 @@
         <div class="more-menu-item" onclick="closeMoreMenu();navigateTo('#profile')">Agent 资料</div>
       </div>
     </div>
+
+    <div class="page-stage">
 
     <!-- ===== 对话页 ===== -->
     <section id="page-chat" class="page-section active">
@@ -323,6 +344,9 @@
         </div>
       </div>
     </section>
+
+    </div><!-- /page-stage -->
+
   </main>
 
   <!-- ===== 底部导航（移动端） ===== -->
@@ -1588,6 +1612,46 @@ setTimeout(() => {
 }, 2000);
 
 // ========== 更多菜单 ==========
+let themePanelOpen = false;
+function toggleThemeQuickPanel(e) {
+  e.stopPropagation();
+  const panel = document.getElementById('themeQuickPanel');
+  const btn = document.getElementById('toolbarThemeBtn');
+  if (themePanelOpen) {
+    panel.style.display = 'none';
+    themePanelOpen = false;
+    btn.classList.remove('ring');
+  } else {
+    panel.style.display = 'flex';
+    themePanelOpen = true;
+    btn.classList.add('ring');
+    // close more menu if open
+    const mm = document.getElementById('moreMenu');
+    if (mm) mm.style.display = 'none';
+    moreMenuOpen = false;
+    // highlight current accent
+    const curAccent = document.documentElement.getAttribute('data-accent') || 'cyber';
+    const curMode = document.documentElement.getAttribute('data-mode') || 'dark';
+    document.querySelectorAll('.tqp-chip').forEach(c => {
+      c.classList.toggle('active', c.dataset.accent === curAccent && c.dataset.mode === curMode);
+    });
+    setTimeout(() => { document.addEventListener('click', () => { panel.style.display = 'none'; themePanelOpen = false; btn.classList.remove('ring'); }, { once: true }); }, 10);
+  }
+}
+function applyQuick(accent, mode) {
+  document.documentElement.setAttribute('data-accent', accent);
+  document.documentElement.setAttribute('data-mode', mode);
+  localStorage.setItem('marvis-theme-accent', accent);
+  localStorage.setItem('marvis-theme-mode', mode);
+  // update chips
+  document.querySelectorAll('.tqp-chip').forEach(c => c.classList.toggle('active', c.dataset.accent === accent && c.dataset.mode === mode));
+  // also update settings page dropdowns if they exist
+  const accSel = document.getElementById('themeAccent');
+  const modeSel = document.getElementById('themeMode');
+  if (accSel) accSel.value = accent;
+  if (modeSel) modeSel.value = mode;
+}
+
 let moreMenuOpen = false;
 function toggleMoreMenu(e) {
   e.stopPropagation();
@@ -1598,6 +1662,10 @@ function toggleMoreMenu(e) {
   } else {
     menu.style.display = 'block';
     moreMenuOpen = true;
+    // close quick panel if open
+    const tp = document.getElementById('themeQuickPanel');
+    if (tp) tp.style.display = 'none';
+    themePanelOpen = false;
     setTimeout(() => { document.addEventListener('click', closeMoreMenu, { once: true }); }, 10);
   }
 }

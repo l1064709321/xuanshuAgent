@@ -1,4 +1,4 @@
-# 玄姝 (Xuanshu) — 多 Agent 协作系统
+# 玄姝 (Xuanshu) — 多 Agent 协作系统 v0.0.0.2
 
 [![Python](https://img.shields.io/badge/Python-3.11+-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)

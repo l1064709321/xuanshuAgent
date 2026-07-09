@@ -640,6 +640,56 @@ input, textarea { font-family: inherit; color: inherit; }
   .input-area { padding: var(--s3) var(--s4); }
 
   .bubble { max-width: 88%; font-size: 14px; }
+
+/* ── 思考过程折叠面板 ── */
+.thinking-chain {
+  margin-bottom: var(--s3);
+  border: 1px solid var(--rule);
+  border-radius: 4px;
+  overflow: hidden;
+  background: oklch(0.14 0.012 50 / 0.5);
+}
+.thinking-chain summary {
+  cursor: pointer;
+  padding: var(--s2) var(--s3);
+  font-family: var(--sans);
+  font-size: 11px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  user-select: none;
+  display: flex; align-items: center; gap: var(--s2);
+}
+.thinking-chain summary:hover { color: var(--cinnabar); }
+.thinking-chain summary::after {
+  content: '▸';
+  margin-left: auto;
+  font-size: 10px;
+  transition: transform 0.2s var(--ease-out);
+}
+.thinking-chain[open] summary::after { transform: rotate(90deg); }
+.thinking-step {
+  padding: var(--s3);
+  font-size: 12px;
+  color: var(--text-muted);
+  line-height: 1.55;
+  border-bottom: 1px solid var(--rule);
+}
+.thinking-step:last-child { border-bottom: none; }
+.thinking-step .tstep-tool {
+  display: block;
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--cinnabar-soft);
+  margin-bottom: var(--s1);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+.thinking-step .tstep-round {
+  font-size: 10px;
+  color: var(--text-faint);
+  margin-right: var(--s2);
+}
   .input-row textarea { font-size: 16px; }
 
   /* Bottom nav */

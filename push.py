@@ -5,13 +5,15 @@ import os, sys, subprocess
 HERE = os.path.dirname(os.path.abspath(__file__))
 os.chdir(HERE)
 
-# 读取 token
-with open(os.path.join(HERE, ".github_token")) as f:
-    TOKEN = f.read().strip()
 
-# 读取远程地址
-with open(os.path.join(HERE, ".github_remote")) as f:
-    REMOTE_URL = f.read().strip()
+def _read_token():
+    with open(os.path.join(HERE, ".github_token")) as f:
+        return f.read().strip()
+
+
+def _read_remote():
+    with open(os.path.join(HERE, ".github_remote")) as f:
+        return f.read().strip()
 
 # 构造带认证的 URL
 AUTH_URL = REMOTE_URL.replace("https://", f"https://l1064709321:{TOKEN}@")

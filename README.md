@@ -140,8 +140,6 @@ xuanshuAgent/
 ├── monitor.py        性能监控
 ├── logger.py         日志模块
 ├── main.py           命令行入口
-├── auto_sandbox.py   推送前自动验证
-├── push.py           GitHub 一键推送
 ├── run.sh            一键启动脚本（含 venv 创建）
 ├── start             旧版启动脚本
 ├── index.html        Web 前端界面

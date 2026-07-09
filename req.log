@@ -228,3 +228,208 @@
  * Running on http://172.18.0.2:8901
 2026-06-30 13:31:44,777 [33mPress CTRL+C to quit[0m
 2026-06-30 13:31:46,094 127.0.0.1 - - [30/Jun/2026 13:31:46] "GET / HTTP/1.1" 200 -
+2026-06-30 21:55:23,107 [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:8901
+ * Running on http://172.18.0.2:8901
+2026-06-30 21:55:23,108 [33mPress CTRL+C to quit[0m
+2026-06-30 21:55:24,388 127.0.0.1 - - [30/Jun/2026 21:55:24] "GET / HTTP/1.1" 200 -
+2026-06-30 22:05:26,149 127.0.0.1 - - [30/Jun/2026 22:05:26] "GET / HTTP/1.1" 200 -
+2026-06-30 22:05:29,567 127.0.0.1 - - [30/Jun/2026 22:05:29] "POST /models HTTP/1.1" 200 -
+2026-06-30 22:18:08,471 127.0.0.1 - - [30/Jun/2026 22:18:08] "GET /models HTTP/1.1" 200 -
+2026-06-30 22:31:38,395 [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:8901
+ * Running on http://172.18.0.2:8901
+2026-06-30 22:31:38,396 [33mPress CTRL+C to quit[0m
+2026-06-30 22:31:39,632 127.0.0.1 - - [30/Jun/2026 22:31:39] "GET / HTTP/1.1" 200 -
+2026-07-01 04:02:55,250 [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:8901
+ * Running on http://172.18.0.2:8901
+2026-07-01 04:02:55,251 [33mPress CTRL+C to quit[0m
+2026-07-01 04:33:07,639 [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:8901
+ * Running on http://172.18.0.2:8901
+2026-07-01 04:33:07,639 [33mPress CTRL+C to quit[0m
+2026-07-01 04:33:08,958 127.0.0.1 - - [01/Jul/2026 04:33:08] "GET / HTTP/1.1" 200 -
+2026-07-01 05:13:21,957 127.0.0.1 - - [01/Jul/2026 05:13:21] "GET / HTTP/1.1" 200 -
+2026-07-01 05:13:24,960 127.0.0.1 - - [01/Jul/2026 05:13:24] "GET / HTTP/1.1" 200 -
+2026-07-01 07:58:52,564 [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:8901
+ * Running on http://172.18.0.2:8901
+2026-07-01 07:58:52,565 [33mPress CTRL+C to quit[0m
+2026-07-01 07:58:53,748 127.0.0.1 - - [01/Jul/2026 07:58:53] "GET / HTTP/1.1" 200 -
+2026-07-01 08:08:58,707 127.0.0.1 - - [01/Jul/2026 08:08:58] "GET / HTTP/1.1" 200 -
+2026-07-01 08:09:02,041 127.0.0.1 - - [01/Jul/2026 08:09:02] "GET / HTTP/1.1" 200 -
+2026-07-01 08:09:05,033 127.0.0.1 - - [01/Jul/2026 08:09:05] "GET / HTTP/1.1" 200 -
+2026-07-01 08:09:07,772 127.0.0.1 - - [01/Jul/2026 08:09:07] "GET / HTTP/1.1" 200 -
+2026-07-01 21:49:18,846 [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:8901
+ * Running on http://172.18.0.2:8901
+2026-07-01 21:49:18,847 [33mPress CTRL+C to quit[0m
+2026-07-01 21:49:20,493 127.0.0.1 - - [01/Jul/2026 21:49:20] "GET / HTTP/1.1" 200 -
+2026-07-01 21:59:27,427 127.0.0.1 - - [01/Jul/2026 21:59:27] "GET / HTTP/1.1" 200 -
+2026-07-02 08:44:57,651 [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:8901
+ * Running on http://172.18.0.2:8901
+2026-07-02 08:44:57,652 [33mPress CTRL+C to quit[0m
+2026-07-02 08:44:59,578 127.0.0.1 - - [02/Jul/2026 08:44:59] "GET /models HTTP/1.1" 200 -
+2026-07-02 08:55:05,141 127.0.0.1 - - [02/Jul/2026 08:55:05] "GET /models HTTP/1.1" 200 -
+2026-07-02 08:55:09,368 127.0.0.1 - - [02/Jul/2026 08:55:09] "POST /models HTTP/1.1" 200 -
+2026-07-02 21:08:00,490 [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:8901
+ * Running on http://172.18.0.2:8901
+2026-07-02 21:08:00,492 [33mPress CTRL+C to quit[0m
+2026-07-02 21:08:03,496 127.0.0.1 - - [02/Jul/2026 21:08:03] "GET /models HTTP/1.1" 200 -
+2026-07-02 21:18:35,004 127.0.0.1 - - [02/Jul/2026 21:18:35] "GET /models HTTP/1.1" 200 -
+2026-07-02 21:18:43,041 127.0.0.1 - - [02/Jul/2026 21:18:43] "POST /models HTTP/1.1" 200 -
+2026-07-02 21:18:43,048 127.0.0.1 - - [02/Jul/2026 21:18:43] "GET /models HTTP/1.1" 200 -
+2026-07-02 21:43:02,108 [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:8901
+ * Running on http://172.18.0.2:8901
+2026-07-02 21:43:02,108 [33mPress CTRL+C to quit[0m
+2026-07-02 21:43:03,316 127.0.0.1 - - [02/Jul/2026 21:43:03] "GET /models HTTP/1.1" 200 -
+2026-07-02 21:53:07,658 [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:8901
+ * Running on http://172.18.0.2:8901
+2026-07-02 21:53:07,658 [33mPress CTRL+C to quit[0m
+2026-07-02 22:06:53,616 127.0.0.1 - - [02/Jul/2026 22:06:53] "GET /models HTTP/1.1" 200 -
+2026-07-03 07:29:26,783 [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:8901
+ * Running on http://172.18.0.2:8901
+2026-07-03 07:29:26,784 [33mPress CTRL+C to quit[0m
+2026-07-03 07:29:27,698 127.0.0.1 - - [03/Jul/2026 07:29:27] "GET /models HTTP/1.1" 200 -
+2026-07-03 07:46:25,125 [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:8901
+ * Running on http://172.18.0.2:8901
+2026-07-03 07:46:25,126 [33mPress CTRL+C to quit[0m
+2026-07-03 07:56:35,809 [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:8901
+ * Running on http://172.18.0.2:8901
+2026-07-03 07:56:35,810 [33mPress CTRL+C to quit[0m
+2026-07-05 07:51:40,864 [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:8901
+ * Running on http://172.18.0.2:8901
+2026-07-05 07:51:40,866 [33mPress CTRL+C to quit[0m
+2026-07-05 07:51:41,558 127.0.0.1 - - [05/Jul/2026 07:51:41] "GET / HTTP/1.1" 200 -
+2026-07-05 07:51:41,566 127.0.0.1 - - [05/Jul/2026 07:51:41] "GET /models HTTP/1.1" 200 -
+2026-07-05 08:02:01,899 127.0.0.1 - - [05/Jul/2026 08:02:01] "GET / HTTP/1.1" 200 -
+2026-07-05 08:26:38,797 127.0.0.1 - - [05/Jul/2026 08:26:38] "GET /models HTTP/1.1" 200 -
+2026-07-05 08:27:36,213 GET /model-key/status data={}
+2026-07-05 08:27:36,213 127.0.0.1 - - [05/Jul/2026 08:27:36] "GET /model-key/status HTTP/1.1" 200 -
+2026-07-08 18:33:25,214 [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:8901
+ * Running on http://172.18.0.2:8901
+2026-07-08 18:33:25,216 [33mPress CTRL+C to quit[0m
+2026-07-08 18:33:33,775 127.0.0.1 - - [08/Jul/2026 18:33:33] "GET /api/check_env HTTP/1.1" 200 -
+2026-07-08 18:33:40,075 127.0.0.1 - - [08/Jul/2026 18:33:40] "GET /api/presets?tool=curl HTTP/1.1" 200 -
+2026-07-08 18:33:40,088 127.0.0.1 - - [08/Jul/2026 18:33:40] "POST /skills/create HTTP/1.1" 200 -
+2026-07-08 18:33:40,096 127.0.0.1 - - [08/Jul/2026 18:33:40] "POST /skills/list HTTP/1.1" 200 -
+2026-07-08 18:33:40,101 Exception on /api/run [POST]
+Traceback (most recent call last):
+  File "/home/marvis/Marvis/User/77A0318BB6CBFBF7DD7DE820DE597C1E/workspace/conv_19e5d3037f5_3a9b862be1cb/output/multi_agent/frontend.py", line 618, in api_run
+    result = subprocess.run(command, shell=True, capture_output=True, text=True, timeout=30)
+             ^^^^^^^^^^
+NameError: name 'subprocess' is not defined
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/home/marvis/Marvis/User/77A0318BB6CBFBF7DD7DE820DE597C1E/workspace/conv_19e5d3037f5_3a9b862be1cb/output/multi_agent/.venv/lib64/python3.11/site-packages/flask/app.py", line 1511, in wsgi_app
+    response = self.full_dispatch_request()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/marvis/Marvis/User/77A0318BB6CBFBF7DD7DE820DE597C1E/workspace/conv_19e5d3037f5_3a9b862be1cb/output/multi_agent/.venv/lib64/python3.11/site-packages/flask/app.py", line 919, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/marvis/Marvis/User/77A0318BB6CBFBF7DD7DE820DE597C1E/workspace/conv_19e5d3037f5_3a9b862be1cb/output/multi_agent/.venv/lib64/python3.11/site-packages/flask/app.py", line 917, in full_dispatch_request
+    rv = self.dispatch_request()
+         ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/marvis/Marvis/User/77A0318BB6CBFBF7DD7DE820DE597C1E/workspace/conv_19e5d3037f5_3a9b862be1cb/output/multi_agent/.venv/lib64/python3.11/site-packages/flask/app.py", line 902, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/marvis/Marvis/User/77A0318BB6CBFBF7DD7DE820DE597C1E/workspace/conv_19e5d3037f5_3a9b862be1cb/output/multi_agent/frontend.py", line 625, in api_run
+    except subprocess.TimeoutExpired:
+           ^^^^^^^^^^
+NameError: name 'subprocess' is not defined
+2026-07-08 18:33:40,122 127.0.0.1 - - [08/Jul/2026 18:33:40] "[35m[1mPOST /api/run HTTP/1.1[0m" 500 -
+2026-07-08 18:33:47,816 Exception on /api/run [POST]
+Traceback (most recent call last):
+  File "/home/marvis/Marvis/User/77A0318BB6CBFBF7DD7DE820DE597C1E/workspace/conv_19e5d3037f5_3a9b862be1cb/output/multi_agent/frontend.py", line 618, in api_run
+    result = subprocess.run(command, shell=True, capture_output=True, text=True, timeout=30)
+             ^^^^^^^^^^
+NameError: name 'subprocess' is not defined
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/home/marvis/Marvis/User/77A0318BB6CBFBF7DD7DE820DE597C1E/workspace/conv_19e5d3037f5_3a9b862be1cb/output/multi_agent/.venv/lib64/python3.11/site-packages/flask/app.py", line 1511, in wsgi_app
+    response = self.full_dispatch_request()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/marvis/Marvis/User/77A0318BB6CBFBF7DD7DE820DE597C1E/workspace/conv_19e5d3037f5_3a9b862be1cb/output/multi_agent/.venv/lib64/python3.11/site-packages/flask/app.py", line 919, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/marvis/Marvis/User/77A0318BB6CBFBF7DD7DE820DE597C1E/workspace/conv_19e5d3037f5_3a9b862be1cb/output/multi_agent/.venv/lib64/python3.11/site-packages/flask/app.py", line 917, in full_dispatch_request
+    rv = self.dispatch_request()
+         ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/marvis/Marvis/User/77A0318BB6CBFBF7DD7DE820DE597C1E/workspace/conv_19e5d3037f5_3a9b862be1cb/output/multi_agent/.venv/lib64/python3.11/site-packages/flask/app.py", line 902, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/marvis/Marvis/User/77A0318BB6CBFBF7DD7DE820DE597C1E/workspace/conv_19e5d3037f5_3a9b862be1cb/output/multi_agent/frontend.py", line 625, in api_run
+    except subprocess.TimeoutExpired:
+           ^^^^^^^^^^
+NameError: name 'subprocess' is not defined
+2026-07-08 18:33:47,817 127.0.0.1 - - [08/Jul/2026 18:33:47] "[35m[1mPOST /api/run HTTP/1.1[0m" 500 -
+2026-07-08 18:34:00,566 [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:8901
+ * Running on http://172.18.0.2:8901
+2026-07-08 18:34:00,567 [33mPress CTRL+C to quit[0m
+2026-07-08 18:34:01,759 127.0.0.1 - - [08/Jul/2026 18:34:01] "POST /api/run HTTP/1.1" 200 -
+2026-07-08 18:34:01,773 127.0.0.1 - - [08/Jul/2026 18:34:01] "POST /skills/delete HTTP/1.1" 200 -
+2026-07-08 18:44:06,846 [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:8901
+ * Running on http://172.18.0.2:8901
+2026-07-08 18:44:06,846 [33mPress CTRL+C to quit[0m
+2026-07-08 18:44:07,917 127.0.0.1 - - [08/Jul/2026 18:44:07] "POST /api/run HTTP/1.1" 200 -
+2026-07-08 18:54:17,160 [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:8901
+ * Running on http://172.18.0.2:8901
+2026-07-08 18:54:17,160 [33mPress CTRL+C to quit[0m
+2026-07-08 18:54:20,225 127.0.0.1 - - [08/Jul/2026 18:54:20] "POST /api/run HTTP/1.1" 200 -
+2026-07-08 18:54:20,227 127.0.0.1 - - [08/Jul/2026 18:54:20] "GET /api/check_env HTTP/1.1" 200 -
+2026-07-08 18:54:20,230 127.0.0.1 - - [08/Jul/2026 18:54:20] "GET /api/presets?tool=curl HTTP/1.1" 200 -
+2026-07-08 20:00:53,264 [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:8901
+ * Running on http://172.18.0.2:8901
+2026-07-08 20:00:53,265 [33mPress CTRL+C to quit[0m
+2026-07-09 08:31:54,102 [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:8901
+ * Running on http://172.18.0.2:8901
+2026-07-09 08:31:54,105 [33mPress CTRL+C to quit[0m
+2026-07-09 08:36:38,931 [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:8901
+ * Running on http://172.18.0.2:8901
+2026-07-09 08:36:38,932 [33mPress CTRL+C to quit[0m
+2026-07-09 09:05:47,758 [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:8901
+ * Running on http://172.18.0.2:8901
+2026-07-09 09:05:47,761 [33mPress CTRL+C to quit[0m

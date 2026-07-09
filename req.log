@@ -433,3 +433,783 @@ NameError: name 'subprocess' is not defined
  * Running on http://127.0.0.1:8901
  * Running on http://172.18.0.2:8901
 2026-07-09 09:05:47,761 [33mPress CTRL+C to quit[0m
+2026-07-09 10:44:07,545 [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:8901
+ * Running on http://172.18.0.2:8901
+2026-07-09 10:44:07,550 [33mPress CTRL+C to quit[0m
+2026-07-09 10:46:04,410 [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on http://127.0.0.1:8899
+2026-07-09 10:46:04,410 [33mPress CTRL+C to quit[0m
+2026-07-09 10:46:06,551 127.0.0.1 - - [09/Jul/2026 10:46:06] "GET / HTTP/1.1" 200 -
+2026-07-09 10:46:23,739 [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:8901
+ * Running on http://172.18.0.2:8901
+2026-07-09 10:46:23,740 [33mPress CTRL+C to quit[0m
+2026-07-09 10:47:22,932 [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:8901
+ * Running on http://172.18.0.2:8901
+2026-07-09 10:47:22,932 [33mPress CTRL+C to quit[0m
+2026-07-09 10:47:23,009 127.0.0.1 - - [09/Jul/2026 10:47:23] "GET / HTTP/1.1" 200 -
+2026-07-09 10:47:23,599 127.0.0.1 - - [09/Jul/2026 10:47:23] "GET / HTTP/1.1" 200 -
+2026-07-09 10:47:23,622 127.0.0.1 - - [09/Jul/2026 10:47:23] "GET /style.css HTTP/1.1" 200 -
+2026-07-09 10:47:23,954 127.0.0.1 - - [09/Jul/2026 10:47:23] "GET /models HTTP/1.1" 200 -
+2026-07-09 10:47:23,958 127.0.0.1 - - [09/Jul/2026 10:47:23] "GET /context HTTP/1.1" 200 -
+2026-07-09 10:47:23,972 GET /model-key/status data={}
+2026-07-09 10:47:23,973 127.0.0.1 - - [09/Jul/2026 10:47:23] "GET /model-key/status HTTP/1.1" 200 -
+2026-07-09 10:47:24,045 127.0.0.1 - - [09/Jul/2026 10:47:24] "POST /context/save HTTP/1.1" 200 -
+2026-07-09 10:47:24,761 127.0.0.1 - - [09/Jul/2026 10:47:24] "POST /skills/list HTTP/1.1" 200 -
+2026-07-09 10:47:24,852 127.0.0.1 - - [09/Jul/2026 10:47:24] "GET /models HTTP/1.1" 200 -
+2026-07-09 10:47:24,901 GET /model-key/status data={}
+2026-07-09 10:47:24,902 127.0.0.1 - - [09/Jul/2026 10:47:24] "GET /model-key/status HTTP/1.1" 200 -
+2026-07-09 10:47:25,033 127.0.0.1 - - [09/Jul/2026 10:47:25] "POST /skills/list HTTP/1.1" 200 -
+2026-07-09 10:47:25,046 127.0.0.1 - - [09/Jul/2026 10:47:25] "GET /memory/list HTTP/1.1" 200 -
+2026-07-09 10:47:25,152 127.0.0.1 - - [09/Jul/2026 10:47:25] "POST /skills/list HTTP/1.1" 200 -
+2026-07-09 11:18:46,496 [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:8901
+ * Running on http://172.18.0.2:8901
+2026-07-09 11:18:46,500 [33mPress CTRL+C to quit[0m
+2026-07-09 11:18:46,521 127.0.0.1 - - [09/Jul/2026 11:18:46] "GET / HTTP/1.1" 200 -
+2026-07-09 11:18:48,314 127.0.0.1 - - [09/Jul/2026 11:18:48] "GET / HTTP/1.1" 200 -
+2026-07-09 11:18:48,339 127.0.0.1 - - [09/Jul/2026 11:18:48] "GET /style.css HTTP/1.1" 200 -
+2026-07-09 11:18:48,623 127.0.0.1 - - [09/Jul/2026 11:18:48] "GET /models HTTP/1.1" 200 -
+2026-07-09 11:18:48,628 127.0.0.1 - - [09/Jul/2026 11:18:48] "GET /context HTTP/1.1" 200 -
+2026-07-09 11:18:48,696 GET /model-key/status data={}
+2026-07-09 11:18:48,697 127.0.0.1 - - [09/Jul/2026 11:18:48] "GET /model-key/status HTTP/1.1" 200 -
+2026-07-09 11:18:48,749 127.0.0.1 - - [09/Jul/2026 11:18:48] "POST /context/save HTTP/1.1" 200 -
+2026-07-09 11:18:49,464 127.0.0.1 - - [09/Jul/2026 11:18:49] "GET /models HTTP/1.1" 200 -
+2026-07-09 11:18:49,474 GET /model-key/status data={}
+2026-07-09 11:18:49,474 127.0.0.1 - - [09/Jul/2026 11:18:49] "GET /model-key/status HTTP/1.1" 200 -
+2026-07-09 11:18:49,490 127.0.0.1 - - [09/Jul/2026 11:18:49] "POST /skills/list HTTP/1.1" 200 -
+2026-07-09 11:18:49,827 127.0.0.1 - - [09/Jul/2026 11:18:49] "POST /skills/list HTTP/1.1" 200 -
+2026-07-09 11:18:50,175 127.0.0.1 - - [09/Jul/2026 11:18:50] "POST /browse HTTP/1.1" 200 -
+2026-07-09 11:18:55,222 127.0.0.1 - - [09/Jul/2026 11:18:55] "POST /skills/list HTTP/1.1" 200 -
+2026-07-09 11:18:55,239 127.0.0.1 - - [09/Jul/2026 11:18:55] "GET /memory/list HTTP/1.1" 200 -
+2026-07-09 11:19:08,329 127.0.0.1 - - [09/Jul/2026 11:19:08] "GET /models HTTP/1.1" 200 -
+2026-07-09 11:19:08,333 GET /model-key/status data={}
+2026-07-09 11:19:08,333 127.0.0.1 - - [09/Jul/2026 11:19:08] "GET /model-key/status HTTP/1.1" 200 -
+2026-07-09 11:20:03,852 [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:8901
+ * Running on http://172.18.0.2:8901
+2026-07-09 11:20:03,852 [33mPress CTRL+C to quit[0m
+2026-07-09 11:20:04,006 127.0.0.1 - - [09/Jul/2026 11:20:04] "GET / HTTP/1.1" 200 -
+2026-07-09 11:20:04,403 127.0.0.1 - - [09/Jul/2026 11:20:04] "GET / HTTP/1.1" 200 -
+2026-07-09 11:20:04,418 127.0.0.1 - - [09/Jul/2026 11:20:04] "GET /style.css HTTP/1.1" 200 -
+2026-07-09 11:20:04,662 127.0.0.1 - - [09/Jul/2026 11:20:04] "GET /models HTTP/1.1" 200 -
+2026-07-09 11:20:04,663 127.0.0.1 - - [09/Jul/2026 11:20:04] "GET /context HTTP/1.1" 200 -
+2026-07-09 11:20:04,702 GET /model-key/status data={}
+2026-07-09 11:20:04,703 127.0.0.1 - - [09/Jul/2026 11:20:04] "GET /model-key/status HTTP/1.1" 200 -
+2026-07-09 11:20:04,727 127.0.0.1 - - [09/Jul/2026 11:20:04] "POST /context/save HTTP/1.1" 200 -
+2026-07-09 11:20:05,461 127.0.0.1 - - [09/Jul/2026 11:20:05] "GET /models HTTP/1.1" 200 -
+2026-07-09 11:20:05,472 GET /model-key/status data={}
+2026-07-09 11:20:05,472 127.0.0.1 - - [09/Jul/2026 11:20:05] "GET /model-key/status HTTP/1.1" 200 -
+2026-07-09 11:20:05,519 127.0.0.1 - - [09/Jul/2026 11:20:05] "POST /skills/list HTTP/1.1" 200 -
+2026-07-09 11:20:05,881 127.0.0.1 - - [09/Jul/2026 11:20:05] "POST /skills/list HTTP/1.1" 200 -
+2026-07-09 11:20:06,312 127.0.0.1 - - [09/Jul/2026 11:20:06] "POST /skills/list HTTP/1.1" 200 -
+2026-07-09 11:20:06,324 127.0.0.1 - - [09/Jul/2026 11:20:06] "GET /memory/list HTTP/1.1" 200 -
+2026-07-09 11:20:20,618 127.0.0.1 - - [09/Jul/2026 11:20:20] "POST /browse HTTP/1.1" 200 -
+2026-07-09 11:21:30,253 [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:8901
+ * Running on http://172.18.0.2:8901
+2026-07-09 11:21:30,253 [33mPress CTRL+C to quit[0m
+2026-07-09 11:21:30,501 127.0.0.1 - - [09/Jul/2026 11:21:30] "GET / HTTP/1.1" 200 -
+2026-07-09 11:21:30,924 127.0.0.1 - - [09/Jul/2026 11:21:30] "GET / HTTP/1.1" 200 -
+2026-07-09 11:21:30,940 127.0.0.1 - - [09/Jul/2026 11:21:30] "GET /style.css HTTP/1.1" 200 -
+2026-07-09 11:21:31,269 127.0.0.1 - - [09/Jul/2026 11:21:31] "GET /models HTTP/1.1" 200 -
+2026-07-09 11:21:31,270 127.0.0.1 - - [09/Jul/2026 11:21:31] "GET /context HTTP/1.1" 200 -
+2026-07-09 11:21:31,285 GET /model-key/status data={}
+2026-07-09 11:21:31,285 127.0.0.1 - - [09/Jul/2026 11:21:31] "GET /model-key/status HTTP/1.1" 200 -
+2026-07-09 11:21:31,312 127.0.0.1 - - [09/Jul/2026 11:21:31] "POST /context/save HTTP/1.1" 200 -
+2026-07-09 11:21:32,362 [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:8901
+ * Running on http://172.18.0.2:8901
+2026-07-09 11:21:32,362 [33mPress CTRL+C to quit[0m
+2026-07-09 11:21:32,606 127.0.0.1 - - [09/Jul/2026 11:21:32] "GET / HTTP/1.1" 200 -
+2026-07-09 11:21:32,980 127.0.0.1 - - [09/Jul/2026 11:21:32] "GET / HTTP/1.1" 200 -
+2026-07-09 11:21:32,996 127.0.0.1 - - [09/Jul/2026 11:21:32] "GET /style.css HTTP/1.1" 200 -
+2026-07-09 11:21:33,285 127.0.0.1 - - [09/Jul/2026 11:21:33] "GET /context HTTP/1.1" 200 -
+2026-07-09 11:21:33,287 127.0.0.1 - - [09/Jul/2026 11:21:33] "GET /models HTTP/1.1" 200 -
+2026-07-09 11:21:33,376 GET /model-key/status data={}
+2026-07-09 11:21:33,376 127.0.0.1 - - [09/Jul/2026 11:21:33] "GET /model-key/status HTTP/1.1" 200 -
+2026-07-09 11:21:33,378 127.0.0.1 - - [09/Jul/2026 11:21:33] "POST /context/save HTTP/1.1" 200 -
+2026-07-09 11:21:34,041 127.0.0.1 - - [09/Jul/2026 11:21:34] "GET /models HTTP/1.1" 200 -
+2026-07-09 11:21:34,052 GET /model-key/status data={}
+2026-07-09 11:21:34,052 127.0.0.1 - - [09/Jul/2026 11:21:34] "GET /model-key/status HTTP/1.1" 200 -
+2026-07-09 11:21:34,121 127.0.0.1 - - [09/Jul/2026 11:21:34] "POST /skills/list HTTP/1.1" 200 -
+2026-07-09 11:21:34,486 127.0.0.1 - - [09/Jul/2026 11:21:34] "POST /skills/list HTTP/1.1" 200 -
+2026-07-09 11:21:37,871 [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:8901
+ * Running on http://172.18.0.2:8901
+2026-07-09 11:21:37,871 [33mPress CTRL+C to quit[0m
+2026-07-09 11:21:38,127 127.0.0.1 - - [09/Jul/2026 11:21:38] "GET / HTTP/1.1" 200 -
+2026-07-09 11:21:38,524 127.0.0.1 - - [09/Jul/2026 11:21:38] "GET / HTTP/1.1" 200 -
+2026-07-09 11:21:38,536 127.0.0.1 - - [09/Jul/2026 11:21:38] "GET /style.css HTTP/1.1" 200 -
+2026-07-09 11:21:38,790 127.0.0.1 - - [09/Jul/2026 11:21:38] "GET /models HTTP/1.1" 200 -
+2026-07-09 11:21:38,795 127.0.0.1 - - [09/Jul/2026 11:21:38] "GET /context HTTP/1.1" 200 -
+2026-07-09 11:21:38,835 GET /model-key/status data={}
+2026-07-09 11:21:38,836 127.0.0.1 - - [09/Jul/2026 11:21:38] "GET /model-key/status HTTP/1.1" 200 -
+2026-07-09 11:21:38,865 127.0.0.1 - - [09/Jul/2026 11:21:38] "POST /context/save HTTP/1.1" 200 -
+2026-07-09 11:21:39,627 127.0.0.1 - - [09/Jul/2026 11:21:39] "POST /skills/list HTTP/1.1" 200 -
+2026-07-09 11:21:39,992 127.0.0.1 - - [09/Jul/2026 11:21:39] "POST /skills/list HTTP/1.1" 200 -
+2026-07-09 11:21:59,180 [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:8901
+ * Running on http://172.18.0.2:8901
+2026-07-09 11:21:59,180 [33mPress CTRL+C to quit[0m
+2026-07-09 11:21:59,439 127.0.0.1 - - [09/Jul/2026 11:21:59] "GET / HTTP/1.1" 200 -
+2026-07-09 11:21:59,805 127.0.0.1 - - [09/Jul/2026 11:21:59] "GET / HTTP/1.1" 200 -
+2026-07-09 11:21:59,818 127.0.0.1 - - [09/Jul/2026 11:21:59] "GET /style.css HTTP/1.1" 200 -
+2026-07-09 11:22:00,128 127.0.0.1 - - [09/Jul/2026 11:22:00] "GET /models HTTP/1.1" 200 -
+2026-07-09 11:22:00,131 127.0.0.1 - - [09/Jul/2026 11:22:00] "GET /context HTTP/1.1" 200 -
+2026-07-09 11:22:00,148 GET /model-key/status data={}
+2026-07-09 11:22:00,148 127.0.0.1 - - [09/Jul/2026 11:22:00] "GET /model-key/status HTTP/1.1" 200 -
+2026-07-09 11:22:00,178 127.0.0.1 - - [09/Jul/2026 11:22:00] "POST /context/save HTTP/1.1" 200 -
+2026-07-09 11:22:00,892 127.0.0.1 - - [09/Jul/2026 11:22:00] "POST /skills/list HTTP/1.1" 200 -
+2026-07-09 11:22:00,898 127.0.0.1 - - [09/Jul/2026 11:22:00] "GET /memory/list HTTP/1.1" 200 -
+2026-07-09 11:22:00,935 127.0.0.1 - - [09/Jul/2026 11:22:00] "POST /skills/list HTTP/1.1" 200 -
+2026-07-09 11:22:01,330 127.0.0.1 - - [09/Jul/2026 11:22:01] "POST /skills/list HTTP/1.1" 200 -
+2026-07-09 11:22:09,463 [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:8901
+ * Running on http://172.18.0.2:8901
+2026-07-09 11:22:09,463 [33mPress CTRL+C to quit[0m
+2026-07-09 11:22:09,708 127.0.0.1 - - [09/Jul/2026 11:22:09] "GET / HTTP/1.1" 200 -
+2026-07-09 11:22:10,073 127.0.0.1 - - [09/Jul/2026 11:22:10] "GET / HTTP/1.1" 200 -
+2026-07-09 11:22:10,086 127.0.0.1 - - [09/Jul/2026 11:22:10] "GET /style.css HTTP/1.1" 200 -
+2026-07-09 11:22:10,345 127.0.0.1 - - [09/Jul/2026 11:22:10] "GET /models HTTP/1.1" 200 -
+2026-07-09 11:22:10,347 127.0.0.1 - - [09/Jul/2026 11:22:10] "GET /context HTTP/1.1" 200 -
+2026-07-09 11:22:10,386 GET /model-key/status data={}
+2026-07-09 11:22:10,387 127.0.0.1 - - [09/Jul/2026 11:22:10] "GET /model-key/status HTTP/1.1" 200 -
+2026-07-09 11:22:10,420 127.0.0.1 - - [09/Jul/2026 11:22:10] "POST /context/save HTTP/1.1" 200 -
+2026-07-09 11:22:11,176 127.0.0.1 - - [09/Jul/2026 11:22:11] "POST /skills/list HTTP/1.1" 200 -
+2026-07-09 11:22:11,546 127.0.0.1 - - [09/Jul/2026 11:22:11] "POST /skills/list HTTP/1.1" 200 -
+2026-07-09 11:22:19,638 [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:8901
+ * Running on http://172.18.0.2:8901
+2026-07-09 11:22:19,638 [33mPress CTRL+C to quit[0m
+2026-07-09 11:22:19,894 127.0.0.1 - - [09/Jul/2026 11:22:19] "GET / HTTP/1.1" 200 -
+2026-07-09 11:22:20,267 127.0.0.1 - - [09/Jul/2026 11:22:20] "GET / HTTP/1.1" 200 -
+2026-07-09 11:22:20,280 127.0.0.1 - - [09/Jul/2026 11:22:20] "GET /style.css HTTP/1.1" 200 -
+2026-07-09 11:22:20,555 127.0.0.1 - - [09/Jul/2026 11:22:20] "GET /models HTTP/1.1" 200 -
+2026-07-09 11:22:20,557 127.0.0.1 - - [09/Jul/2026 11:22:20] "GET /context HTTP/1.1" 200 -
+2026-07-09 11:22:20,572 GET /model-key/status data={}
+2026-07-09 11:22:20,573 127.0.0.1 - - [09/Jul/2026 11:22:20] "GET /model-key/status HTTP/1.1" 200 -
+2026-07-09 11:22:20,605 127.0.0.1 - - [09/Jul/2026 11:22:20] "POST /context/save HTTP/1.1" 200 -
+2026-07-09 11:22:21,357 127.0.0.1 - - [09/Jul/2026 11:22:21] "POST /skills/list HTTP/1.1" 200 -
+2026-07-09 11:22:21,754 127.0.0.1 - - [09/Jul/2026 11:22:21] "POST /skills/list HTTP/1.1" 200 -
+2026-07-09 11:22:26,313 127.0.0.1 - - [09/Jul/2026 11:22:26] "POST /browse HTTP/1.1" 200 -
+2026-07-09 11:22:31,819 [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:8901
+ * Running on http://172.18.0.2:8901
+2026-07-09 11:22:31,819 [33mPress CTRL+C to quit[0m
+2026-07-09 11:22:32,060 127.0.0.1 - - [09/Jul/2026 11:22:32] "GET / HTTP/1.1" 200 -
+2026-07-09 11:22:32,451 127.0.0.1 - - [09/Jul/2026 11:22:32] "GET / HTTP/1.1" 200 -
+2026-07-09 11:22:32,464 127.0.0.1 - - [09/Jul/2026 11:22:32] "GET /style.css HTTP/1.1" 200 -
+2026-07-09 11:22:32,747 127.0.0.1 - - [09/Jul/2026 11:22:32] "GET /models HTTP/1.1" 200 -
+2026-07-09 11:22:32,750 127.0.0.1 - - [09/Jul/2026 11:22:32] "GET /context HTTP/1.1" 200 -
+2026-07-09 11:22:32,788 GET /model-key/status data={}
+2026-07-09 11:22:32,789 127.0.0.1 - - [09/Jul/2026 11:22:32] "GET /model-key/status HTTP/1.1" 200 -
+2026-07-09 11:22:32,821 127.0.0.1 - - [09/Jul/2026 11:22:32] "POST /context/save HTTP/1.1" 200 -
+2026-07-09 11:22:33,575 127.0.0.1 - - [09/Jul/2026 11:22:33] "POST /skills/list HTTP/1.1" 200 -
+2026-07-09 11:22:33,946 127.0.0.1 - - [09/Jul/2026 11:22:33] "POST /skills/list HTTP/1.1" 200 -
+2026-07-09 11:22:57,131 [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:8901
+ * Running on http://172.18.0.2:8901
+2026-07-09 11:22:57,131 [33mPress CTRL+C to quit[0m
+2026-07-09 11:22:57,388 127.0.0.1 - - [09/Jul/2026 11:22:57] "GET / HTTP/1.1" 200 -
+2026-07-09 11:22:57,743 127.0.0.1 - - [09/Jul/2026 11:22:57] "GET / HTTP/1.1" 200 -
+2026-07-09 11:22:57,757 127.0.0.1 - - [09/Jul/2026 11:22:57] "GET /style.css HTTP/1.1" 200 -
+2026-07-09 11:22:58,002 127.0.0.1 - - [09/Jul/2026 11:22:58] "GET /models HTTP/1.1" 200 -
+2026-07-09 11:22:58,004 127.0.0.1 - - [09/Jul/2026 11:22:58] "GET /context HTTP/1.1" 200 -
+2026-07-09 11:22:58,044 GET /model-key/status data={}
+2026-07-09 11:22:58,044 127.0.0.1 - - [09/Jul/2026 11:22:58] "GET /model-key/status HTTP/1.1" 200 -
+2026-07-09 11:22:58,067 127.0.0.1 - - [09/Jul/2026 11:22:58] "POST /context/save HTTP/1.1" 200 -
+2026-07-09 11:22:58,737 127.0.0.1 - - [09/Jul/2026 11:22:58] "GET /models HTTP/1.1" 200 -
+2026-07-09 11:22:58,748 GET /model-key/status data={}
+2026-07-09 11:22:58,748 127.0.0.1 - - [09/Jul/2026 11:22:58] "GET /model-key/status HTTP/1.1" 200 -
+2026-07-09 11:22:58,853 127.0.0.1 - - [09/Jul/2026 11:22:58] "POST /skills/list HTTP/1.1" 200 -
+2026-07-09 11:23:44,942 [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:8901
+ * Running on http://172.18.0.2:8901
+2026-07-09 11:23:44,943 [33mPress CTRL+C to quit[0m
+2026-07-09 11:23:45,198 127.0.0.1 - - [09/Jul/2026 11:23:45] "GET / HTTP/1.1" 200 -
+2026-07-09 11:23:45,581 127.0.0.1 - - [09/Jul/2026 11:23:45] "GET / HTTP/1.1" 200 -
+2026-07-09 11:23:45,595 127.0.0.1 - - [09/Jul/2026 11:23:45] "GET /style.css HTTP/1.1" 200 -
+2026-07-09 11:23:45,861 127.0.0.1 - - [09/Jul/2026 11:23:45] "GET /models HTTP/1.1" 200 -
+2026-07-09 11:23:45,863 127.0.0.1 - - [09/Jul/2026 11:23:45] "GET /context HTTP/1.1" 200 -
+2026-07-09 11:23:45,903 GET /model-key/status data={}
+2026-07-09 11:23:45,905 127.0.0.1 - - [09/Jul/2026 11:23:45] "GET /model-key/status HTTP/1.1" 200 -
+2026-07-09 11:23:45,933 127.0.0.1 - - [09/Jul/2026 11:23:45] "POST /context/save HTTP/1.1" 200 -
+2026-07-09 11:23:47,003 [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:8901
+ * Running on http://172.18.0.2:8901
+2026-07-09 11:23:47,004 [33mPress CTRL+C to quit[0m
+2026-07-09 11:23:47,260 127.0.0.1 - - [09/Jul/2026 11:23:47] "GET / HTTP/1.1" 200 -
+2026-07-09 11:23:47,617 127.0.0.1 - - [09/Jul/2026 11:23:47] "GET / HTTP/1.1" 200 -
+2026-07-09 11:23:47,627 127.0.0.1 - - [09/Jul/2026 11:23:47] "GET /style.css HTTP/1.1" 200 -
+2026-07-09 11:23:47,930 127.0.0.1 - - [09/Jul/2026 11:23:47] "GET /models HTTP/1.1" 200 -
+2026-07-09 11:23:47,936 127.0.0.1 - - [09/Jul/2026 11:23:47] "GET /context HTTP/1.1" 200 -
+2026-07-09 11:23:47,948 GET /model-key/status data={}
+2026-07-09 11:23:47,949 127.0.0.1 - - [09/Jul/2026 11:23:47] "GET /model-key/status HTTP/1.1" 200 -
+2026-07-09 11:23:47,976 127.0.0.1 - - [09/Jul/2026 11:23:47] "POST /context/save HTTP/1.1" 200 -
+2026-07-09 11:23:48,652 127.0.0.1 - - [09/Jul/2026 11:23:48] "GET /models HTTP/1.1" 200 -
+2026-07-09 11:23:48,662 GET /model-key/status data={}
+2026-07-09 11:23:48,662 127.0.0.1 - - [09/Jul/2026 11:23:48] "GET /model-key/status HTTP/1.1" 200 -
+2026-07-09 11:23:48,741 127.0.0.1 - - [09/Jul/2026 11:23:48] "POST /skills/list HTTP/1.1" 200 -
+2026-07-09 11:23:49,401 [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:8901
+ * Running on http://172.18.0.2:8901
+2026-07-09 11:23:49,401 [33mPress CTRL+C to quit[0m
+2026-07-09 11:23:49,649 127.0.0.1 - - [09/Jul/2026 11:23:49] "GET / HTTP/1.1" 200 -
+2026-07-09 11:23:50,038 127.0.0.1 - - [09/Jul/2026 11:23:50] "GET / HTTP/1.1" 200 -
+2026-07-09 11:23:50,050 127.0.0.1 - - [09/Jul/2026 11:23:50] "GET /style.css HTTP/1.1" 200 -
+2026-07-09 11:23:50,355 127.0.0.1 - - [09/Jul/2026 11:23:50] "GET /models HTTP/1.1" 200 -
+2026-07-09 11:23:50,357 127.0.0.1 - - [09/Jul/2026 11:23:50] "GET /context HTTP/1.1" 200 -
+2026-07-09 11:23:50,393 GET /model-key/status data={}
+2026-07-09 11:23:50,394 127.0.0.1 - - [09/Jul/2026 11:23:50] "GET /model-key/status HTTP/1.1" 200 -
+2026-07-09 11:23:50,418 127.0.0.1 - - [09/Jul/2026 11:23:50] "POST /context/save HTTP/1.1" 200 -
+2026-07-09 11:23:51,102 127.0.0.1 - - [09/Jul/2026 11:23:51] "GET /models HTTP/1.1" 200 -
+2026-07-09 11:23:51,113 GET /model-key/status data={}
+2026-07-09 11:23:51,113 127.0.0.1 - - [09/Jul/2026 11:23:51] "GET /model-key/status HTTP/1.1" 200 -
+2026-07-09 11:23:51,191 127.0.0.1 - - [09/Jul/2026 11:23:51] "POST /skills/list HTTP/1.1" 200 -
+2026-07-09 11:23:51,885 [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:8901
+ * Running on http://172.18.0.2:8901
+2026-07-09 11:23:51,885 [33mPress CTRL+C to quit[0m
+2026-07-09 11:23:52,141 127.0.0.1 - - [09/Jul/2026 11:23:52] "GET / HTTP/1.1" 200 -
+2026-07-09 11:23:52,522 127.0.0.1 - - [09/Jul/2026 11:23:52] "GET / HTTP/1.1" 200 -
+2026-07-09 11:23:52,533 127.0.0.1 - - [09/Jul/2026 11:23:52] "GET /style.css HTTP/1.1" 200 -
+2026-07-09 11:23:52,802 127.0.0.1 - - [09/Jul/2026 11:23:52] "GET /models HTTP/1.1" 200 -
+2026-07-09 11:23:52,803 127.0.0.1 - - [09/Jul/2026 11:23:52] "GET /context HTTP/1.1" 200 -
+2026-07-09 11:23:52,850 GET /model-key/status data={}
+2026-07-09 11:23:52,851 127.0.0.1 - - [09/Jul/2026 11:23:52] "GET /model-key/status HTTP/1.1" 200 -
+2026-07-09 11:23:52,883 127.0.0.1 - - [09/Jul/2026 11:23:52] "POST /context/save HTTP/1.1" 200 -
+2026-07-09 11:23:53,571 127.0.0.1 - - [09/Jul/2026 11:23:53] "POST /skills/list HTTP/1.1" 200 -
+2026-07-09 11:23:53,578 127.0.0.1 - - [09/Jul/2026 11:23:53] "GET /memory/list HTTP/1.1" 200 -
+2026-07-09 11:23:53,642 127.0.0.1 - - [09/Jul/2026 11:23:53] "POST /skills/list HTTP/1.1" 200 -
+2026-07-09 11:23:54,003 127.0.0.1 - - [09/Jul/2026 11:23:54] "POST /skills/list HTTP/1.1" 200 -
+2026-07-09 11:24:03,146 [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:8901
+ * Running on http://172.18.0.2:8901
+2026-07-09 11:24:03,146 [33mPress CTRL+C to quit[0m
+2026-07-09 11:24:03,384 127.0.0.1 - - [09/Jul/2026 11:24:03] "GET / HTTP/1.1" 200 -
+2026-07-09 11:24:03,737 127.0.0.1 - - [09/Jul/2026 11:24:03] "GET / HTTP/1.1" 200 -
+2026-07-09 11:24:03,749 127.0.0.1 - - [09/Jul/2026 11:24:03] "GET /style.css HTTP/1.1" 200 -
+2026-07-09 11:24:04,009 127.0.0.1 - - [09/Jul/2026 11:24:04] "GET /models HTTP/1.1" 200 -
+2026-07-09 11:24:04,011 127.0.0.1 - - [09/Jul/2026 11:24:04] "GET /context HTTP/1.1" 200 -
+2026-07-09 11:24:04,048 GET /model-key/status data={}
+2026-07-09 11:24:04,049 127.0.0.1 - - [09/Jul/2026 11:24:04] "GET /model-key/status HTTP/1.1" 200 -
+2026-07-09 11:24:04,076 127.0.0.1 - - [09/Jul/2026 11:24:04] "POST /context/save HTTP/1.1" 200 -
+2026-07-09 11:24:04,838 127.0.0.1 - - [09/Jul/2026 11:24:04] "POST /skills/list HTTP/1.1" 200 -
+2026-07-09 11:24:05,211 127.0.0.1 - - [09/Jul/2026 11:24:05] "POST /skills/list HTTP/1.1" 200 -
+2026-07-09 11:24:13,332 [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:8901
+ * Running on http://172.18.0.2:8901
+2026-07-09 11:24:13,332 [33mPress CTRL+C to quit[0m
+2026-07-09 11:24:13,586 127.0.0.1 - - [09/Jul/2026 11:24:13] "GET / HTTP/1.1" 200 -
+2026-07-09 11:24:13,952 127.0.0.1 - - [09/Jul/2026 11:24:13] "GET / HTTP/1.1" 200 -
+2026-07-09 11:24:13,963 127.0.0.1 - - [09/Jul/2026 11:24:13] "GET /style.css HTTP/1.1" 200 -
+2026-07-09 11:24:14,222 127.0.0.1 - - [09/Jul/2026 11:24:14] "GET /models HTTP/1.1" 200 -
+2026-07-09 11:24:14,224 127.0.0.1 - - [09/Jul/2026 11:24:14] "GET /context HTTP/1.1" 200 -
+2026-07-09 11:24:14,268 GET /model-key/status data={}
+2026-07-09 11:24:14,268 127.0.0.1 - - [09/Jul/2026 11:24:14] "GET /model-key/status HTTP/1.1" 200 -
+2026-07-09 11:24:14,298 127.0.0.1 - - [09/Jul/2026 11:24:14] "POST /context/save HTTP/1.1" 200 -
+2026-07-09 11:24:14,960 127.0.0.1 - - [09/Jul/2026 11:24:14] "POST /browse HTTP/1.1" 200 -
+2026-07-09 11:24:15,053 127.0.0.1 - - [09/Jul/2026 11:24:15] "POST /skills/list HTTP/1.1" 200 -
+2026-07-09 11:24:15,425 127.0.0.1 - - [09/Jul/2026 11:24:15] "POST /skills/list HTTP/1.1" 200 -
+2026-07-09 11:24:20,461 [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:8901
+ * Running on http://172.18.0.2:8901
+2026-07-09 11:24:20,461 [33mPress CTRL+C to quit[0m
+2026-07-09 11:24:20,724 127.0.0.1 - - [09/Jul/2026 11:24:20] "GET / HTTP/1.1" 200 -
+2026-07-09 11:24:21,092 127.0.0.1 - - [09/Jul/2026 11:24:21] "GET / HTTP/1.1" 200 -
+2026-07-09 11:24:21,106 127.0.0.1 - - [09/Jul/2026 11:24:21] "GET /style.css HTTP/1.1" 200 -
+2026-07-09 11:24:21,370 127.0.0.1 - - [09/Jul/2026 11:24:21] "GET /models HTTP/1.1" 200 -
+2026-07-09 11:24:21,371 127.0.0.1 - - [09/Jul/2026 11:24:21] "GET /context HTTP/1.1" 200 -
+2026-07-09 11:24:21,430 GET /model-key/status data={}
+2026-07-09 11:24:21,431 127.0.0.1 - - [09/Jul/2026 11:24:21] "GET /model-key/status HTTP/1.1" 200 -
+2026-07-09 11:24:21,478 127.0.0.1 - - [09/Jul/2026 11:24:21] "POST /context/save HTTP/1.1" 200 -
+2026-07-09 11:24:22,199 127.0.0.1 - - [09/Jul/2026 11:24:22] "POST /skills/list HTTP/1.1" 200 -
+2026-07-09 11:24:22,573 127.0.0.1 - - [09/Jul/2026 11:24:22] "POST /skills/list HTTP/1.1" 200 -
+2026-07-09 11:24:49,610 [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:8901
+ * Running on http://172.18.0.2:8901
+2026-07-09 11:24:49,610 [33mPress CTRL+C to quit[0m
+2026-07-09 11:24:49,765 127.0.0.1 - - [09/Jul/2026 11:24:49] "GET / HTTP/1.1" 200 -
+2026-07-09 11:24:50,256 127.0.0.1 - - [09/Jul/2026 11:24:50] "GET / HTTP/1.1" 200 -
+2026-07-09 11:24:50,269 127.0.0.1 - - [09/Jul/2026 11:24:50] "GET /style.css HTTP/1.1" 200 -
+2026-07-09 11:24:50,584 127.0.0.1 - - [09/Jul/2026 11:24:50] "GET /models HTTP/1.1" 200 -
+2026-07-09 11:24:50,585 127.0.0.1 - - [09/Jul/2026 11:24:50] "GET /context HTTP/1.1" 200 -
+2026-07-09 11:24:50,599 GET /model-key/status data={}
+2026-07-09 11:24:50,600 127.0.0.1 - - [09/Jul/2026 11:24:50] "GET /model-key/status HTTP/1.1" 200 -
+2026-07-09 11:24:50,646 127.0.0.1 - - [09/Jul/2026 11:24:50] "POST /context/save HTTP/1.1" 200 -
+2026-07-09 11:24:51,350 127.0.0.1 - - [09/Jul/2026 11:24:51] "GET /models HTTP/1.1" 200 -
+2026-07-09 11:24:51,360 GET /model-key/status data={}
+2026-07-09 11:24:51,360 127.0.0.1 - - [09/Jul/2026 11:24:51] "GET /model-key/status HTTP/1.1" 200 -
+2026-07-09 11:24:51,414 127.0.0.1 - - [09/Jul/2026 11:24:51] "POST /skills/list HTTP/1.1" 200 -
+2026-07-09 11:28:30,976 [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:8901
+ * Running on http://172.18.0.2:8901
+2026-07-09 11:28:30,976 [33mPress CTRL+C to quit[0m
+2026-07-09 11:28:31,148 127.0.0.1 - - [09/Jul/2026 11:28:31] "GET / HTTP/1.1" 200 -
+2026-07-09 11:28:35,748 127.0.0.1 - - [09/Jul/2026 11:28:35] "GET / HTTP/1.1" 200 -
+2026-07-09 11:28:38,736 127.0.0.1 - - [09/Jul/2026 11:28:38] "GET /style.css HTTP/1.1" 200 -
+2026-07-09 11:28:40,093 127.0.0.1 - - [09/Jul/2026 11:28:40] "GET /models HTTP/1.1" 200 -
+2026-07-09 11:28:40,094 127.0.0.1 - - [09/Jul/2026 11:28:40] "GET /context HTTP/1.1" 200 -
+2026-07-09 11:28:42,057 GET /model-key/status data={}
+2026-07-09 11:28:42,057 127.0.0.1 - - [09/Jul/2026 11:28:42] "GET /model-key/status HTTP/1.1" 200 -
+2026-07-09 11:28:42,940 127.0.0.1 - - [09/Jul/2026 11:28:42] "POST /context/save HTTP/1.1" 200 -
+2026-07-09 11:28:42,954 127.0.0.1 - - [09/Jul/2026 11:28:42] "POST /skills/list HTTP/1.1" 200 -
+2026-07-09 11:28:42,960 127.0.0.1 - - [09/Jul/2026 11:28:42] "POST /skills/list HTTP/1.1" 200 -
+2026-07-09 11:28:44,579 [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:8901
+ * Running on http://172.18.0.2:8901
+2026-07-09 11:28:44,580 [33mPress CTRL+C to quit[0m
+2026-07-09 11:28:44,808 127.0.0.1 - - [09/Jul/2026 11:28:44] "GET / HTTP/1.1" 200 -
+2026-07-09 11:28:45,383 127.0.0.1 - - [09/Jul/2026 11:28:45] "GET / HTTP/1.1" 200 -
+2026-07-09 11:28:45,395 127.0.0.1 - - [09/Jul/2026 11:28:45] "GET /style.css HTTP/1.1" 200 -
+2026-07-09 11:28:45,672 127.0.0.1 - - [09/Jul/2026 11:28:45] "GET /models HTTP/1.1" 200 -
+2026-07-09 11:28:45,674 127.0.0.1 - - [09/Jul/2026 11:28:45] "GET /context HTTP/1.1" 200 -
+2026-07-09 11:28:45,714 GET /model-key/status data={}
+2026-07-09 11:28:45,715 127.0.0.1 - - [09/Jul/2026 11:28:45] "GET /model-key/status HTTP/1.1" 200 -
+2026-07-09 11:28:45,764 127.0.0.1 - - [09/Jul/2026 11:28:45] "POST /context/save HTTP/1.1" 200 -
+2026-07-09 11:28:46,424 127.0.0.1 - - [09/Jul/2026 11:28:46] "GET /models HTTP/1.1" 200 -
+2026-07-09 11:28:46,434 GET /model-key/status data={}
+2026-07-09 11:28:46,434 127.0.0.1 - - [09/Jul/2026 11:28:46] "GET /model-key/status HTTP/1.1" 200 -
+2026-07-09 11:28:46,514 127.0.0.1 - - [09/Jul/2026 11:28:46] "POST /skills/list HTTP/1.1" 200 -
+2026-07-09 11:28:47,138 [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:8901
+ * Running on http://172.18.0.2:8901
+2026-07-09 11:28:47,138 [33mPress CTRL+C to quit[0m
+2026-07-09 11:28:47,391 127.0.0.1 - - [09/Jul/2026 11:28:47] "GET / HTTP/1.1" 200 -
+2026-07-09 11:28:47,763 127.0.0.1 - - [09/Jul/2026 11:28:47] "GET / HTTP/1.1" 200 -
+2026-07-09 11:28:47,775 127.0.0.1 - - [09/Jul/2026 11:28:47] "GET /style.css HTTP/1.1" 200 -
+2026-07-09 11:28:48,028 127.0.0.1 - - [09/Jul/2026 11:28:48] "GET /models HTTP/1.1" 200 -
+2026-07-09 11:28:48,030 127.0.0.1 - - [09/Jul/2026 11:28:48] "GET /context HTTP/1.1" 200 -
+2026-07-09 11:28:48,071 GET /model-key/status data={}
+2026-07-09 11:28:48,071 127.0.0.1 - - [09/Jul/2026 11:28:48] "GET /model-key/status HTTP/1.1" 200 -
+2026-07-09 11:28:48,101 127.0.0.1 - - [09/Jul/2026 11:28:48] "POST /context/save HTTP/1.1" 200 -
+2026-07-09 11:28:48,774 127.0.0.1 - - [09/Jul/2026 11:28:48] "GET /models HTTP/1.1" 200 -
+2026-07-09 11:28:48,784 GET /model-key/status data={}
+2026-07-09 11:28:48,785 127.0.0.1 - - [09/Jul/2026 11:28:48] "GET /model-key/status HTTP/1.1" 200 -
+2026-07-09 11:28:48,860 127.0.0.1 - - [09/Jul/2026 11:28:48] "POST /skills/list HTTP/1.1" 200 -
+2026-07-09 11:28:49,628 [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:8901
+ * Running on http://172.18.0.2:8901
+2026-07-09 11:28:49,629 [33mPress CTRL+C to quit[0m
+2026-07-09 11:28:49,881 127.0.0.1 - - [09/Jul/2026 11:28:49] "GET / HTTP/1.1" 200 -
+2026-07-09 11:28:50,257 127.0.0.1 - - [09/Jul/2026 11:28:50] "GET / HTTP/1.1" 200 -
+2026-07-09 11:28:50,269 127.0.0.1 - - [09/Jul/2026 11:28:50] "GET /style.css HTTP/1.1" 200 -
+2026-07-09 11:28:50,519 127.0.0.1 - - [09/Jul/2026 11:28:50] "GET /models HTTP/1.1" 200 -
+2026-07-09 11:28:50,520 127.0.0.1 - - [09/Jul/2026 11:28:50] "GET /context HTTP/1.1" 200 -
+2026-07-09 11:28:50,565 GET /model-key/status data={}
+2026-07-09 11:28:50,566 127.0.0.1 - - [09/Jul/2026 11:28:50] "GET /model-key/status HTTP/1.1" 200 -
+2026-07-09 11:28:50,629 127.0.0.1 - - [09/Jul/2026 11:28:50] "POST /context/save HTTP/1.1" 200 -
+2026-07-09 11:28:51,290 127.0.0.1 - - [09/Jul/2026 11:28:51] "GET /models HTTP/1.1" 200 -
+2026-07-09 11:28:51,301 GET /model-key/status data={}
+2026-07-09 11:28:51,302 127.0.0.1 - - [09/Jul/2026 11:28:51] "GET /model-key/status HTTP/1.1" 200 -
+2026-07-09 11:28:51,374 127.0.0.1 - - [09/Jul/2026 11:28:51] "POST /skills/list HTTP/1.1" 200 -
+2026-07-09 11:28:51,838 [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:8901
+ * Running on http://172.18.0.2:8901
+2026-07-09 11:28:51,838 [33mPress CTRL+C to quit[0m
+2026-07-09 11:28:52,089 127.0.0.1 - - [09/Jul/2026 11:28:52] "GET / HTTP/1.1" 200 -
+2026-07-09 11:28:52,485 127.0.0.1 - - [09/Jul/2026 11:28:52] "GET / HTTP/1.1" 200 -
+2026-07-09 11:28:52,498 127.0.0.1 - - [09/Jul/2026 11:28:52] "GET /style.css HTTP/1.1" 200 -
+2026-07-09 11:28:52,760 127.0.0.1 - - [09/Jul/2026 11:28:52] "GET /models HTTP/1.1" 200 -
+2026-07-09 11:28:52,762 127.0.0.1 - - [09/Jul/2026 11:28:52] "GET /context HTTP/1.1" 200 -
+2026-07-09 11:28:52,800 GET /model-key/status data={}
+2026-07-09 11:28:52,802 127.0.0.1 - - [09/Jul/2026 11:28:52] "GET /model-key/status HTTP/1.1" 200 -
+2026-07-09 11:28:52,830 127.0.0.1 - - [09/Jul/2026 11:28:52] "POST /context/save HTTP/1.1" 200 -
+2026-07-09 11:28:53,592 127.0.0.1 - - [09/Jul/2026 11:28:53] "POST /skills/list HTTP/1.1" 200 -
+2026-07-09 11:28:53,962 127.0.0.1 - - [09/Jul/2026 11:28:53] "POST /skills/list HTTP/1.1" 200 -
+2026-07-09 11:28:57,262 [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:8901
+ * Running on http://172.18.0.2:8901
+2026-07-09 11:28:57,262 [33mPress CTRL+C to quit[0m
+2026-07-09 11:28:57,517 127.0.0.1 - - [09/Jul/2026 11:28:57] "GET / HTTP/1.1" 200 -
+2026-07-09 11:28:57,905 127.0.0.1 - - [09/Jul/2026 11:28:57] "GET / HTTP/1.1" 200 -
+2026-07-09 11:28:57,917 127.0.0.1 - - [09/Jul/2026 11:28:57] "GET /style.css HTTP/1.1" 200 -
+2026-07-09 11:28:58,185 127.0.0.1 - - [09/Jul/2026 11:28:58] "GET /models HTTP/1.1" 200 -
+2026-07-09 11:28:58,190 127.0.0.1 - - [09/Jul/2026 11:28:58] "GET /context HTTP/1.1" 200 -
+2026-07-09 11:28:58,201 GET /model-key/status data={}
+2026-07-09 11:28:58,201 127.0.0.1 - - [09/Jul/2026 11:28:58] "GET /model-key/status HTTP/1.1" 200 -
+2026-07-09 11:28:58,232 127.0.0.1 - - [09/Jul/2026 11:28:58] "POST /context/save HTTP/1.1" 200 -
+2026-07-09 11:28:58,899 127.0.0.1 - - [09/Jul/2026 11:28:58] "POST /browse HTTP/1.1" 200 -
+2026-07-09 11:28:58,993 127.0.0.1 - - [09/Jul/2026 11:28:58] "POST /skills/list HTTP/1.1" 200 -
+2026-07-09 11:28:59,388 127.0.0.1 - - [09/Jul/2026 11:28:59] "POST /skills/list HTTP/1.1" 200 -
+2026-07-09 11:29:04,387 [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:8901
+ * Running on http://172.18.0.2:8901
+2026-07-09 11:29:04,388 [33mPress CTRL+C to quit[0m
+2026-07-09 11:29:04,647 127.0.0.1 - - [09/Jul/2026 11:29:04] "GET / HTTP/1.1" 200 -
+2026-07-09 11:29:05,003 127.0.0.1 - - [09/Jul/2026 11:29:05] "GET / HTTP/1.1" 200 -
+2026-07-09 11:29:05,015 127.0.0.1 - - [09/Jul/2026 11:29:05] "GET /style.css HTTP/1.1" 200 -
+2026-07-09 11:29:05,294 127.0.0.1 - - [09/Jul/2026 11:29:05] "GET /models HTTP/1.1" 200 -
+2026-07-09 11:29:05,296 127.0.0.1 - - [09/Jul/2026 11:29:05] "GET /context HTTP/1.1" 200 -
+2026-07-09 11:29:05,310 GET /model-key/status data={}
+2026-07-09 11:29:05,310 127.0.0.1 - - [09/Jul/2026 11:29:05] "GET /model-key/status HTTP/1.1" 200 -
+2026-07-09 11:29:05,339 127.0.0.1 - - [09/Jul/2026 11:29:05] "POST /context/save HTTP/1.1" 200 -
+2026-07-09 11:29:06,024 127.0.0.1 - - [09/Jul/2026 11:29:06] "POST /skills/list HTTP/1.1" 200 -
+2026-07-09 11:29:06,040 127.0.0.1 - - [09/Jul/2026 11:29:06] "GET /memory/list HTTP/1.1" 200 -
+2026-07-09 11:29:06,098 127.0.0.1 - - [09/Jul/2026 11:29:06] "POST /skills/list HTTP/1.1" 200 -
+2026-07-09 11:30:42,275 [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:8901
+ * Running on http://172.18.0.2:8901
+2026-07-09 11:30:42,275 [33mPress CTRL+C to quit[0m
+2026-07-09 11:30:42,536 127.0.0.1 - - [09/Jul/2026 11:30:42] "GET / HTTP/1.1" 200 -
+2026-07-09 11:30:42,991 127.0.0.1 - - [09/Jul/2026 11:30:42] "GET / HTTP/1.1" 200 -
+2026-07-09 11:30:43,003 127.0.0.1 - - [09/Jul/2026 11:30:43] "GET /style.css HTTP/1.1" 200 -
+2026-07-09 11:30:43,683 127.0.0.1 - - [09/Jul/2026 11:30:43] "GET /models HTTP/1.1" 200 -
+2026-07-09 11:30:43,684 127.0.0.1 - - [09/Jul/2026 11:30:43] "GET /context HTTP/1.1" 200 -
+2026-07-09 11:30:43,726 GET /model-key/status data={}
+2026-07-09 11:30:43,727 127.0.0.1 - - [09/Jul/2026 11:30:43] "GET /model-key/status HTTP/1.1" 200 -
+2026-07-09 11:30:43,753 127.0.0.1 - - [09/Jul/2026 11:30:43] "POST /context/save HTTP/1.1" 200 -
+2026-07-09 11:30:44,870 [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:8901
+ * Running on http://172.18.0.2:8901
+2026-07-09 11:30:44,870 [33mPress CTRL+C to quit[0m
+2026-07-09 11:30:45,127 127.0.0.1 - - [09/Jul/2026 11:30:45] "GET / HTTP/1.1" 200 -
+2026-07-09 11:30:45,525 127.0.0.1 - - [09/Jul/2026 11:30:45] "GET / HTTP/1.1" 200 -
+2026-07-09 11:30:45,537 127.0.0.1 - - [09/Jul/2026 11:30:45] "GET /style.css HTTP/1.1" 200 -
+2026-07-09 11:30:45,863 127.0.0.1 - - [09/Jul/2026 11:30:45] "GET /models HTTP/1.1" 200 -
+2026-07-09 11:30:45,865 127.0.0.1 - - [09/Jul/2026 11:30:45] "GET /context HTTP/1.1" 200 -
+2026-07-09 11:30:45,879 GET /model-key/status data={}
+2026-07-09 11:30:45,880 127.0.0.1 - - [09/Jul/2026 11:30:45] "GET /model-key/status HTTP/1.1" 200 -
+2026-07-09 11:30:45,909 127.0.0.1 - - [09/Jul/2026 11:30:45] "POST /context/save HTTP/1.1" 200 -
+2026-07-09 11:30:46,568 127.0.0.1 - - [09/Jul/2026 11:30:46] "GET /models HTTP/1.1" 200 -
+2026-07-09 11:30:46,578 GET /model-key/status data={}
+2026-07-09 11:30:46,579 127.0.0.1 - - [09/Jul/2026 11:30:46] "GET /model-key/status HTTP/1.1" 200 -
+2026-07-09 11:30:46,671 127.0.0.1 - - [09/Jul/2026 11:30:46] "POST /skills/list HTTP/1.1" 200 -
+2026-07-09 11:30:47,231 [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:8901
+ * Running on http://172.18.0.2:8901
+2026-07-09 11:30:47,231 [33mPress CTRL+C to quit[0m
+2026-07-09 11:30:47,488 127.0.0.1 - - [09/Jul/2026 11:30:47] "GET / HTTP/1.1" 200 -
+2026-07-09 11:30:47,870 127.0.0.1 - - [09/Jul/2026 11:30:47] "GET / HTTP/1.1" 200 -
+2026-07-09 11:30:47,883 127.0.0.1 - - [09/Jul/2026 11:30:47] "GET /style.css HTTP/1.1" 200 -
+2026-07-09 11:30:48,121 127.0.0.1 - - [09/Jul/2026 11:30:48] "GET /models HTTP/1.1" 200 -
+2026-07-09 11:30:48,125 127.0.0.1 - - [09/Jul/2026 11:30:48] "GET /context HTTP/1.1" 200 -
+2026-07-09 11:30:48,164 GET /model-key/status data={}
+2026-07-09 11:30:48,165 127.0.0.1 - - [09/Jul/2026 11:30:48] "GET /model-key/status HTTP/1.1" 200 -
+2026-07-09 11:30:48,193 127.0.0.1 - - [09/Jul/2026 11:30:48] "POST /context/save HTTP/1.1" 200 -
+2026-07-09 11:30:48,868 127.0.0.1 - - [09/Jul/2026 11:30:48] "GET /models HTTP/1.1" 200 -
+2026-07-09 11:30:48,878 GET /model-key/status data={}
+2026-07-09 11:30:48,878 127.0.0.1 - - [09/Jul/2026 11:30:48] "GET /model-key/status HTTP/1.1" 200 -
+2026-07-09 11:30:48,956 127.0.0.1 - - [09/Jul/2026 11:30:48] "POST /skills/list HTTP/1.1" 200 -
+2026-07-09 11:30:49,657 [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:8901
+ * Running on http://172.18.0.2:8901
+2026-07-09 11:30:49,657 [33mPress CTRL+C to quit[0m
+2026-07-09 11:30:49,914 127.0.0.1 - - [09/Jul/2026 11:30:49] "GET / HTTP/1.1" 200 -
+2026-07-09 11:30:50,287 127.0.0.1 - - [09/Jul/2026 11:30:50] "GET / HTTP/1.1" 200 -
+2026-07-09 11:30:50,302 127.0.0.1 - - [09/Jul/2026 11:30:50] "GET /style.css HTTP/1.1" 200 -
+2026-07-09 11:30:50,541 127.0.0.1 - - [09/Jul/2026 11:30:50] "GET /models HTTP/1.1" 200 -
+2026-07-09 11:30:50,542 127.0.0.1 - - [09/Jul/2026 11:30:50] "GET /context HTTP/1.1" 200 -
+2026-07-09 11:30:50,580 GET /model-key/status data={}
+2026-07-09 11:30:50,580 127.0.0.1 - - [09/Jul/2026 11:30:50] "GET /model-key/status HTTP/1.1" 200 -
+2026-07-09 11:30:50,609 127.0.0.1 - - [09/Jul/2026 11:30:50] "POST /context/save HTTP/1.1" 200 -
+2026-07-09 11:30:51,302 127.0.0.1 - - [09/Jul/2026 11:30:51] "GET /models HTTP/1.1" 200 -
+2026-07-09 11:30:51,314 GET /model-key/status data={}
+2026-07-09 11:30:51,314 127.0.0.1 - - [09/Jul/2026 11:30:51] "GET /model-key/status HTTP/1.1" 200 -
+2026-07-09 11:30:51,394 127.0.0.1 - - [09/Jul/2026 11:30:51] "POST /skills/list HTTP/1.1" 200 -
+2026-07-09 11:30:51,842 [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:8901
+ * Running on http://172.18.0.2:8901
+2026-07-09 11:30:51,842 [33mPress CTRL+C to quit[0m
+2026-07-09 11:30:52,102 127.0.0.1 - - [09/Jul/2026 11:30:52] "GET / HTTP/1.1" 200 -
+2026-07-09 11:30:52,495 127.0.0.1 - - [09/Jul/2026 11:30:52] "GET / HTTP/1.1" 200 -
+2026-07-09 11:30:52,505 127.0.0.1 - - [09/Jul/2026 11:30:52] "GET /style.css HTTP/1.1" 200 -
+2026-07-09 11:30:52,770 127.0.0.1 - - [09/Jul/2026 11:30:52] "GET /models HTTP/1.1" 200 -
+2026-07-09 11:30:52,777 127.0.0.1 - - [09/Jul/2026 11:30:52] "GET /context HTTP/1.1" 200 -
+2026-07-09 11:30:52,785 GET /model-key/status data={}
+2026-07-09 11:30:52,785 127.0.0.1 - - [09/Jul/2026 11:30:52] "GET /model-key/status HTTP/1.1" 200 -
+2026-07-09 11:30:52,824 127.0.0.1 - - [09/Jul/2026 11:30:52] "POST /context/save HTTP/1.1" 200 -
+2026-07-09 11:30:53,573 127.0.0.1 - - [09/Jul/2026 11:30:53] "POST /skills/list HTTP/1.1" 200 -
+2026-07-09 11:30:53,980 127.0.0.1 - - [09/Jul/2026 11:30:53] "POST /skills/list HTTP/1.1" 200 -
+2026-07-09 11:31:03,071 [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:8901
+ * Running on http://172.18.0.2:8901
+2026-07-09 11:31:03,071 [33mPress CTRL+C to quit[0m
+2026-07-09 11:31:03,317 127.0.0.1 - - [09/Jul/2026 11:31:03] "GET / HTTP/1.1" 200 -
+2026-07-09 11:31:03,711 127.0.0.1 - - [09/Jul/2026 11:31:03] "GET / HTTP/1.1" 200 -
+2026-07-09 11:31:03,725 127.0.0.1 - - [09/Jul/2026 11:31:03] "GET /style.css HTTP/1.1" 200 -
+2026-07-09 11:31:03,995 127.0.0.1 - - [09/Jul/2026 11:31:03] "GET /models HTTP/1.1" 200 -
+2026-07-09 11:31:03,997 127.0.0.1 - - [09/Jul/2026 11:31:03] "GET /context HTTP/1.1" 200 -
+2026-07-09 11:31:04,037 GET /model-key/status data={}
+2026-07-09 11:31:04,038 127.0.0.1 - - [09/Jul/2026 11:31:04] "GET /model-key/status HTTP/1.1" 200 -
+2026-07-09 11:31:04,061 127.0.0.1 - - [09/Jul/2026 11:31:04] "POST /context/save HTTP/1.1" 200 -
+2026-07-09 11:31:04,754 127.0.0.1 - - [09/Jul/2026 11:31:04] "POST /skills/list HTTP/1.1" 200 -
+2026-07-09 11:31:04,759 127.0.0.1 - - [09/Jul/2026 11:31:04] "GET /memory/list HTTP/1.1" 200 -
+2026-07-09 11:31:04,829 127.0.0.1 - - [09/Jul/2026 11:31:04] "POST /skills/list HTTP/1.1" 200 -
+2026-07-09 11:31:05,291 [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:8901
+ * Running on http://172.18.0.2:8901
+2026-07-09 11:31:05,291 [33mPress CTRL+C to quit[0m
+2026-07-09 11:31:05,544 127.0.0.1 - - [09/Jul/2026 11:31:05] "GET / HTTP/1.1" 200 -
+2026-07-09 11:31:05,932 127.0.0.1 - - [09/Jul/2026 11:31:05] "GET / HTTP/1.1" 200 -
+2026-07-09 11:31:05,945 127.0.0.1 - - [09/Jul/2026 11:31:05] "GET /style.css HTTP/1.1" 200 -
+2026-07-09 11:31:06,206 127.0.0.1 - - [09/Jul/2026 11:31:06] "GET /models HTTP/1.1" 200 -
+2026-07-09 11:31:06,208 127.0.0.1 - - [09/Jul/2026 11:31:06] "GET /context HTTP/1.1" 200 -
+2026-07-09 11:31:06,249 GET /model-key/status data={}
+2026-07-09 11:31:06,249 127.0.0.1 - - [09/Jul/2026 11:31:06] "GET /model-key/status HTTP/1.1" 200 -
+2026-07-09 11:31:06,276 127.0.0.1 - - [09/Jul/2026 11:31:06] "POST /context/save HTTP/1.1" 200 -
+2026-07-09 11:31:06,945 127.0.0.1 - - [09/Jul/2026 11:31:06] "POST /browse HTTP/1.1" 200 -
+2026-07-09 11:31:07,036 127.0.0.1 - - [09/Jul/2026 11:31:07] "POST /skills/list HTTP/1.1" 200 -
+2026-07-09 11:31:07,408 127.0.0.1 - - [09/Jul/2026 11:31:07] "POST /skills/list HTTP/1.1" 200 -
+2026-07-09 11:31:45,175 [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:8901
+ * Running on http://172.18.0.2:8901
+2026-07-09 11:31:45,175 [33mPress CTRL+C to quit[0m
+2026-07-09 11:31:45,432 127.0.0.1 - - [09/Jul/2026 11:31:45] "GET / HTTP/1.1" 200 -
+2026-07-09 11:31:45,796 127.0.0.1 - - [09/Jul/2026 11:31:45] "GET / HTTP/1.1" 200 -
+2026-07-09 11:31:45,807 127.0.0.1 - - [09/Jul/2026 11:31:45] "GET /style.css HTTP/1.1" 200 -
+2026-07-09 11:31:46,057 127.0.0.1 - - [09/Jul/2026 11:31:46] "GET /models HTTP/1.1" 200 -
+2026-07-09 11:31:46,060 127.0.0.1 - - [09/Jul/2026 11:31:46] "GET /context HTTP/1.1" 200 -
+2026-07-09 11:31:46,103 GET /model-key/status data={}
+2026-07-09 11:31:46,104 127.0.0.1 - - [09/Jul/2026 11:31:46] "GET /model-key/status HTTP/1.1" 200 -
+2026-07-09 11:31:46,128 127.0.0.1 - - [09/Jul/2026 11:31:46] "POST /context/save HTTP/1.1" 200 -
+2026-07-09 11:31:47,207 [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:8901
+ * Running on http://172.18.0.2:8901
+2026-07-09 11:31:47,207 [33mPress CTRL+C to quit[0m
+2026-07-09 11:31:47,462 127.0.0.1 - - [09/Jul/2026 11:31:47] "GET / HTTP/1.1" 200 -
+2026-07-09 11:31:47,834 127.0.0.1 - - [09/Jul/2026 11:31:47] "GET / HTTP/1.1" 200 -
+2026-07-09 11:31:47,845 127.0.0.1 - - [09/Jul/2026 11:31:47] "GET /style.css HTTP/1.1" 200 -
+2026-07-09 11:31:48,119 127.0.0.1 - - [09/Jul/2026 11:31:48] "GET /models HTTP/1.1" 200 -
+2026-07-09 11:31:48,120 127.0.0.1 - - [09/Jul/2026 11:31:48] "GET /context HTTP/1.1" 200 -
+2026-07-09 11:31:48,158 GET /model-key/status data={}
+2026-07-09 11:31:48,158 127.0.0.1 - - [09/Jul/2026 11:31:48] "GET /model-key/status HTTP/1.1" 200 -
+2026-07-09 11:31:48,191 127.0.0.1 - - [09/Jul/2026 11:31:48] "POST /context/save HTTP/1.1" 200 -
+2026-07-09 11:31:48,850 127.0.0.1 - - [09/Jul/2026 11:31:48] "GET /models HTTP/1.1" 200 -
+2026-07-09 11:31:48,924 GET /model-key/status data={}
+2026-07-09 11:31:48,925 127.0.0.1 - - [09/Jul/2026 11:31:48] "GET /model-key/status HTTP/1.1" 200 -
+2026-07-09 11:31:48,964 127.0.0.1 - - [09/Jul/2026 11:31:48] "POST /skills/list HTTP/1.1" 200 -
+2026-07-09 11:31:49,519 [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:8901
+ * Running on http://172.18.0.2:8901
+2026-07-09 11:31:49,519 [33mPress CTRL+C to quit[0m
+2026-07-09 11:31:49,782 127.0.0.1 - - [09/Jul/2026 11:31:49] "GET / HTTP/1.1" 200 -
+2026-07-09 11:31:50,145 127.0.0.1 - - [09/Jul/2026 11:31:50] "GET / HTTP/1.1" 200 -
+2026-07-09 11:31:50,161 127.0.0.1 - - [09/Jul/2026 11:31:50] "GET /style.css HTTP/1.1" 200 -
+2026-07-09 11:31:50,474 127.0.0.1 - - [09/Jul/2026 11:31:50] "GET /models HTTP/1.1" 200 -
+2026-07-09 11:31:50,475 127.0.0.1 - - [09/Jul/2026 11:31:50] "GET /context HTTP/1.1" 200 -
+2026-07-09 11:31:50,498 GET /model-key/status data={}
+2026-07-09 11:31:50,499 127.0.0.1 - - [09/Jul/2026 11:31:50] "GET /model-key/status HTTP/1.1" 200 -
+2026-07-09 11:31:50,525 127.0.0.1 - - [09/Jul/2026 11:31:50] "POST /context/save HTTP/1.1" 200 -
+2026-07-09 11:31:51,199 127.0.0.1 - - [09/Jul/2026 11:31:51] "GET /models HTTP/1.1" 200 -
+2026-07-09 11:31:51,209 GET /model-key/status data={}
+2026-07-09 11:31:51,209 127.0.0.1 - - [09/Jul/2026 11:31:51] "GET /model-key/status HTTP/1.1" 200 -
+2026-07-09 11:31:51,275 127.0.0.1 - - [09/Jul/2026 11:31:51] "POST /skills/list HTTP/1.1" 200 -
+2026-07-09 11:31:51,988 [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:8901
+ * Running on http://172.18.0.2:8901
+2026-07-09 11:31:51,988 [33mPress CTRL+C to quit[0m
+2026-07-09 11:31:52,244 127.0.0.1 - - [09/Jul/2026 11:31:52] "GET / HTTP/1.1" 200 -
+2026-07-09 11:31:52,625 127.0.0.1 - - [09/Jul/2026 11:31:52] "GET / HTTP/1.1" 200 -
+2026-07-09 11:31:52,637 127.0.0.1 - - [09/Jul/2026 11:31:52] "GET /style.css HTTP/1.1" 200 -
+2026-07-09 11:31:52,891 127.0.0.1 - - [09/Jul/2026 11:31:52] "GET /models HTTP/1.1" 200 -
+2026-07-09 11:31:52,893 127.0.0.1 - - [09/Jul/2026 11:31:52] "GET /context HTTP/1.1" 200 -
+2026-07-09 11:31:52,931 GET /model-key/status data={}
+2026-07-09 11:31:52,932 127.0.0.1 - - [09/Jul/2026 11:31:52] "GET /model-key/status HTTP/1.1" 200 -
+2026-07-09 11:31:52,952 127.0.0.1 - - [09/Jul/2026 11:31:52] "POST /context/save HTTP/1.1" 200 -
+2026-07-09 11:31:53,649 127.0.0.1 - - [09/Jul/2026 11:31:53] "GET /models HTTP/1.1" 200 -
+2026-07-09 11:31:53,661 GET /model-key/status data={}
+2026-07-09 11:31:53,661 127.0.0.1 - - [09/Jul/2026 11:31:53] "GET /model-key/status HTTP/1.1" 200 -
+2026-07-09 11:31:53,728 127.0.0.1 - - [09/Jul/2026 11:31:53] "POST /skills/list HTTP/1.1" 200 -
+2026-07-09 11:31:54,128 [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:8901
+ * Running on http://172.18.0.2:8901
+2026-07-09 11:31:54,128 [33mPress CTRL+C to quit[0m
+2026-07-09 11:31:54,388 127.0.0.1 - - [09/Jul/2026 11:31:54] "GET / HTTP/1.1" 200 -
+2026-07-09 11:31:54,754 127.0.0.1 - - [09/Jul/2026 11:31:54] "GET / HTTP/1.1" 200 -
+2026-07-09 11:31:54,767 127.0.0.1 - - [09/Jul/2026 11:31:54] "GET /style.css HTTP/1.1" 200 -
+2026-07-09 11:31:55,014 127.0.0.1 - - [09/Jul/2026 11:31:55] "GET /models HTTP/1.1" 200 -
+2026-07-09 11:31:55,017 127.0.0.1 - - [09/Jul/2026 11:31:55] "GET /context HTTP/1.1" 200 -
+2026-07-09 11:31:55,056 GET /model-key/status data={}
+2026-07-09 11:31:55,057 127.0.0.1 - - [09/Jul/2026 11:31:55] "GET /model-key/status HTTP/1.1" 200 -
+2026-07-09 11:31:55,078 127.0.0.1 - - [09/Jul/2026 11:31:55] "POST /context/save HTTP/1.1" 200 -
+2026-07-09 11:31:55,844 127.0.0.1 - - [09/Jul/2026 11:31:55] "POST /skills/list HTTP/1.1" 200 -
+2026-07-09 11:31:56,050 127.0.0.1 - - [09/Jul/2026 11:31:56] "POST /skills/list HTTP/1.1" 200 -
+2026-07-09 11:31:56,054 127.0.0.1 - - [09/Jul/2026 11:31:56] "GET /memory/list HTTP/1.1" 200 -
+2026-07-09 11:31:56,477 [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:8901
+ * Running on http://172.18.0.2:8901
+2026-07-09 11:31:56,477 [33mPress CTRL+C to quit[0m
+2026-07-09 11:31:56,735 127.0.0.1 - - [09/Jul/2026 11:31:56] "GET / HTTP/1.1" 200 -
+2026-07-09 11:31:57,140 127.0.0.1 - - [09/Jul/2026 11:31:57] "GET / HTTP/1.1" 200 -
+2026-07-09 11:31:57,156 127.0.0.1 - - [09/Jul/2026 11:31:57] "GET /style.css HTTP/1.1" 200 -
+2026-07-09 11:31:57,470 127.0.0.1 - - [09/Jul/2026 11:31:57] "GET /models HTTP/1.1" 200 -
+2026-07-09 11:31:57,471 127.0.0.1 - - [09/Jul/2026 11:31:57] "GET /context HTTP/1.1" 200 -
+2026-07-09 11:31:57,489 GET /model-key/status data={}
+2026-07-09 11:31:57,490 127.0.0.1 - - [09/Jul/2026 11:31:57] "GET /model-key/status HTTP/1.1" 200 -
+2026-07-09 11:31:57,519 127.0.0.1 - - [09/Jul/2026 11:31:57] "POST /context/save HTTP/1.1" 200 -
+2026-07-09 11:31:58,185 127.0.0.1 - - [09/Jul/2026 11:31:58] "POST /skills/list HTTP/1.1" 200 -
+2026-07-09 11:31:58,187 127.0.0.1 - - [09/Jul/2026 11:31:58] "GET /memory/list HTTP/1.1" 200 -
+2026-07-09 11:31:58,284 127.0.0.1 - - [09/Jul/2026 11:31:58] "POST /skills/list HTTP/1.1" 200 -
+2026-07-09 11:31:58,701 [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:8901
+ * Running on http://172.18.0.2:8901
+2026-07-09 11:31:58,701 [33mPress CTRL+C to quit[0m
+2026-07-09 11:31:58,952 127.0.0.1 - - [09/Jul/2026 11:31:58] "GET / HTTP/1.1" 200 -
+2026-07-09 11:31:59,321 127.0.0.1 - - [09/Jul/2026 11:31:59] "GET / HTTP/1.1" 200 -
+2026-07-09 11:31:59,332 127.0.0.1 - - [09/Jul/2026 11:31:59] "GET /style.css HTTP/1.1" 200 -
+2026-07-09 11:31:59,708 127.0.0.1 - - [09/Jul/2026 11:31:59] "GET /models HTTP/1.1" 200 -
+2026-07-09 11:31:59,709 127.0.0.1 - - [09/Jul/2026 11:31:59] "GET /context HTTP/1.1" 200 -
+2026-07-09 11:31:59,749 GET /model-key/status data={}
+2026-07-09 11:31:59,750 127.0.0.1 - - [09/Jul/2026 11:31:59] "GET /model-key/status HTTP/1.1" 200 -
+2026-07-09 11:31:59,778 127.0.0.1 - - [09/Jul/2026 11:31:59] "POST /context/save HTTP/1.1" 200 -
+2026-07-09 11:32:00,440 127.0.0.1 - - [09/Jul/2026 11:32:00] "POST /browse HTTP/1.1" 200 -
+2026-07-09 11:32:00,538 127.0.0.1 - - [09/Jul/2026 11:32:00] "POST /skills/list HTTP/1.1" 200 -
+2026-07-09 11:32:00,910 127.0.0.1 - - [09/Jul/2026 11:32:00] "POST /skills/list HTTP/1.1" 200 -
+2026-07-09 11:32:28,498 [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:8901
+ * Running on http://172.18.0.2:8901
+2026-07-09 11:32:28,498 [33mPress CTRL+C to quit[0m
+2026-07-09 11:32:28,766 127.0.0.1 - - [09/Jul/2026 11:32:28] "GET / HTTP/1.1" 200 -
+2026-07-09 11:32:29,163 127.0.0.1 - - [09/Jul/2026 11:32:29] "GET / HTTP/1.1" 200 -
+2026-07-09 11:32:29,176 127.0.0.1 - - [09/Jul/2026 11:32:29] "GET /style.css HTTP/1.1" 200 -
+2026-07-09 11:32:29,417 127.0.0.1 - - [09/Jul/2026 11:32:29] "GET /models HTTP/1.1" 200 -
+2026-07-09 11:32:29,419 127.0.0.1 - - [09/Jul/2026 11:32:29] "GET /context HTTP/1.1" 200 -
+2026-07-09 11:32:29,458 GET /model-key/status data={}
+2026-07-09 11:32:29,459 127.0.0.1 - - [09/Jul/2026 11:32:29] "GET /model-key/status HTTP/1.1" 200 -
+2026-07-09 11:32:29,497 127.0.0.1 - - [09/Jul/2026 11:32:29] "POST /context/save HTTP/1.1" 200 -
+2026-07-09 11:32:30,547 [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:8901
+ * Running on http://172.18.0.2:8901
+2026-07-09 11:32:30,548 [33mPress CTRL+C to quit[0m
+2026-07-09 11:32:30,805 127.0.0.1 - - [09/Jul/2026 11:32:30] "GET / HTTP/1.1" 200 -
+2026-07-09 11:32:31,171 127.0.0.1 - - [09/Jul/2026 11:32:31] "GET / HTTP/1.1" 200 -
+2026-07-09 11:32:31,182 127.0.0.1 - - [09/Jul/2026 11:32:31] "GET /style.css HTTP/1.1" 200 -
+2026-07-09 11:32:31,451 127.0.0.1 - - [09/Jul/2026 11:32:31] "GET /models HTTP/1.1" 200 -
+2026-07-09 11:32:31,453 127.0.0.1 - - [09/Jul/2026 11:32:31] "GET /context HTTP/1.1" 200 -
+2026-07-09 11:32:31,492 GET /model-key/status data={}
+2026-07-09 11:32:31,493 127.0.0.1 - - [09/Jul/2026 11:32:31] "GET /model-key/status HTTP/1.1" 200 -
+2026-07-09 11:32:31,516 127.0.0.1 - - [09/Jul/2026 11:32:31] "POST /context/save HTTP/1.1" 200 -
+2026-07-09 11:32:32,231 127.0.0.1 - - [09/Jul/2026 11:32:32] "GET /models HTTP/1.1" 200 -
+2026-07-09 11:32:32,241 GET /model-key/status data={}
+2026-07-09 11:32:32,241 127.0.0.1 - - [09/Jul/2026 11:32:32] "GET /model-key/status HTTP/1.1" 200 -
+2026-07-09 11:32:32,287 127.0.0.1 - - [09/Jul/2026 11:32:32] "POST /skills/list HTTP/1.1" 200 -
+2026-07-09 11:32:32,915 [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:8901
+ * Running on http://172.18.0.2:8901
+2026-07-09 11:32:32,915 [33mPress CTRL+C to quit[0m
+2026-07-09 11:32:33,164 127.0.0.1 - - [09/Jul/2026 11:32:33] "GET / HTTP/1.1" 200 -
+2026-07-09 11:32:33,529 127.0.0.1 - - [09/Jul/2026 11:32:33] "GET / HTTP/1.1" 200 -
+2026-07-09 11:32:33,541 127.0.0.1 - - [09/Jul/2026 11:32:33] "GET /style.css HTTP/1.1" 200 -
+2026-07-09 11:32:33,794 127.0.0.1 - - [09/Jul/2026 11:32:33] "GET /models HTTP/1.1" 200 -
+2026-07-09 11:32:33,798 127.0.0.1 - - [09/Jul/2026 11:32:33] "GET /context HTTP/1.1" 200 -
+2026-07-09 11:32:33,837 GET /model-key/status data={}
+2026-07-09 11:32:33,838 127.0.0.1 - - [09/Jul/2026 11:32:33] "GET /model-key/status HTTP/1.1" 200 -
+2026-07-09 11:32:33,870 127.0.0.1 - - [09/Jul/2026 11:32:33] "POST /context/save HTTP/1.1" 200 -
+2026-07-09 11:32:34,547 127.0.0.1 - - [09/Jul/2026 11:32:34] "GET /models HTTP/1.1" 200 -
+2026-07-09 11:32:34,558 GET /model-key/status data={}
+2026-07-09 11:32:34,558 127.0.0.1 - - [09/Jul/2026 11:32:34] "GET /model-key/status HTTP/1.1" 200 -
+2026-07-09 11:32:34,627 127.0.0.1 - - [09/Jul/2026 11:32:34] "POST /skills/list HTTP/1.1" 200 -
+2026-07-09 11:32:35,347 [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:8901
+ * Running on http://172.18.0.2:8901
+2026-07-09 11:32:35,347 [33mPress CTRL+C to quit[0m
+2026-07-09 11:32:35,606 127.0.0.1 - - [09/Jul/2026 11:32:35] "GET / HTTP/1.1" 200 -
+2026-07-09 11:32:35,985 127.0.0.1 - - [09/Jul/2026 11:32:35] "GET / HTTP/1.1" 200 -
+2026-07-09 11:32:35,997 127.0.0.1 - - [09/Jul/2026 11:32:35] "GET /style.css HTTP/1.1" 200 -
+2026-07-09 11:32:36,244 127.0.0.1 - - [09/Jul/2026 11:32:36] "GET /models HTTP/1.1" 200 -
+2026-07-09 11:32:36,246 127.0.0.1 - - [09/Jul/2026 11:32:36] "GET /context HTTP/1.1" 200 -
+2026-07-09 11:32:36,288 GET /model-key/status data={}
+2026-07-09 11:32:36,288 127.0.0.1 - - [09/Jul/2026 11:32:36] "GET /model-key/status HTTP/1.1" 200 -
+2026-07-09 11:32:36,323 127.0.0.1 - - [09/Jul/2026 11:32:36] "POST /context/save HTTP/1.1" 200 -
+2026-07-09 11:32:36,998 127.0.0.1 - - [09/Jul/2026 11:32:36] "GET /models HTTP/1.1" 200 -
+2026-07-09 11:32:37,010 GET /model-key/status data={}
+2026-07-09 11:32:37,010 127.0.0.1 - - [09/Jul/2026 11:32:37] "GET /model-key/status HTTP/1.1" 200 -
+2026-07-09 11:32:37,092 127.0.0.1 - - [09/Jul/2026 11:32:37] "POST /skills/list HTTP/1.1" 200 -
+2026-07-09 11:32:37,564 [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:8901
+ * Running on http://172.18.0.2:8901
+2026-07-09 11:32:37,564 [33mPress CTRL+C to quit[0m
+2026-07-09 11:32:37,803 127.0.0.1 - - [09/Jul/2026 11:32:37] "GET / HTTP/1.1" 200 -
+2026-07-09 11:32:38,170 127.0.0.1 - - [09/Jul/2026 11:32:38] "GET / HTTP/1.1" 200 -
+2026-07-09 11:32:38,182 127.0.0.1 - - [09/Jul/2026 11:32:38] "GET /style.css HTTP/1.1" 200 -
+2026-07-09 11:32:38,417 127.0.0.1 - - [09/Jul/2026 11:32:38] "GET /models HTTP/1.1" 200 -
+2026-07-09 11:32:38,419 127.0.0.1 - - [09/Jul/2026 11:32:38] "GET /context HTTP/1.1" 200 -
+2026-07-09 11:32:38,454 GET /model-key/status data={}
+2026-07-09 11:32:38,457 127.0.0.1 - - [09/Jul/2026 11:32:38] "GET /model-key/status HTTP/1.1" 200 -
+2026-07-09 11:32:38,486 127.0.0.1 - - [09/Jul/2026 11:32:38] "POST /context/save HTTP/1.1" 200 -
+2026-07-09 11:32:39,245 127.0.0.1 - - [09/Jul/2026 11:32:39] "POST /skills/list HTTP/1.1" 200 -
+2026-07-09 11:32:39,465 127.0.0.1 - - [09/Jul/2026 11:32:39] "POST /skills/list HTTP/1.1" 200 -
+2026-07-09 11:32:39,470 127.0.0.1 - - [09/Jul/2026 11:32:39] "GET /memory/list HTTP/1.1" 200 -
+2026-07-09 11:32:39,877 [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:8901
+ * Running on http://172.18.0.2:8901
+2026-07-09 11:32:39,878 [33mPress CTRL+C to quit[0m
+2026-07-09 11:32:40,139 127.0.0.1 - - [09/Jul/2026 11:32:40] "GET / HTTP/1.1" 200 -
+2026-07-09 11:32:40,506 127.0.0.1 - - [09/Jul/2026 11:32:40] "GET / HTTP/1.1" 200 -
+2026-07-09 11:32:40,518 127.0.0.1 - - [09/Jul/2026 11:32:40] "GET /style.css HTTP/1.1" 200 -
+2026-07-09 11:32:40,798 127.0.0.1 - - [09/Jul/2026 11:32:40] "GET /models HTTP/1.1" 200 -
+2026-07-09 11:32:40,799 127.0.0.1 - - [09/Jul/2026 11:32:40] "GET /context HTTP/1.1" 200 -
+2026-07-09 11:32:40,812 GET /model-key/status data={}
+2026-07-09 11:32:40,813 127.0.0.1 - - [09/Jul/2026 11:32:40] "GET /model-key/status HTTP/1.1" 200 -
+2026-07-09 11:32:40,845 127.0.0.1 - - [09/Jul/2026 11:32:40] "POST /context/save HTTP/1.1" 200 -
+2026-07-09 11:32:41,517 127.0.0.1 - - [09/Jul/2026 11:32:41] "POST /skills/list HTTP/1.1" 200 -
+2026-07-09 11:32:41,521 127.0.0.1 - - [09/Jul/2026 11:32:41] "GET /memory/list HTTP/1.1" 200 -
+2026-07-09 11:32:41,599 127.0.0.1 - - [09/Jul/2026 11:32:41] "POST /skills/list HTTP/1.1" 200 -
+2026-07-09 11:32:42,017 [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:8901
+ * Running on http://172.18.0.2:8901
+2026-07-09 11:32:42,017 [33mPress CTRL+C to quit[0m
+2026-07-09 11:32:42,281 127.0.0.1 - - [09/Jul/2026 11:32:42] "GET / HTTP/1.1" 200 -
+2026-07-09 11:32:42,650 127.0.0.1 - - [09/Jul/2026 11:32:42] "GET / HTTP/1.1" 200 -
+2026-07-09 11:32:42,662 127.0.0.1 - - [09/Jul/2026 11:32:42] "GET /style.css HTTP/1.1" 200 -
+2026-07-09 11:32:42,910 127.0.0.1 - - [09/Jul/2026 11:32:42] "GET /models HTTP/1.1" 200 -
+2026-07-09 11:32:42,912 127.0.0.1 - - [09/Jul/2026 11:32:42] "GET /context HTTP/1.1" 200 -
+2026-07-09 11:32:42,950 GET /model-key/status data={}
+2026-07-09 11:32:42,950 127.0.0.1 - - [09/Jul/2026 11:32:42] "GET /model-key/status HTTP/1.1" 200 -
+2026-07-09 11:32:42,982 127.0.0.1 - - [09/Jul/2026 11:32:42] "POST /context/save HTTP/1.1" 200 -
+2026-07-09 11:32:43,673 127.0.0.1 - - [09/Jul/2026 11:32:43] "POST /browse HTTP/1.1" 200 -
+2026-07-09 11:32:43,737 127.0.0.1 - - [09/Jul/2026 11:32:43] "POST /skills/list HTTP/1.1" 200 -
+2026-07-09 11:32:43,752 127.0.0.1 - - [09/Jul/2026 11:32:43] "POST /browse HTTP/1.1" 200 -

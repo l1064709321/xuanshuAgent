@@ -628,6 +628,101 @@ def api_run():
     except Exception as e:
         return jsonify({"stdout": "", "stderr": str(e), "command": command, "returncode": -1})
 
+# ── 文件预览（适配前端 /read-file 响应格式）──
+@app.route("/read-file", methods=["POST"])
+def read_file_v2():
+    data = request.get_json(silent=True) or {}
+    path = (data.get("path") or "").strip()
+    if not path:
+        return jsonify({"ok": False, "error": "路径不能为空"})
+    real = os.path.realpath(path)
+    if not real.startswith(_ALLOWED_BASE):
+        return jsonify({"ok": False, "error": "禁止访问该路径"})
+    if not os.path.isfile(real):
+        return jsonify({"ok": False, "error": "不是文件"})
+    name = os.path.basename(real)
+    ext = os.path.splitext(real)[1].lower()
+    size = os.path.getsize(real)
+    max_size = data.get("max_size", 200 * 1024)
+    if size > max_size:
+        return jsonify({"ok": False, "error": f"文件过大 ({size//1024}KB > {max_size//1024}KB)"})
+    text_exts = {'.txt','.md','.py','.js','.json','.xml','.yaml','.yml','.html','.css','.csv',
+                 '.sh','.bat','.cfg','.ini','.toml','.log','.c','.cpp','.h','.java','.rs','.go',
+                 '.ts','.tsx','.jsx','.vue','.sql','.r','.m','.swift','.kt','.scala','.rb','.php',
+                 '.env','.gitignore','.dockerignore','.editorconfig'}
+    is_text = ext in text_exts or (name.startswith('.') and '.' not in name[1:]) or name in ('Makefile','Dockerfile','README','LICENSE')
+    try:
+        if is_text:
+            with open(real, "r", encoding="utf-8", errors="replace") as f:
+                content = f.read()
+            return jsonify({"ok": True, "type": "text", "path": real, "name": name, "size": size,
+                            "content": content, "lines": content.count('\n') + 1})
+        else:
+            return jsonify({"ok": True, "type": "binary", "path": real, "name": name, "size": size, "ext": ext})
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)})
+
+# ── Git 版本回滚 ──
+@app.route("/git-log", methods=["GET"])
+def git_log():
+    try:
+        r = subprocess.run(
+            ["/home/marvis/local/bin/git", "log", "--oneline", "-15", "--format=%h|%s|%ai"],
+            capture_output=True, text=True, timeout=5,
+            cwd=os.path.dirname(os.path.abspath(__file__))
+        )
+        if r.returncode != 0:
+            return jsonify({"ok": False, "error": r.stderr.strip()})
+        commits = []
+        for line in r.stdout.strip().split('\n'):
+            if not line: continue
+            parts = line.split('|', 2)
+            commits.append({"hash": parts[0], "message": parts[1], "date": parts[2] if len(parts)>2 else ""})
+        return jsonify({"ok": True, "commits": commits, "head": commits[0]["hash"] if commits else ""})
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)})
+
+@app.route("/git-revert", methods=["POST"])
+def git_revert():
+    data = request.get_json(silent=True) or {}
+    target = data.get("hash", "").strip()
+    if not target:
+        return jsonify({"ok": False, "error": "缺少目标 commit hash"})
+    try:
+        subprocess.run(["/home/marvis/local/bin/git", "stash", "push", "-u", "-m", "auto-stash-before-revert"],
+                       capture_output=True, timeout=10,
+                       cwd=os.path.dirname(os.path.abspath(__file__)))
+        r = subprocess.run(
+            ["/home/marvis/local/bin/git", "reset", "--hard", target],
+            capture_output=True, text=True, timeout=10,
+            cwd=os.path.dirname(os.path.abspath(__file__))
+        )
+        if r.returncode != 0:
+            return jsonify({"ok": False, "error": r.stderr.strip()})
+        r2 = subprocess.run(
+            ["/home/marvis/local/bin/git", "log", "--oneline", "-1", "--format=%h %s"],
+            capture_output=True, text=True, timeout=5,
+            cwd=os.path.dirname(os.path.abspath(__file__))
+        )
+        return jsonify({"ok": True, "reset_to": r2.stdout.strip(), "stashed": True})
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)})
+
+@app.route("/git-revert-restore", methods=["POST"])
+def git_revert_restore():
+    try:
+        r = subprocess.run(
+            ["/home/marvis/local/bin/git", "stash", "list"],
+            capture_output=True, text=True, timeout=5,
+            cwd=os.path.dirname(os.path.abspath(__file__))
+        )
+        if not r.stdout.strip():
+            return jsonify({"ok": False, "error": "没有可恢复的 stash"})
+        subprocess.run(["/home/marvis/local/bin/git", "stash", "pop"], capture_output=True, timeout=10,
+                       cwd=os.path.dirname(os.path.abspath(__file__)))
+        return jsonify({"ok": True, "message": "已恢复回滚前状态"})
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)})
 
 if __name__ == "__main__":
     print("玄姝多Agent API → http://0.0.0.0:8901")

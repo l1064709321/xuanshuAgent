@@ -36,6 +36,9 @@
 <!-- 遮罩层 -->
 <div class="mobile-overlay" id="overlay" onclick="closeAllPanels()"></div>
 
+<!-- 粒子云画布 -->
+<canvas id="particleCanvas"></canvas>
+
 <div class="app">
 
   <!-- ===== 左侧边栏 ===== -->
@@ -58,6 +61,10 @@
     <div class="sidebar-section-label">会话</div>
     <div class="sidebar-sessions" id="sessionList">
       <div class="session-item active" tabindex="0" role="button" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click()}">当前对话</div>
+    </div>
+    <div class="sidebar-section-label">📁 文件</div>
+    <div class="sidebar-file-tree" id="sidebarFileTree">
+      <div class="file-tree-loading">加载中…</div>
     </div>
     <div class="status-bar">
       <span class="status-dot offline" id="statusDot"></span>
@@ -128,7 +135,17 @@
         </div>
       </div>
 
-      <!-- 文件浏览器弹窗 -->
+      <!-- 文件查看面板 -->
+      <div class="file-viewer" id="fileViewerPanel" style="display:none">
+        <div class="file-viewer-header">
+          <span class="file-viewer-path" id="fvPath">—</span>
+          <button class="file-viewer-close" onclick="closeFileViewer()" aria-label="关闭文件查看器">&times;</button>
+        </div>
+        <div class="file-viewer-meta" id="fvMeta"></div>
+        <div class="file-viewer-content" id="fvContent"></div>
+      </div>
+
+      <!-- 文件浏览器弹窗（保留兼容） -->
       <div class="file-browser-popup" id="fileBrowserPopup" style="display:none">
         <div class="file-browser-header">
           <span id="fbBreadcrumb">/</span>
@@ -1710,7 +1727,230 @@ function showDownloadPermInfo() {
 window.addEventListener('DOMContentLoaded', function() {
   const toolbarEl = document.getElementById('toolbarAvatar');
   if (toolbarEl) toolbarEl.onclick = () => navigateTo('#profile');
+  // 初始化文件树 + 粒子云
+  setTimeout(initFileTree, 300);
+  setTimeout(initParticles, 100);
 });
+
+// ========== 侧栏文件树 ==========
+let ftRootPath = '';
+async function initFileTree() {
+  try {
+    const r = await fetch(API + '/browse', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({path: ''})
+    });
+    const d = await r.json();
+    if (!d.ok) return;
+    ftRootPath = d.path;
+    renderFileTree(d.entries, '');
+  } catch(e) {
+    document.getElementById('sidebarFileTree').innerHTML = '<div class="file-tree-loading">文件服务未启动</div>';
+  }
+}
+
+function renderFileTree(entries, parentPath) {
+  let html = '';
+  if (parentPath) {
+    const pp = parentPath.substring(0, parentPath.lastIndexOf('/'));
+    html += '<div class="ft-item ft-up" onclick="ftLoadDir(\'' + pp.replace(/'/g, "\\'") + '\')">&larr; 上级目录</div>';
+  }
+  // 目录在前，文件在后
+  const dirs = entries.filter(e => e.dir);
+  const files = entries.filter(e => !e.dir);
+  [...dirs, ...files].forEach(e => {
+    if (e.dir) {
+      html += '<div class="ft-item ft-dir" data-path="' + e.path.replace(/'/g, "\\'") + '" onclick="ftToggleDir(this,\'' + e.path.replace(/'/g, "\\'") + '\')">' +
+        '<span class="ft-arrow">▸</span>📁 <span class="ft-name">' + e.name + '</span></div>';
+    } else {
+      html += '<div class="ft-item ft-file" onclick="openFileInViewer(\'' + e.path.replace(/'/g, "\\'") + '\',\'' + e.name.replace(/'/g, "\\'") + '\')">' +
+        '📄 <span class="ft-name">' + e.name + '</span><span class="ft-size">' + formatSize(e.size) + '</span></div>';
+    }
+  });
+  document.getElementById('sidebarFileTree').innerHTML = html || '<div class="file-tree-loading">空目录</div>';
+}
+
+async function ftToggleDir(el, path) {
+  const arrow = el.querySelector('.ft-arrow');
+  if (el.classList.contains('expanded')) {
+    el.classList.remove('expanded');
+    arrow.textContent = '▸';
+    const sub = el.nextElementSibling;
+    while (sub && sub.dataset.ftSub === '1') { sub.remove(); sub = el.nextElementSibling; }
+    return;
+  }
+  el.classList.add('expanded');
+  arrow.textContent = '▾';
+  try {
+    const r = await fetch(API + '/browse', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({path})
+    });
+    const d = await r.json();
+    if (!d.ok) return;
+    let html = '';
+    d.entries.forEach(e => {
+      if (e.dir) {
+        html += '<div class="ft-item ft-dir ft-sub" data-ft-sub="1" data-path="' + e.path.replace(/'/g, "\\'") + '" onclick="ftToggleDir(this,\'' + e.path.replace(/'/g, "\\'") + '\')">' +
+          '&nbsp;&nbsp;<span class="ft-arrow">▸</span>📁 <span class="ft-name">' + e.name + '</span></div>';
+      } else {
+        html += '<div class="ft-item ft-file ft-sub" data-ft-sub="1" onclick="openFileInViewer(\'' + e.path.replace(/'/g, "\\'") + '\',\'' + e.name.replace(/'/g, "\\'") + '\')">' +
+          '&nbsp;&nbsp;📄 <span class="ft-name">' + e.name + '</span><span class="ft-size">' + formatSize(e.size) + '</span></div>';
+      }
+    });
+    el.insertAdjacentHTML('afterend', html);
+  } catch(e) { showToast('目录加载失败'); }
+}
+
+async function ftLoadDir(path) {
+  try {
+    const r = await fetch(API + '/browse', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({path})
+    });
+    const d = await r.json();
+    if (!d.ok) return;
+    renderFileTree(d.entries, d.path);
+  } catch(e) { showToast('加载失败'); }
+}
+
+// ========== 文件查看器 ==========
+async function openFileInViewer(path, name) {
+  const panel = document.getElementById('fileViewerPanel');
+  document.getElementById('fvPath').textContent = path;
+  document.getElementById('fvMeta').textContent = '加载中…';
+  document.getElementById('fvContent').innerHTML = '<div style="padding:20px;color:var(--text-muted);text-align:center">加载中…</div>';
+  panel.style.display = '';
+
+  try {
+    const r = await fetch(API + '/read-file', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({path})
+    });
+    const d = await r.json();
+    if (!d.ok) {
+      document.getElementById('fvMeta').textContent = '错误: ' + d.error;
+      document.getElementById('fvContent').innerHTML = '';
+      return;
+    }
+    document.getElementById('fvMeta').textContent = name + ' — ' + formatSize(d.size) + ' — ' + d.lines + ' 行';
+    if (d.type === 'binary') {
+      document.getElementById('fvContent').innerHTML = '<div style="padding:20px;color:var(--text-muted);text-align:center">无法预览二进制文件 (' + d.ext + ')</div>';
+    } else {
+      document.getElementById('fvContent').innerHTML = '<pre class="fv-code">' + escapeHtml(d.content) + '</pre>';
+    }
+    // 滚动到文件查看器顶部
+    panel.scrollIntoView({behavior:'smooth'});
+  } catch(e) {
+    document.getElementById('fvMeta').textContent = '加载失败: 服务未启动';
+    document.getElementById('fvContent').innerHTML = '';
+  }
+}
+
+function closeFileViewer() {
+  document.getElementById('fileViewerPanel').style.display = 'none';
+}
+
+function escapeHtml(str) { return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+// ========== 粒子云画布 ==========
+function initParticles() {
+  const canvas = document.getElementById('particleCanvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  let w, h, particles = [];
+  const PARTICLE_COUNT = 80;
+
+  function resize() {
+    w = canvas.width = window.innerWidth;
+    h = canvas.height = window.innerHeight;
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  // 从 CSS 变量读取 accent color
+  function getAccentColor() {
+    const style = getComputedStyle(document.documentElement);
+    const accent = style.getPropertyValue('--accent').trim() || 'oklch(0.62 0.20 230)';
+    return accent;
+  }
+
+  class Particle {
+    constructor() {
+      this.reset();
+    }
+    reset() {
+      this.x = Math.random() * w;
+      this.y = Math.random() * h;
+      this.vx = (Math.random() - 0.5) * 0.4;
+      this.vy = (Math.random() - 0.5) * 0.4;
+      this.radius = Math.random() * 2 + 0.5;
+      this.opacity = Math.random() * 0.4 + 0.1;
+    }
+    update() {
+      this.x += this.vx;
+      this.y += this.vy;
+      if (this.x < 0 || this.x > w) this.vx *= -1;
+      if (this.y < 0 || this.y > h) this.vy *= -1;
+    }
+    draw(ctx, accent) {
+      ctx.beginPath();
+      ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+      ctx.fillStyle = accent.replace(')', ' / ' + this.opacity + ')')
+        .replace('oklch(', 'oklch(');
+      ctx.fill();
+    }
+  }
+
+  for (let i = 0; i < PARTICLE_COUNT; i++) particles.push(new Particle());
+
+  let mouseX = -100, mouseY = -100;
+  document.addEventListener('mousemove', (e) => { mouseX = e.clientX; mouseY = e.clientY; });
+
+  function animate() {
+    ctx.clearRect(0, 0, w, h);
+    const accent = getAccentColor();
+
+    particles.forEach(p => {
+      p.update();
+      p.draw(ctx, accent);
+    });
+
+    // 连线：近距离粒子之间
+    for (let i = 0; i < particles.length; i++) {
+      for (let j = i + 1; j < particles.length; j++) {
+        const dx = particles[i].x - particles[j].x;
+        const dy = particles[i].y - particles[j].y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist < 100) {
+          ctx.beginPath();
+          ctx.moveTo(particles[i].x, particles[i].y);
+          ctx.lineTo(particles[j].x, particles[j].y);
+          ctx.strokeStyle = accent.replace(')', ' / ' + (0.06 * (1 - dist/100)) + ')');
+          ctx.lineWidth = 0.5;
+          ctx.stroke();
+        }
+      }
+      // 鼠标吸引
+      const dmx = particles[i].x - mouseX;
+      const dmy = particles[i].y - mouseY;
+      const dm = Math.sqrt(dmx * dmx + dmy * dmy);
+      if (dm < 150) {
+        particles[i].vx += dmx / dm * 0.02;
+        particles[i].vy += dmy / dm * 0.02;
+      }
+    }
+
+    // 速度衰减
+    particles.forEach(p => {
+      p.vx *= 0.999;
+      p.vy *= 0.999;
+    });
+
+    requestAnimationFrame(animate);
+  }
+  animate();
+}
 </script>
 </body>
 </html>

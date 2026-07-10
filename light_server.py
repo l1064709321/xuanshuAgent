@@ -105,5 +105,72 @@ def read_file():
     except Exception as e:
         return jsonify({"ok": False, "error": str(e)})
 
+@app.route("/git-log", methods=["GET"])
+def git_log():
+    """返回最近 15 条提交记录"""
+    import subprocess
+    try:
+        r = subprocess.run(
+            ["/home/marvis/local/bin/git", "log", "--oneline", "-15", "--format=%h|%s|%ai"],
+            capture_output=True, text=True, timeout=5,
+            cwd=_HERE
+        )
+        if r.returncode != 0:
+            return jsonify({"ok": False, "error": r.stderr.strip()})
+        commits = []
+        for line in r.stdout.strip().split('\n'):
+            if not line: continue
+            parts = line.split('|', 2)
+            commits.append({"hash": parts[0], "message": parts[1], "date": parts[2] if len(parts)>2 else ""})
+        return jsonify({"ok": True, "commits": commits, "head": commits[0]["hash"] if commits else ""})
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)})
+
+@app.route("/git-revert", methods=["POST"])
+def git_revert():
+    """回滚到指定 commit（git reset --hard）"""
+    import subprocess
+    data = request.get_json(silent=True) or {}
+    target = data.get("hash", "").strip()
+    if not target:
+        return jsonify({"ok": False, "error": "缺少目标 commit hash"})
+    try:
+        # 先备份当前状态为 stash
+        subprocess.run(["/home/marvis/local/bin/git", "stash", "push", "-u", "-m", "auto-stash-before-revert"], capture_output=True, timeout=10, cwd=_HERE)
+        # reset --hard
+        r = subprocess.run(
+            ["/home/marvis/local/bin/git", "reset", "--hard", target],
+            capture_output=True, text=True, timeout=10,
+            cwd=_HERE
+        )
+        if r.returncode != 0:
+            return jsonify({"ok": False, "error": r.stderr.strip()})
+        # 获取新 HEAD
+        r2 = subprocess.run(
+            ["/home/marvis/local/bin/git", "log", "--oneline", "-1", "--format=%h %s"],
+            capture_output=True, text=True, timeout=5,
+            cwd=_HERE
+        )
+        return jsonify({"ok": True, "reset_to": r2.stdout.strip(), "stashed": True})
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)})
+
+@app.route("/git-revert-restore", methods=["POST"])
+def git_revert_restore():
+    """撤销回滚：恢复 stash"""
+    import subprocess
+    try:
+        r = subprocess.run(
+            ["/home/marvis/local/bin/git", "stash", "list"],
+            capture_output=True, text=True, timeout=5,
+            cwd=_HERE
+        )
+        if not r.stdout.strip():
+            return jsonify({"ok": False, "error": "没有可恢复的 stash"})
+        subprocess.run(["/home/marvis/local/bin/git", "stash", "pop"], capture_output=True, timeout=10, cwd=_HERE)
+        return jsonify({"ok": True, "message": "已恢复回滚前状态"})
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)})
+
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=8901, debug=False)

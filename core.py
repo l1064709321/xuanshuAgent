@@ -1213,6 +1213,10 @@ Git 版本回滚：
         if "保存" in q or "文件" in q or "读取" in q or "反编译" in q or "decompile" in q or "pyc" in q:
             self.log.sys(f'关键词路由 → "文件Agent"')
             return "文件Agent"
+        # git 回滚关键词 → 代码/文件 Agent
+        if any(k in q for k in ["回滚", "回退", "撤销", "还原", "恢复版本", "git revert", "git reset"]):
+            self.log.sys(f'关键词路由 → "代码Agent"（回滚意图）')
+            return "代码Agent"
         kw = {
             "搜索Agent": (["搜索", "查", "什么是", "天气", "百科", "维基", "wiki", "新闻", "几度"], 0),
             "代码Agent": (["代码", "编程", "脚本", "写", "python", "bug", "报错", "函数", "算法", "开发"], 0),

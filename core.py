@@ -768,6 +768,110 @@ def _decompile_formats(args=None):
     except Exception as e:
         return f"查询失败: {e}"
 
+# ── Git 版本回滚工具 ───────────────────────────────────
+_GIT_BIN = "/home/marvis/local/bin/git"
+_GIT_REPO = os.path.dirname(os.path.abspath(__file__))  # multi_agent 目录（.git 所在）
+
+def _git_log(args=None):
+    """查看最近 git 提交记录"""
+    import subprocess
+    try:
+        n = int(args.get("n", 15)) if args else 15
+        result = subprocess.run(
+            [_GIT_BIN, "log", "--oneline", f"-{n}", "--format=%h|%s|%ai"],
+            cwd=_GIT_REPO, capture_output=True, text=True, timeout=5
+        )
+        if result.returncode != 0:
+            return f"git log 失败: {result.stderr.strip()}"
+        lines = result.stdout.strip().split("\n")
+        if not lines or not lines[0]:
+            return "暂无提交记录。"
+        out = ["最近提交："]
+        for i, line in enumerate(lines):
+            parts = line.split("|", 2)
+            if len(parts) >= 3:
+                out.append(f"  {i+1}. {parts[0]} {parts[1]} ({parts[2][:16]})")
+            else:
+                out.append(f"  {i+1}. {line}")
+        # 标记当前 HEAD
+        head = subprocess.run(
+            [_GIT_BIN, "rev-parse", "--short", "HEAD"],
+            cwd=_GIT_REPO, capture_output=True, text=True, timeout=3
+        )
+        if head.returncode == 0:
+            current = head.stdout.strip()
+            out.append(f"\n当前 HEAD: {current}")
+        return "\n".join(out)
+    except Exception as e:
+        return f"git log 错误: {e}"
+
+def _git_revert(args):
+    """回滚到指定 commit，自动 stash 当前未提交修改。
+    参数: commit - 目标 commit hash（支持 HEAD~1 等相对引用）"""
+    import subprocess
+    try:
+        target = args.get("commit", "HEAD~1")
+        # 先 stash 当前改动
+        stash = subprocess.run(
+            [_GIT_BIN, "stash", "push", "-u", "-m", "auto-stash-before-revert"],
+            cwd=_GIT_REPO, capture_output=True, text=True, timeout=10
+        )
+        stashed = "No local changes" not in stash.stdout
+
+        # 执行 reset
+        result = subprocess.run(
+            [_GIT_BIN, "reset", "--hard", target],
+            cwd=_GIT_REPO, capture_output=True, text=True, timeout=10
+        )
+        if result.returncode != 0:
+            return f"回滚失败: {result.stderr.strip()}"
+        # 确认当前 HEAD
+        head = subprocess.run(
+            [_GIT_BIN, "log", "--oneline", "-1", "--format=%h %s"],
+            cwd=_GIT_REPO, capture_output=True, text=True, timeout=3
+        )
+        head_info = head.stdout.strip()
+        info = f"已回滚到: {head_info}"
+        if stashed:
+            info += "\n(回滚前的未提交改动已 stash，可用 git_revert_restore 恢复)"
+        return info
+    except Exception as e:
+        return f"git revert 错误: {e}"
+
+def _git_revert_restore(args=None):
+    """恢复最近一次 stash（回滚前保存的改动）"""
+    import subprocess
+    try:
+        # 检查是否有 stash
+        check = subprocess.run(
+            [_GIT_BIN, "stash", "list"],
+            cwd=_GIT_REPO, capture_output=True, text=True, timeout=5
+        )
+        if not check.stdout.strip():
+            return "没有可恢复的 stash。"
+        result = subprocess.run(
+            [_GIT_BIN, "stash", "pop"],
+            cwd=_GIT_REPO, capture_output=True, text=True, timeout=10
+        )
+        if result.returncode != 0:
+            return f"恢复失败: {result.stderr.strip()}"
+        return f"已恢复 stash 中的改动。\n{result.stdout.strip()}"
+    except Exception as e:
+        return f"git revert_restore 错误: {e}"
+
+def _git_status(args=None):
+    """查看当前 git 工作区状态（改动/未跟踪文件）"""
+    import subprocess
+    try:
+        result = subprocess.run(
+            [_GIT_BIN, "status", "--short"],
+            cwd=_GIT_REPO, capture_output=True, text=True, timeout=5
+        )
+        out = result.stdout.strip()
+        return out if out else "工作区干净，无改动。"
+    except Exception as e:
+        return f"git status 错误: {e}"
+
 # ── 子Bot ────────────────────────────────────────────
 _MEM_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".memory")
 
@@ -832,8 +936,8 @@ class ParentBot:
 
 可用子Agent：
 - 搜索Agent: 联网搜索、查实时信息、天气、百科、新闻
-- 代码Agent: 编程、写代码、调试、算法、技术问题
-- 文件Agent: 读写文件、文件管理、文档处理、反编译（检测/反编译pyc/ELF/PE/APK/class/WASM等二进制文件）
+- 代码Agent: 编程、写代码、调试、算法、技术问题、Git版本回滚
+- 文件Agent: 读写文件、文件管理、文档处理、反编译、Git版本回滚
 
 用户消息：{query}
 
@@ -901,6 +1005,16 @@ Spec（用中文）："""
             Tool("memdir_snapshot", "生成记忆快照（汇总文件到报告）", {}, _mem_snapshot),
         ]
 
+        # ── 共享 git 回滚工具 ──
+        git_tools = [
+            Tool("git_log", "查看最近 git 提交记录（默认15条），返回 hash|消息|时间",
+                 {"n": {"type": "integer", "description": "显示条数，默认15"}}, _git_log),
+            Tool("git_status", "查看当前 git 工作区状态（改动/未跟踪文件）", {}, _git_status),
+            Tool("git_revert", "回滚到指定 commit，自动 stash 当前未提交改动。参数 commit 可以是 hash 或 HEAD~N。事后自动确认当前 HEAD。",
+                 {"commit": {"type": "string", "description": "目标 commit hash 或 HEAD~1/HEAD~2 等相对引用，默认 HEAD~1"}}, _git_revert),
+            Tool("git_revert_restore", "恢复最近一次 stash（上次 git_revert 前自动保存的改动）", {}, _git_revert_restore),
+        ]
+
         self.children = {
             "搜索Agent": ChildBot(
                 name="搜索Agent",
@@ -917,7 +1031,7 @@ Spec（用中文）："""
             ),
             "代码Agent": ChildBot(
                 name="代码Agent",
-                description="编程、写代码、调试、算法",
+                description="编程、写代码、调试、算法、Git版本回滚",
                 system_prompt="""你是编程专家。直接写可运行代码放```块中，解释要简洁。优先Python。
 重要规则:
 - 写完代码后必须用 run_code 工具执行验证
@@ -926,19 +1040,24 @@ Spec（用中文）："""
 - 报告时包含验证结果
 - 需要创建/写文件时，告知父Bot处理；你只能读文件
 
+Git 版本回滚：
+- 当你改动代码后发现出错、被误删，或用户要求回滚时，用 git_log 查看提交历史、git_revert 回滚到指定 commit
+- git_revert 会自动 stash 当前未提交改动，事后可用 git_revert_restore 恢复
+- 回滚前先 git_log 确认目标版本，再执行 git_revert
+
 语言规则：所有思考和回复必须用中文。代码本身和变量名可用英文，但思考过程和解释说明必须用中文。""",
                 tools=[
                     Tool("run_code", "执行Python代码并返回结果", 
                          {"code": {"type": "string", "description": "Python代码"}}, _run_code),
                     Tool("read_file", "读取文件", {"path": {"type": "string", "description": "路径"}}, _read),
                     Tool("list_files", "列出目录", {"path": {"type": "string", "description": "路径"}}, _ls),
-                ] + mem_tools,
+                ] + mem_tools + git_tools,
                 self_verify=True,
             ),
             "文件Agent": ChildBot(
                 name="文件Agent",
-                description="文件分析、文档处理、反编译",
-                system_prompt="你是文件分析助手。你只有只读权限，可读取和列出文件，但不能创建/修改/删除文件。\n\n附加能力 — 逆向工程：你具备二进制分析技能，能识别ELF/PE/Mach-O/APK/DEX/.NET/Python字节码/Lua/WASM等格式，使用decompile_detect检测文件类型后调用decompile反编译，解读结果时关注关键逻辑和入口点。工具不可用时说明原因并建议替代方案。\n\n如果需要实际创建/修改/删除文件，告知父Bot处理。\n\n语言规则：所有思考和回复必须用中文。文件路径、十六进制地址等技术性内容保留原文。",
+                description="文件分析、文档处理、反编译、Git版本回滚",
+                system_prompt="你是文件分析助手。你只有只读权限，可读取和列出文件，但不能创建/修改/删除文件。\n\n附加能力 — 逆向工程：你具备二进制分析技能，能识别ELF/PE/Mach-O/APK/DEX/.NET/Python字节码/Lua/WASM等格式，使用decompile_detect检测文件类型后调用decompile反编译，解读结果时关注关键逻辑和入口点。工具不可用时说明原因并建议替代方案。\n\nGit 版本回滚：发现文件被误改或需要恢复到之前版本时，用 git_log 查看提交历史、git_revert 回滚到指定版本。\n\n如果需要实际创建/修改/删除文件，告知父Bot处理。\n\n语言规则：所有思考和回复必须用中文。文件路径、十六进制地址等技术性内容保留原文。",
                 tools=[
                     Tool("list_files", "列出目录", {"path": {"type": "string", "description": "路径"}}, _ls),
                     Tool("read_file", "读取文件", {"path": {"type": "string", "description": "路径"}}, _read),
@@ -947,7 +1066,7 @@ Spec（用中文）："""
                     Tool("decompile", "反编译二进制/字节码文件，支持output_format参数(text/json/ast)",
                          {"file_path": {"type": "string", "description": "文件路径"}, "output_format": {"type": "string", "description": "输出格式:text/json/ast，默认text"}}, _decompile),
                     Tool("decompile_formats", "列出所有支持反编译的文件格式和可用工具状态", {}, _decompile_formats),
-                ] + mem_tools,
+                ] + mem_tools + git_tools,
             ),
         }
 
@@ -1377,10 +1496,6 @@ Spec（用中文）："""
                 retry = self.chat(retry_input, retry_image)
                 return {"reply": msg + "\n\n" + retry["reply"], "thinking": retry.get("thinking", [])}
             return {"reply": msg, "thinking": []}
-
-        # ── 回退命令 ──
-        if stripped in ("回退", "回滚", "撤销分支", "/rollback"):
-            return {"reply": self._rollback_chat(), "thinking": []}
 
         # ── Agent 管理命令 ──
         if stripped.startswith("/agents"):

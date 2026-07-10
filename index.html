@@ -108,7 +108,6 @@
         <div class="more-menu-header">权限与授权</div>
         <div class="more-menu-item" onclick="closeMoreMenu();loadAgentConfig()">Agent 配置</div>
         <div class="more-menu-item" id="moreDownloadPerm" onclick="closeMoreMenu();showDownloadPermInfo()">下载权限</div>
-        <div class="more-menu-item" onclick="closeMoreMenu();showRevertPanel()">回滚版本</div>
         <div class="more-menu-item" onclick="closeMoreMenu();navigateTo('#profile')">Agent 资料</div>
       </div>
     </div>
@@ -364,24 +363,6 @@
     </section>
 
     </div><!-- /page-stage -->
-
-    <!-- 回滚面板弹窗 -->
-    <div class="revert-overlay" id="revertOverlay" style="display:none">
-      <div class="revert-panel">
-        <div class="revert-header">
-          <span class="revert-title">⏪ 版本回滚</span>
-          <button class="revert-close" onclick="closeRevertPanel()">&times;</button>
-        </div>
-        <p class="revert-warning">选择要回滚到的版本。当前 HEAD 会被自动保存为 stash（可恢复）。</p>
-        <div class="revert-list" id="revertCommitList">
-          <div style="text-align:center;padding:16px;color:var(--text-muted)">加载中…</div>
-        </div>
-        <div class="revert-actions">
-          <button class="btn btn-ghost" onclick="restoreRevert()" id="revertRestoreBtn" style="display:none">恢复回滚前状态</button>
-          <button class="btn btn-ghost" onclick="closeRevertPanel()">取消</button>
-        </div>
-      </div>
-    </div>
 
   </main>
 
@@ -1970,79 +1951,6 @@ function initParticles() {
   }
   animate();
 }
-
-// ========== 版本回滚面板 ==========
-async function showRevertPanel() {
-  document.getElementById('revertOverlay').style.display = 'flex';
-  document.getElementById('revertRestoreBtn').style.display = 'none';
-  document.getElementById('revertCommitList').innerHTML = '<div style="text-align:center;padding:16px;color:var(--text-muted)">加载中…</div>';
-  try {
-    const r = await fetch(API + '/git-log');
-    const d = await r.json();
-    if (!d.ok) { document.getElementById('revertCommitList').innerHTML = '<div style="text-align:center;padding:16px;color:var(--cinnabar)">' + d.error + '</div>'; return; }
-    let html = '';
-    d.commits.forEach((c, i) => {
-      html += '<div class="revert-commit-item" onclick="doRevert(\'' + c.hash + '\')">' +
-        '<span class="revert-commit-hash">' + c.hash + '</span>' +
-        '<span class="revert-commit-msg">' + c.message + '</span>' +
-        '<span class="revert-commit-date">' + (c.date ? c.date.slice(0,16).replace('T',' ') : '') + '</span>' +
-        (i === 0 ? '<span class="revert-current-badge">当前</span>' : '') +
-        '</div>';
-    });
-    document.getElementById('revertCommitList').innerHTML = html;
-  } catch(e) {
-    document.getElementById('revertCommitList').innerHTML = '<div style="text-align:center;padding:16px;color:var(--cinnabar)">加载失败</div>';
-  }
-}
-
-function closeRevertPanel() {
-  document.getElementById('revertOverlay').style.display = 'none';
-}
-
-async function doRevert(hash) {
-  if (!confirm('确认回滚到 ' + hash + '？\n当前修改会被自动 stash，可恢复。')) return;
-  document.getElementById('revertCommitList').innerHTML = '<div style="text-align:center;padding:16px;color:var(--accent)">回滚中…</div>';
-  try {
-    const r = await fetch(API + '/git-revert', {
-      method: 'POST', headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({hash})
-    });
-    const d = await r.json();
-    if (!d.ok) {
-      document.getElementById('revertCommitList').innerHTML = '<div style="text-align:center;padding:16px;color:var(--cinnabar)">回滚失败: ' + d.error + '</div>';
-      return;
-    }
-    document.getElementById('revertCommitList').innerHTML = '<div style="text-align:center;padding:16px;color:var(--accent)">已回滚到: ' + d.reset_to + '</div>';
-    document.getElementById('revertRestoreBtn').style.display = '';
-    showToast('已回滚到 ' + hash);
-  } catch(e) {
-    document.getElementById('revertCommitList').innerHTML = '<div style="text-align:center;padding:16px;color:var(--cinnabar)">回滚失败</div>';
-  }
-}
-
-async function restoreRevert() {
-  document.getElementById('revertCommitList').innerHTML = '<div style="text-align:center;padding:16px;color:var(--accent)">恢复中…</div>';
-  try {
-    const r = await fetch(API + '/git-revert-restore', { method: 'POST' });
-    const d = await r.json();
-    if (!d.ok) {
-      document.getElementById('revertCommitList').innerHTML = '<div style="text-align:center;padding:16px;color:var(--cinnabar)">恢复失败: ' + d.error + '</div>';
-      return;
-    }
-    document.getElementById('revertRestoreBtn').style.display = 'none';
-    showRevertPanel(); // 刷新列表
-    showToast('已恢复回滚前状态');
-  } catch(e) {
-    document.getElementById('revertCommitList').innerHTML = '<div style="text-align:center;padding:16px;color:var(--cinnabar)">恢复失败</div>';
-  }
-}
-
-// 点击 overlay 背景关闭
-document.addEventListener('DOMContentLoaded', function() {
-  document.getElementById('revertOverlay')?.addEventListener('click', function(e) {
-    if (e.target === this) closeRevertPanel();
-  });
-});
 </script>
 </body>
 </html>

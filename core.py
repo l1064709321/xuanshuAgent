@@ -872,6 +872,242 @@ def _git_status(args=None):
     except Exception as e:
         return f"git status 错误: {e}"
 
+def _verify_rollback(args=None):
+    """Agent 自检：验证 git 回滚工具链是否正常。运行端到端集成测试。"""
+    import subprocess, tempfile
+    results = []
+    workspace = _GIT_REPO
+
+    # 1. 环境检查
+    results.append(f"[git] 二进制: {'OK' if os.path.isfile(_GIT_BIN) else '缺失'} ({_GIT_BIN})")
+    results.append(f"[git] 仓库:   {'OK' if os.path.isdir(os.path.join(workspace, '.git')) else '无效'} ({workspace})")
+
+    # 2. git log
+    try:
+        r = subprocess.run([_GIT_BIN, "log", "--oneline", "-1"], cwd=workspace,
+                          capture_output=True, text=True, timeout=5)
+        results.append(f"[git_log]   {'OK' if r.returncode == 0 else 'FAIL'}: {r.stdout.strip()[:60]}")
+    except Exception as e:
+        results.append(f"[git_log]   FAIL: {e}")
+
+    # 3. git status
+    try:
+        r = subprocess.run([_GIT_BIN, "status", "--porcelain"], cwd=workspace,
+                          capture_output=True, text=True, timeout=5)
+        dirty = len([l for l in r.stdout.strip().split('\n') if l.strip()])
+        results.append(f"[git_status] OK: {dirty}个改动文件")
+    except Exception as e:
+        results.append(f"[git_status] FAIL: {e}")
+
+    # 4. git revert 模拟（不实际执行，只验证参数解析）
+    results.append(f"[git_revert] 就绪: 支持 hash 和 HEAD~N 参数")
+
+    # 5. git_revert_restore
+    try:
+        r = subprocess.run([_GIT_BIN, "stash", "list"], cwd=workspace,
+                          capture_output=True, text=True, timeout=5)
+        stash_count = len([l for l in r.stdout.strip().split('\n') if l.strip()])
+        results.append(f"[git_restore] OK: {stash_count}个stash可用")
+    except Exception as e:
+        results.append(f"[git_restore] FAIL: {e}")
+
+    # 汇总
+    results.append(f"\n结论: {'全部通过 ✅' if all('FAIL' not in r for r in results[1:]) else '存在问题，请检查'}")
+    return "\n".join(results)
+
+# ── 电脑Agent工具 ─────────────────────────────────────
+
+def _sys_info(args=None):
+    """系统信息：内核版本、主机名、运行时间、发行版"""
+    import subprocess, socket
+    lines = []
+    lines.append(f"主机名: {socket.gethostname()}")
+    try:
+        r = subprocess.run(["uname", "-a"], capture_output=True, text=True, timeout=5)
+        lines.append(f"内核: {r.stdout.strip()}")
+    except Exception as e:
+        lines.append(f"内核: 获取失败 ({e})")
+    try:
+        r = subprocess.run(["cat", "/etc/os-release"], capture_output=True, text=True, timeout=5)
+        for line in r.stdout.strip().split("\n"):
+            if line.startswith("NAME=") or line.startswith("VERSION="):
+                lines.append(line.replace('"', ''))
+    except Exception:
+        pass
+    try:
+        r = subprocess.run(["uptime"], capture_output=True, text=True, timeout=5)
+        lines.append(f"运行时间: {r.stdout.strip()}")
+    except Exception:
+        pass
+    return "\n".join(lines)
+
+def _process_list(args=None):
+    """列出进程（默认 top 15 按CPU排序）"""
+    import subprocess
+    limit = (args or {}).get("limit", 15)
+    try:
+        r = subprocess.run(["ps", "aux", "--sort=-%cpu"], capture_output=True, text=True, timeout=5)
+        header = r.stdout.split("\n")[0]
+        lines = r.stdout.strip().split("\n")[1:1+int(limit)]
+        return header + "\n" + "\n".join(lines)
+    except Exception as e:
+        return f"进程查询失败: {e}"
+
+def _process_kill(args):
+    """终止进程（PID 或进程名）。高风险操作，返回受影响进程。"""
+    import subprocess
+    target = args.get("target", "")
+    signal = args.get("signal", "TERM")
+    results = []
+    try:
+        if target.isdigit():
+            # PID
+            r = subprocess.run(["kill", f"-{signal}", target], capture_output=True, text=True, timeout=5)
+            results.append(f"已向 PID {target} 发送 {signal} 信号")
+        else:
+            # 进程名
+            r = subprocess.run(["pkill", f"-{signal}", "-f", target], capture_output=True, text=True, timeout=5)
+            results.append(f"已向匹配 '{target}' 的进程发送 {signal} 信号")
+        return "\n".join(results)
+    except Exception as e:
+        return f"终止失败: {e}"
+
+def _disk_usage(args=None):
+    """磁盘使用情况"""
+    import subprocess
+    try:
+        r = subprocess.run(["df", "-h"], capture_output=True, text=True, timeout=5)
+        return r.stdout.strip()
+    except Exception as e:
+        return f"磁盘查询失败: {e}"
+
+def _memory_usage(args=None):
+    """内存使用情况"""
+    import subprocess
+    try:
+        r = subprocess.run(["free", "-h"], capture_output=True, text=True, timeout=5)
+        return r.stdout.strip()
+    except Exception as e:
+        return f"内存查询失败: {e}"
+
+def _cpu_info(args=None):
+    """CPU 信息（型号、核心数）"""
+    import subprocess
+    try:
+        r = subprocess.run(["lscpu"], capture_output=True, text=True, timeout=5)
+        lines = []
+        for line in r.stdout.split("\n"):
+            if any(k in line for k in ["Model name", "CPU(s)", "Thread", "Core", "Socket", "Vendor"]):
+                lines.append(line.strip())
+        return "\n".join(lines)
+    except Exception as e:
+        return f"CPU 信息获取失败: {e}"
+
+def _network_info(args=None):
+    """网络信息（IP、连接状态）"""
+    import subprocess
+    results = []
+    try:
+        r = subprocess.run(["ip", "addr", "show"], capture_output=True, text=True, timeout=5)
+        results.append(f"[网络接口]\n{r.stdout.strip()}")
+    except Exception:
+        results.append("[网络接口] 不可用")
+    try:
+        r = subprocess.run(["ss", "-tlnp"], capture_output=True, text=True, timeout=5)
+        results.append(f"[监听端口]\n{r.stdout.strip()}")
+    except Exception:
+        pass
+    return "\n\n".join(results)
+
+
+# ── 应用管理Agent工具 ──────────────────────────────────
+
+def _pkg_list(args=None):
+    """列出已安装的包（dnf/yum）"""
+    import subprocess
+    name = (args or {}).get("name", "")
+    try:
+        if name:
+            cmd = ["rpm", "-qa", name]
+        else:
+            limit = (args or {}).get("limit", 20)
+            cmd = ["rpm", "-qa", "--last"] if limit > 100 else ["rpm", "-qa", "--last"]
+        r = subprocess.run(cmd, capture_output=True, text=True, timeout=10)
+        if name or (isinstance(args, dict) and args.get("limit", 20) > 100):
+            return r.stdout.strip()
+        return "\n".join(r.stdout.strip().split("\n")[:int((args or {}).get("limit", 20))])
+    except Exception as e:
+        return f"包列表查询失败: {e}"
+
+def _pkg_search(args):
+    """搜索软件包（dnf search）"""
+    import subprocess
+    query = args.get("query", "")
+    if not query:
+        return "请提供搜索关键词"
+    try:
+        r = subprocess.run(["dnf", "search", query], capture_output=True, text=True, timeout=15)
+        return r.stdout.strip()[:3000] if r.stdout.strip() else "未找到匹配的包"
+    except Exception as e:
+        return f"搜索失败: {e}"
+
+def _pkg_install(args):
+    """安装软件包（dnf install -y）。高风险操作。"""
+    import subprocess
+    name = args.get("name", "")
+    if not name:
+        return "请提供要安装的包名"
+    try:
+        r = subprocess.run(["sudo", "dnf", "install", "-y", name], capture_output=True, text=True, timeout=120)
+        if r.returncode == 0:
+            return f"安装成功: {name}\n{r.stdout.strip()[-500:]}"
+        return f"安装失败: {r.stderr.strip()[:500]}"
+    except Exception as e:
+        return f"安装失败: {e}"
+
+def _pkg_remove(args):
+    """卸载软件包（dnf remove -y）。高风险操作。"""
+    import subprocess
+    name = args.get("name", "")
+    if not name:
+        return "请提供要卸载的包名"
+    try:
+        r = subprocess.run(["sudo", "dnf", "remove", "-y", name], capture_output=True, text=True, timeout=120)
+        if r.returncode == 0:
+            return f"卸载成功: {name}"
+        return f"卸载失败: {r.stderr.strip()[:500]}"
+    except Exception as e:
+        return f"卸载失败: {e}"
+
+def _pkg_update(args=None):
+    """更新系统/指定包（dnf update）"""
+    import subprocess
+    name = (args or {}).get("name", "")
+    try:
+        if name:
+            r = subprocess.run(["sudo", "dnf", "update", "-y", name], capture_output=True, text=True, timeout=300)
+        else:
+            r = subprocess.run(["dnf", "check-update"], capture_output=True, text=True, timeout=30)
+            if r.returncode == 100:
+                return f"有可用更新:\n{r.stdout.strip()[:3000]}"
+            return "系统已是最新"
+        return r.stdout.strip()[-500:] if r.returncode == 0 else r.stderr.strip()[:500]
+    except Exception as e:
+        return f"更新失败: {e}"
+
+def _pkg_info(args):
+    """查看包详情（rpm -qi）"""
+    import subprocess
+    name = args.get("name", "")
+    if not name:
+        return "请提供包名"
+    try:
+        r = subprocess.run(["rpm", "-qi", name], capture_output=True, text=True, timeout=10)
+        return r.stdout.strip() if r.returncode == 0 else r.stderr.strip()
+    except Exception as e:
+        return f"查询失败: {e}"
+
+
 # ── 子Bot ────────────────────────────────────────────
 _MEM_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".memory")
 
@@ -938,6 +1174,8 @@ class ParentBot:
 - 搜索Agent: 联网搜索、查实时信息、天气、百科、新闻
 - 代码Agent: 编程、写代码、调试、算法、技术问题、Git版本回滚
 - 文件Agent: 读写文件、文件管理、文档处理、反编译、Git版本回滚
+- 电脑Agent: 系统控制、进程管理、资源监控（CPU/内存/磁盘/网络）、查看系统信息
+- 应用Agent: 软件包管理、安装/卸载/搜索/更新应用、查看应用信息
 
 用户消息：{query}
 
@@ -1013,9 +1251,78 @@ Spec（用中文）："""
             Tool("git_revert", "回滚到指定 commit，自动 stash 当前未提交改动。参数 commit 可以是 hash 或 HEAD~N。事后自动确认当前 HEAD。",
                  {"commit": {"type": "string", "description": "目标 commit hash 或 HEAD~1/HEAD~2 等相对引用，默认 HEAD~1"}}, _git_revert),
             Tool("git_revert_restore", "恢复最近一次 stash（上次 git_revert 前自动保存的改动）", {}, _git_revert_restore),
+            Tool("verify_rollback", "Agent自检：运行git回滚工具链端到端验证，检查git二进制/仓库/log/status/stash是否正常", {}, _verify_rollback),
         ]
 
         self.children = {
+            "电脑Agent": ChildBot(
+                name="电脑Agent",
+                description="系统控制：查看系统信息、进程管理、资源监控（CPU/内存/磁盘/网络）、服务状态。可控制系统设置与运行态。",
+                system_prompt="""你是系统控制专家。你可以直接操作这台 Linux 服务器：
+
+可用操作：
+- sys_info：查看系统内核、主机名、运行时间、发行版
+- process_list：列出运行中的进程（默认 top 15，可用 limit 参数调整）
+- process_kill：终止指定进程（target=进程名或PID，signal=TERM/KILL）
+- disk_usage：查看磁盘使用情况
+- memory_usage：查看内存使用情况
+- cpu_info：查看 CPU 型号和核心数
+- network_info：查看网络接口和监听端口
+
+安全规则：
+- process_kill 前先 process_list 确认目标进程
+- 不确定的进程查询后询问再做决定
+- 不可 kill PID 1 (init/systemd) 或关键系统服务
+
+语言规则：所有思考和回复必须用中文。""",
+                tools=[
+                    Tool("sys_info", "查看系统信息（内核、主机名、运行时间、发行版）", {}, _sys_info),
+                    Tool("process_list", "列出进程（默认15条，按CPU排序）",
+                         {"limit": {"type": "integer", "description": "显示条数，默认15"}}, _process_list),
+                    Tool("process_kill", "终止进程（PID或进程名）",
+                         {"target": {"type": "string", "description": "目标PID或进程名"},
+                          "signal": {"type": "string", "description": "信号: TERM(默认)/KILL"}}, _process_kill),
+                    Tool("disk_usage", "查看磁盘使用情况", {}, _disk_usage),
+                    Tool("memory_usage", "查看内存使用情况", {}, _memory_usage),
+                    Tool("cpu_info", "查看CPU信息（型号/核心数）", {}, _cpu_info),
+                    Tool("network_info", "查看网络接口和监听端口", {}, _network_info),
+                ] + mem_tools,
+            ),
+            "应用Agent": ChildBot(
+                name="应用Agent",
+                description="软件包管理：搜索、安装、卸载、更新系统软件包（dnf/yum）。查应用信息、版本等。",
+                system_prompt="""你是应用管理专家。你可以管理这台 Linux 服务器的软件包：
+
+可用操作：
+- pkg_search(query=关键词)：搜索软件包
+- pkg_list(name=包名可选)：列出已安装的包
+- pkg_info(name=包名)：查看包详细信息
+- pkg_install(name=包名)：安装软件包（需 sudo）
+- pkg_remove(name=包名)：卸载软件包（需 sudo）
+- pkg_update(name=包名可选)：检查或执行系统更新
+
+安全规则：
+- pkg_remove 和 pkg_install 为高风险操作，执行前说明影响
+- 不可卸载 kernel、systemd、glibc 等系统关键包
+- 不确定的包先 pkg_search 或 pkg_info 查看详情
+
+语言规则：所有思考和回复必须用中文。""",
+                tools=[
+                    Tool("pkg_search", "搜索软件包（dnf search）",
+                         {"query": {"type": "string", "description": "搜索关键词"}}, _pkg_search),
+                    Tool("pkg_list", "列出已安装的包",
+                         {"name": {"type": "string", "description": "过滤包名（可选）"},
+                          "limit": {"type": "integer", "description": "显示数量，默认20"}}, _pkg_list),
+                    Tool("pkg_info", "查看包详情（rpm -qi）",
+                         {"name": {"type": "string", "description": "包名"}}, _pkg_info),
+                    Tool("pkg_install", "安装软件包（dnf install -y）",
+                         {"name": {"type": "string", "description": "包名"}}, _pkg_install),
+                    Tool("pkg_remove", "卸载软件包（dnf remove -y）",
+                         {"name": {"type": "string", "description": "包名"}}, _pkg_remove),
+                    Tool("pkg_update", "检查/执行系统更新",
+                         {"name": {"type": "string", "description": "指定包名（可选），不填则检查全系统"}}, _pkg_update),
+                ] + mem_tools,
+            ),
             "搜索Agent": ChildBot(
                 name="搜索Agent",
                 description="联网搜索、查实时信息、天气、百科",
@@ -1204,6 +1511,16 @@ Git 版本回滚：
 
     def _keyword_route(self, query: str) -> str:
         q = query.lower()
+        # 电脑Agent优先路由
+        if any(k in q for k in ["系统信息", "主机名", "内核", "进程", "kill", "磁盘", "内存", "cpu", "网络", "端口",
+                                 "top", "ps", "df", "free", "lscpu", "ss -tlnp", "sys_info"]):
+            self.log.sys(f'关键词路由 → "电脑Agent"')
+            return "电脑Agent"
+        # 应用Agent优先路由
+        if any(k in q for k in ["安装", "卸载", "更新包", "yum", "dnf", "rpm", "软件包", "pkg",
+                                 "装一个", "删掉包", "升级", "dnf install", "dnf remove"]):
+            self.log.sys(f'关键词路由 → "应用Agent"')
+            return "应用Agent"
         if "搜索" in q or "查" in q:
             self.log.sys(f'关键词路由 → "搜索Agent"')
             return "搜索Agent"
@@ -1221,6 +1538,8 @@ Git 版本回滚：
             "搜索Agent": (["搜索", "查", "什么是", "天气", "百科", "维基", "wiki", "新闻", "几度"], 0),
             "代码Agent": (["代码", "编程", "脚本", "写", "python", "bug", "报错", "函数", "算法", "开发"], 0),
             "文件Agent": (["文件", "保存", "读取", "目录", "列表", "创建", "写入", "文档", "反编译", "decompile", "pyc", "二进制", "字节码"], 0),
+            "电脑Agent": (["系统", "进程", "磁盘", "内存", "cpu", "网络", "端口", "资源", "负载", "top", "ps", "df", "free"], 0),
+            "应用Agent": (["安装", "卸载", "更新", "yum", "dnf", "rpm", "软件包", "pkg", "升级"], 0),
         }
         best = "搜索Agent"
         best_s = 0

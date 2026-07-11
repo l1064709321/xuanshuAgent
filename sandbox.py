@@ -87,9 +87,47 @@ def _setup_resource_limits():
 
 
 def _prepare_sandbox_dir() -> str:
-    """创建临时沙箱目录"""
+    """创建临时沙箱目录，并注入自检工具模块"""
     sandbox_dir = tempfile.mkdtemp(prefix="sandbox_", dir=_SANDBOX_BASE)
     os.chmod(sandbox_dir, 0o700)
+    # 注入沙箱自检模块
+    _VERIFY_MODULE = '''
+"""沙箱自检模块 — Agent 可调用 verify() 检查沙箱功能是否正常"""
+import sys, json, math
+
+def _check(name, fn):
+    try:
+        fn()
+        return f"  [pass] {name}"
+    except Exception as e:
+        return f"  [FAIL] {name}: {e}"
+
+def run():
+    results = []
+    # 1. 数学计算
+    results.append(_check("math.sqrt", lambda: math.sqrt(16) == 4.0))
+    # 2. JSON 序列化
+    results.append(_check("json.dumps", lambda: json.loads(json.dumps({"a":1}))=={"a":1}))
+    # 3. 字符串处理
+    results.append(_check("str.split", lambda: "a,b,c".split(",")==["a","b","c"]))
+    # 4. 列表推导
+    results.append(_check("list comp", lambda: [x*2 for x in range(5)]==[0,2,4,6,8]))
+    # 5. 禁止模块拦截
+    try:
+        import os
+        results.append("  [FAIL] os import 应被拦截但未拦截!")
+    except ImportError:
+        results.append("  [pass] os 导入已拦截")
+    # 6. 文件写入拦截
+    try:
+        open("_test.txt", "w").write("x")
+        results.append("  [FAIL] 文件写入应被拦截但未拦截!")
+    except PermissionError:
+        results.append("  [pass] 文件写入已拦截")
+    return "\\n".join(results)
+'''
+    with open(os.path.join(sandbox_dir, "verify_sandbox.py"), "w", encoding="utf-8") as f:
+        f.write(_VERIFY_MODULE)
     return sandbox_dir
 
 

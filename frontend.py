@@ -682,6 +682,21 @@ def git_log():
     except Exception as e:
         return jsonify({"ok": False, "error": str(e)})
 
+@app.route("/git-status", methods=["GET", "POST"])
+def git_status():
+    try:
+        r = subprocess.run(
+            ["/home/marvis/local/bin/git", "status", "--porcelain"],
+            capture_output=True, text=True, timeout=5,
+            cwd=os.path.dirname(os.path.abspath(__file__))
+        )
+        if r.returncode != 0:
+            return jsonify({"ok": False, "error": r.stderr.strip()})
+        changes = [l.strip() for l in r.stdout.strip().split('\n') if l.strip()]
+        return jsonify({"ok": True, "changes": changes, "dirty": len(changes) > 0})
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)})
+
 @app.route("/git-revert", methods=["POST"])
 def git_revert():
     data = request.get_json(silent=True) or {}

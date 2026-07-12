@@ -283,12 +283,22 @@
 </div>
 
 <script>
-/* ═══ 赛博粒子动画 ═══ */
+/* ═══ 赛博粒子星云 ═══ */
 (function(){
   const c=document.getElementById('particleCanvas'),
-        ctx=c.getContext('2d');
-  let w,h,ps=[];
+        ctx=c.getContext('2d'),
+        body=document.body;
+  let w,h,ps=[],rgb=[0,240,255];
   const N=80;
+
+  // 从CSS变量读取当前主题色
+  function readThemeColor(){
+    const v=getComputedStyle(body).getPropertyValue('--neon-cyan').trim();
+    const m=v.match(/^#?([a-f0-9]{2})([a-f0-9]{2})([a-f0-9]{2})$/i);
+    if(m){ rgb=[parseInt(m[1],16),parseInt(m[2],16),parseInt(m[3],16)]; }
+  }
+  readThemeColor();
+
   function resize(){
     w=c.width=window.innerWidth;
     h=c.height=window.innerHeight;
@@ -300,8 +310,15 @@
     r:Math.random()*1.5+0.5,
     a:Math.random()*0.5+0.1
   });
+
+  let fc=0;
   function draw(){
+    fc++;
+    // 每60帧刷新一次主题色，跟随CSS变量变化
+    if(fc%60===0) readThemeColor();
+
     ctx.clearRect(0,0,w,h);
+    const [cr,cg,cb]=rgb;
     for(let i=0;i<ps.length;i++){
       const p=ps[i];
       p.x+=p.vx;p.y+=p.vy;
@@ -309,9 +326,8 @@
       if(p.y<0) p.y=h;if(p.y>h) p.y=0;
       ctx.beginPath();
       ctx.arc(p.x,p.y,p.r,0,Math.PI*2);
-      ctx.fillStyle='rgba(0,240,255,'+p.a+')';
+      ctx.fillStyle=`rgba(${cr},${cg},${cb},${p.a})`;
       ctx.fill();
-      // lines between close particles
       for(let j=i+1;j<ps.length;j++){
         const q=ps[j];
         const dx=p.x-q.x,dy=p.y-q.y;
@@ -320,7 +336,7 @@
           ctx.beginPath();
           ctx.moveTo(p.x,p.y);
           ctx.lineTo(q.x,q.y);
-          ctx.strokeStyle='rgba(0,240,255,'+(0.08*(1-d/120))+')';
+          ctx.strokeStyle=`rgba(${cr},${cg},${cb},${(0.08*(1-d/120)).toFixed(3)})`;
           ctx.lineWidth=0.5;
           ctx.stroke();
         }
@@ -329,6 +345,9 @@
     requestAnimationFrame(draw);
   }
   draw();
+
+  // 暴露全局函数，外部切换主题时可立即刷新
+  window.refreshParticleColor=readThemeColor;
 })();
 
 // ========== 状态 ==========

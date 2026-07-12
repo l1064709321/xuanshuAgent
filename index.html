@@ -283,70 +283,182 @@
 </div>
 
 <script>
-/* ═══ 赛博粒子星云 ═══ */
+/* ═══ 星云粒子系统 ═══ */
 (function(){
   const c=document.getElementById('particleCanvas'),
         ctx=c.getContext('2d'),
         body=document.body;
-  let w,h,ps=[],rgb=[0,240,255];
-  const N=80;
+  let w,h,ps=[],clouds=[],rgb=[0,240,255];
+  const N=200;
 
-  // 从CSS变量读取当前主题色
+  // 思考强度
+  let thinkTarget=0, thinkCurrent=0;
+
   function readThemeColor(){
     const v=getComputedStyle(body).getPropertyValue('--neon-cyan').trim();
     const m=v.match(/^#?([a-f0-9]{2})([a-f0-9]{2})([a-f0-9]{2})$/i);
-    if(m){ rgb=[parseInt(m[1],16),parseInt(m[2],16),parseInt(m[3],16)]; }
+    if(m) rgb=[parseInt(m[1],16),parseInt(m[2],16),parseInt(m[3],16)];
   }
   readThemeColor();
+
+  // 距离平方衰减：中心密集、边缘稀疏
+  function nebulaDensity(dist, radius){
+    const t=dist/radius;
+    return Math.exp(-t*t*4); // 高斯衰减
+  }
 
   function resize(){
     w=c.width=window.innerWidth;
     h=c.height=window.innerHeight;
+    clouds=[];
+    const cxCount=Math.max(2,Math.floor((w*h)/180000));
+    for(let i=0;i<cxCount;i++){
+      clouds.push({
+        x:w*(0.1+Math.random()*0.8),
+        y:h*(0.1+Math.random()*0.8),
+        vx:(Math.random()-0.5)*0.2,
+        vy:(Math.random()-0.5)*0.2,
+        radius:Math.min(w,h)*(0.08+Math.random()*0.12),
+        arms:2+Math.floor(Math.random()*3), // 旋臂数
+        twist:0.3+Math.random()*0.5,        // 旋臂卷曲度
+        phase:Math.random()*Math.PI*2
+      });
+    }
+    // 按密度分布生成粒子
+    ps=[];
+    for(let i=0;i<N;i++){
+      const cx=clouds[Math.floor(Math.random()*clouds.length)];
+      // 用拒绝采样实现中心密集分布
+      let dist;
+      do{ dist=Math.random()*cx.radius; }
+      while(Math.random()>nebulaDensity(dist,cx.radius));
+      const baseAngle=Math.random()*Math.PI*2;
+      // 旋臂扰动：粒子更倾向于落在旋臂角度附近
+      const armIdx=Math.floor(Math.random()*cx.arms);
+      const armAngle=(armIdx/cx.arms)*Math.PI*2;
+      const angle=armAngle+(Math.random()-0.5)*cx.twist*(1+dist/cx.radius);
+      ps.push({
+        x:cx.x+Math.cos(angle)*dist,
+        y:cx.y+Math.sin(angle)*dist,
+        cxIdx:clouds.indexOf(cx),
+        orbitAngle:angle,
+        orbitDist:dist,
+        orbitSpeed:0.003+Math.random()*0.008 - dist/cx.radius*0.004, // 内圈快外圈慢
+        baseAlpha:0.08+nebulaDensity(dist,cx.radius)*0.7, // 中心亮边缘暗
+        phase:Math.random()*Math.PI*2,
+        r:0.3+Math.random()*2.5*nebulaDensity(dist,cx.radius), // 中心粒子更大
+        jitter:Math.random()*1.2
+      });
+    }
   }
   resize();window.addEventListener('resize',resize);
-  for(let i=0;i<N;i++) ps.push({
-    x:Math.random()*w,y:Math.random()*h,
-    vx:(Math.random()-0.5)*0.4,vy:(Math.random()-0.5)*0.4,
-    r:Math.random()*1.5+0.5,
-    a:Math.random()*0.5+0.1
-  });
 
   let fc=0;
   function draw(){
     fc++;
-    // 每60帧刷新一次主题色，跟随CSS变量变化
-    if(fc%60===0) readThemeColor();
+    if(fc%45===0) readThemeColor();
+    thinkCurrent+=(thinkTarget-thinkCurrent)*0.025;
+
+    const t=fc*0.016;
+    const intensity=thinkCurrent;
+    const speedMul=1+intensity*2.5;
+    const linkDist=60+intensity*180;
+    const linkAlpha=0.02+intensity*0.15;
+    const breathFreq=1.2+intensity*0.8;
+
+    // 云团漂移
+    for(const cx of clouds){
+      cx.x+=cx.vx*speedMul;
+      cx.y+=cx.vy*speedMul;
+      if(cx.x<-cx.radius*2) cx.x=w+cx.radius*2;
+      if(cx.x>w+cx.radius*2) cx.x=-cx.radius*2;
+      if(cx.y<-cx.radius*2) cx.y=h+cx.radius*2;
+      if(cx.y>h+cx.radius*2) cx.y=-cx.radius*2;
+    }
 
     ctx.clearRect(0,0,w,h);
     const [cr,cg,cb]=rgb;
+
+    // ── 第一遍：星云底层光晕 ──
+    for(const cx of clouds){
+      const glowR=cx.radius*(0.85+intensity*0.3);
+      const breath=0.5+0.5*Math.sin(t*breathFreq+cx.phase);
+      const glowAlpha=0.03+intensity*0.04+breath*0.02;
+      const grad=ctx.createRadialGradient(cx.x,cx.y,0,cx.x,cx.y,glowR);
+      grad.addColorStop(0,`rgba(${Math.min(255,cr+100)},${Math.min(255,cg+100)},${Math.min(255,cb+100)},${glowAlpha*2})`);
+      grad.addColorStop(0.3,`rgba(${cr},${cg},${cb},${glowAlpha})`);
+      grad.addColorStop(0.7,`rgba(${cr},${cg},${cb},${glowAlpha*0.4})`);
+      grad.addColorStop(1,'rgba(0,0,0,0)');
+      ctx.fillStyle=grad;
+      ctx.fillRect(cx.x-glowR,cx.y-glowR,glowR*2,glowR*2);
+    }
+
+    // ── 第二遍：粒子 ──
     for(let i=0;i<ps.length;i++){
       const p=ps[i];
-      p.x+=p.vx;p.y+=p.vy;
-      if(p.x<0) p.x=w;if(p.x>w) p.x=0;
-      if(p.y<0) p.y=h;if(p.y>h) p.y=0;
+      const cx=clouds[p.cxIdx]||clouds[0];
+      p.orbitAngle+=p.orbitSpeed*speedMul;
+      // 旋臂扭曲：越远扭曲越大
+      const twist=p.orbitDist/cx.radius*cx.twist*Math.sin(t*0.4+p.phase)*speedMul*0.5;
+      const a=p.orbitAngle+twist;
+      const tx=cx.x+Math.cos(a)*p.orbitDist;
+      const ty=cx.y+Math.sin(a)*p.orbitDist;
+      p.x=tx+Math.sin(t*2.5+p.phase)*p.jitter*speedMul*0.3;
+      p.y=ty+Math.cos(t*3.1+p.phase)*p.jitter*speedMul*0.3;
+
+      const breath=0.4+0.6*Math.sin(t*breathFreq+p.phase);
+      const distNorm=p.orbitDist/cx.radius;
+      // 中心粒子偏白（热点），外圈纯主题色
+      const whiteness=Math.max(0,1-distNorm*2);
+      const sr=Math.min(255,cr+Math.floor(whiteness*(255-cr)));
+      const sg=Math.min(255,cg+Math.floor(whiteness*(255-cg)));
+      const sb=Math.min(255,cb+Math.floor(whiteness*(255-cb)));
+      const alpha=p.baseAlpha*(0.5+breath*0.5)*(0.5+intensity*0.5);
+
+      // 内层光晕
+      ctx.beginPath();
+      ctx.arc(p.x,p.y,p.r*4,0,Math.PI*2);
+      ctx.fillStyle=`rgba(${sr},${sg},${sb},${alpha*0.15})`;
+      ctx.fill();
+      // 中层
+      ctx.beginPath();
+      ctx.arc(p.x,p.y,p.r*1.8,0,Math.PI*2);
+      ctx.fillStyle=`rgba(${sr},${sg},${sb},${alpha*0.4})`;
+      ctx.fill();
+      // 内核亮点
       ctx.beginPath();
       ctx.arc(p.x,p.y,p.r,0,Math.PI*2);
-      ctx.fillStyle=`rgba(${cr},${cg},${cb},${p.a})`;
+      ctx.fillStyle=`rgba(${sr},${sg},${sb},${alpha})`;
       ctx.fill();
+    }
+
+    // ── 第三遍：旋臂丝状连线 ──
+    for(let i=0;i<ps.length;i++){
+      const pi=ps[i];
       for(let j=i+1;j<ps.length;j++){
-        const q=ps[j];
-        const dx=p.x-q.x,dy=p.y-q.y;
+        const pj=ps[j];
+        if(pi.cxIdx!==pj.cxIdx) continue;
+        const dx=pi.x-pj.x, dy=pi.y-pj.y;
         const d=Math.sqrt(dx*dx+dy*dy);
-        if(d<120){
+        if(d<linkDist){
           ctx.beginPath();
-          ctx.moveTo(p.x,p.y);
-          ctx.lineTo(q.x,q.y);
-          ctx.strokeStyle=`rgba(${cr},${cg},${cb},${(0.08*(1-d/120)).toFixed(3)})`;
-          ctx.lineWidth=0.5;
+          ctx.moveTo(pi.x,pi.y);
+          ctx.lineTo(pj.x,pj.y);
+          const la=linkAlpha*(1-d/linkDist);
+          ctx.strokeStyle=`rgba(${cr},${cg},${cb},${la.toFixed(3)})`;
+          ctx.lineWidth=0.3+intensity*0.5;
           ctx.stroke();
         }
       }
     }
+
     requestAnimationFrame(draw);
   }
   draw();
 
-  // 暴露全局函数，外部切换主题时可立即刷新
+  window.setThinkingLevel=function(lv){thinkTarget=Math.max(0,Math.min(1,lv));};
+  window.startThinking=function(){thinkTarget=0.7;};
+  window.stopThinking=function(){thinkTarget=0;};
   window.refreshParticleColor=readThemeColor;
 })();
 
@@ -929,6 +1041,7 @@ async function send() {
   const img = pendingImage;
   if (img) { body.image = img; pendingImage = null; document.getElementById('imagePreview').style.display = 'none'; }
   const typingEl = addTyping();
+  window.startThinking&&window.startThinking();
   try {
     const r = await fetch(API + '/chat', {
       method: 'POST', headers: {'Content-Type':'application/json'},
@@ -936,6 +1049,7 @@ async function send() {
     });
     const d = await r.json();
     typingEl.remove();
+    window.stopThinking&&window.stopThinking();
 
     // 权限请求拦截：[PERM:type]description
     if (d.reply && d.reply.startsWith('[PERM:')) {
@@ -958,6 +1072,7 @@ async function send() {
     updateTokenBadge();
   } catch(e) {
     typingEl.remove();
+    window.stopThinking&&window.stopThinking();
     addBubble('system', '请求失败 — 请检查 API Key 或当前模型');
   }
   btn.disabled = false;
@@ -1472,10 +1587,14 @@ function permitReply(action) {
   const permType = document.getElementById('permOverlay').getAttribute('data-perm') || 'screencap';
   hidePermission();
   const cmd = '/' + permType + ' ' + action;
+  window.startThinking&&window.startThinking();
   fetch(API + '/chat', {
     method: 'POST', headers: {'Content-Type':'application/json'},
     body: JSON.stringify({msg: cmd})
-  }).then(r => r.json()).then(d => addBubble('system', d.reply));
+  }).then(r => r.json()).then(d => {
+    window.stopThinking&&window.stopThinking();
+    addBubble('system', d.reply);
+  });
 }
 
 // ========== Toast ==========

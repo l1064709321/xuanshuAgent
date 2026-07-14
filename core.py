@@ -1874,6 +1874,9 @@ Git 版本回滚：
             thinking = reply.get("thinking", [])
             reply = reply["reply"]
         if not reply.startswith('[PERM:'):
+            # emoji 兜底：如果子Agent忘记插入emoji，根据情景自动补充
+            if not self._has_emoji(reply):
+                reply = self._inject_emoji(reply)
             return {"reply": reply, "thinking": thinking}
         # 解析权限类型
         if ParentBot.PERM_RE is None:
@@ -1900,6 +1903,46 @@ Git 版本回滚：
         self._perm_pending = (user_input, image)
         self.log.sys(f"子Agent请求权限: {perm_type}")
         return f"[PERM:{perm_type}]{desc}"
+
+    def _has_emoji(self, text: str) -> bool:
+        """检测文本是否已包含emoji"""
+        import re
+        return bool(re.search(r'[\U0001F300-\U0001FAFF\U0001F600-\U0001F64F\U0001F680-\U0001F6FF\U0001F900-\U0001F9FF\U00002600-\U000027BF\U00002B50\U00002764\U0000203C\U00002934\U0001F004\U0001F0CF]', text))
+
+    def _inject_emoji(self, text: str) -> str:
+        """根据文本内容语义注入1-2个emoji"""
+        import re, random
+        emoji_map = {
+            '完成|已处理|搞定|好了|成功|ok': '✅',
+            '错误|失败|出问题|不行|bug': '⚠️',
+            '需要|请|帮忙|可以[吗么]|能否': '🤔',
+            '谢谢|感谢|感恩|多谢': '🙏',
+            '推荐|建议|推荐你|你可以试试': '🌟',
+            '注意|小心|谨慎|警告|重要': '💡',
+            '你好|欢迎|嗨|哈喽': '👋',
+            '加油|真棒|厉害|优秀|不错': '👍',
+            '试试|尝试|探索|查查看': '🔍',
+            '开心|高兴|太[好棒]|完美|棒': '🤗',
+            '快|速度|高效|迅速|马上': '⚡',
+            '问题|疑问|不确定|困惑|\\?|？': '🤔',
+        }
+        # 按文本长度选择候选emoji
+        candidates = []
+        for pattern, emoji in emoji_map.items():
+            if re.search(pattern, text):
+                candidates.append(emoji)
+        if not candidates:
+            candidates = ['✨', '😊', '💡']  # 默认
+        n = min(random.randint(1, 2), len(candidates))
+        chosen = random.sample(candidates, n)
+        # 插在最后一个句号或末尾
+        last_punct = max(text.rfind('。'), text.rfind('.'),
+                         text.rfind('！'), text.rfind('!'),
+                         text.rfind('？'), text.rfind('?'))
+        if last_punct > len(text) * 0.5:
+            return text[:last_punct+1] + ' ' + ' '.join(chosen)
+        else:
+            return text + ' ' + ' '.join(chosen)
 
     # ═══════════ 屏幕命令 ═══════════
     def _handle_screen(self, trigger: str = "") -> str:
@@ -2068,7 +2111,10 @@ Git 版本回滚：
             f"注意：MEMORY.md 只记录长期演化经验（被反复验证有效的原则），"
             f"不是单次对话笔记（那些自动存入 JSON memory）。\n"
             f"只有当你在多轮对话中反复发现某条行为准则确实有效，"
-            f"才用 memdir_write 追加到 MEMORY.md 的「长期演化日志」章节。"
+            f"才用 memdir_write 追加到 MEMORY.md 的「长期演化日志」章节。\n\n"
+            f"## Emoji 风格要求\n"
+            f"在所有回复中随机插入emoji：根据对话情景和语气选择合适的emoji，"
+            f"每条回复插入1~3个，放在句末或段落间。例如：高兴🤗 肯定👍 询问🤔 提醒💡 完成✅ 思考🧐 警告⚠️ 推荐🌟 感谢🙏"
         )
         policy_lines = [boot_prompt]
         if child.knowledge:

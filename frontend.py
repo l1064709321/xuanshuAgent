@@ -176,7 +176,7 @@ def chat():
     data = request.get_json()
     msg = data.get("msg", "")
     image = data.get("image", None)
-    model = data.get("model", None)  # 请求级模型覆盖，不传则由后端自动选择
+    model = data.get("model", None)
 
     if msg.startswith("/"):
         parts = msg.split(maxsplit=1)
@@ -446,9 +446,9 @@ def _model_cmd(arg):
 
 
 def _model():
-    """返回当前生效的模型名，优先返回请求级覆盖模型"""
-    if bot._model_override and bot._model_override in pool.all_models:
-        return pool.all_models[bot._model_override].name
+    ov = getattr(bot, '_model_override', '') or ''
+    if ov and ov in pool.all_models:
+        return pool.all_models[ov].name
     return pool.all_models[pool.default_key].name
 
 

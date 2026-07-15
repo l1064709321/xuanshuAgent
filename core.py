@@ -1108,6 +1108,115 @@ def _pkg_info(args):
         return f"查询失败: {e}"
 
 
+# ── ADB 工具（手机 Agent） ──────────────────────────
+
+def _adb_check(args=None):
+    """检测 adb 环境：二进制是否存在 + 是否有设备连接"""
+    import subprocess
+    try:
+        subprocess.run(["which", "adb"], capture_output=True, text=True, timeout=3, check=True)
+    except Exception:
+        return "ADB 未安装。安装: sudo dnf install -y android-tools / apt install adb"
+    try:
+        r = subprocess.run(["adb", "devices"], capture_output=True, text=True, timeout=5)
+        lines = [l for l in r.stdout.strip().split("\n") if l.strip() and "List of devices" not in l]
+        if not lines:
+            return "ADB 已就绪，但无设备连接。请确保手机/模拟器已连接并开启 USB 调试。"
+        return "ADB 已就绪。已连接设备:\n" + "\n".join(lines)
+    except Exception as e:
+        return f"ADB 检测异常: {e}"
+
+
+def _adb_screenshot(args=None):
+    """手机截图，返回 base64 PNG 或保存路径"""
+    import subprocess, base64, tempfile, os
+    try:
+        path = os.path.join(tempfile.gettempdir(), "adb_screenshot.png")
+        subprocess.run(["adb", "exec-out", "screencap", "-p"], capture_output=True, check=True,
+                       timeout=10, stdout=open(path, "wb"))
+        return f"截图保存: {path}"
+    except Exception as e:
+        return f"截图失败: {e}"
+
+
+def _adb_tap(args):
+    """点击屏幕坐标 (x, y)"""
+    import subprocess
+    x = args.get("x", 0)
+    y = args.get("y", 0)
+    try:
+        subprocess.run(["adb", "shell", "input", "tap", str(x), str(y)], capture_output=True, text=True, timeout=5)
+        return f"已点击 ({x}, {y})"
+    except Exception as e:
+        return f"点击失败: {e}"
+
+
+def _adb_swipe(args):
+    """滑动屏幕 x1 y1 → x2 y2，duration 毫秒"""
+    import subprocess
+    x1, y1 = args.get("x1", 0), args.get("y1", 0)
+    x2, y2 = args.get("x2", 0), args.get("y2", 0)
+    dur = args.get("duration", 500)
+    try:
+        subprocess.run(["adb", "shell", "input", "swipe", str(x1), str(y1), str(x2), str(y2), str(dur)],
+                       capture_output=True, text=True, timeout=5)
+        return f"已滑动 ({x1},{y1}) → ({x2},{y2})，时长 {dur}ms"
+    except Exception as e:
+        return f"滑动失败: {e}"
+
+
+def _adb_type(args):
+    """输入文本"""
+    import subprocess
+    text = args.get("text", "")
+    if not text:
+        return "请输入文本内容"
+    try:
+        # 中文需通过 adb shell am broadcast 输入, 英文走 input text
+        subprocess.run(["adb", "shell", "input", "text", text], capture_output=True, text=True, timeout=5)
+        return f"已输入: {text}"
+    except Exception as e:
+        return f"输入失败: {e}"
+
+
+def _adb_install(args):
+    """安装 APK"""
+    import subprocess, os
+    apk_path = args.get("apk", "")
+    if not apk_path or not os.path.isfile(apk_path):
+        return f"APK 文件不存在: {apk_path}"
+    try:
+        r = subprocess.run(["adb", "install", "-r", apk_path], capture_output=True, text=True, timeout=60)
+        return r.stdout.strip()
+    except Exception as e:
+        return f"安装失败: {e}"
+
+
+def _adb_start_app(args):
+    """启动 APP（包名）"""
+    import subprocess
+    pkg = args.get("package", "")
+    if not pkg:
+        return "请提供 APP 包名，如 com.tencent.mm"
+    try:
+        subprocess.run(["adb", "shell", "monkey", "-p", pkg, "-c", "android.intent.category.LAUNCHER", "1"],
+                       capture_output=True, text=True, timeout=10)
+        return f"已启动 {pkg}"
+    except Exception as e:
+        return f"启动失败: {e}"
+
+
+def _adb_key(args):
+    """发送按键事件（如 KEYCODE_BACK / KEYCODE_HOME）"""
+    import subprocess
+    key = args.get("key", "KEYCODE_BACK")
+    try:
+        subprocess.run(["adb", "shell", "input", "keyevent", key], capture_output=True, text=True, timeout=5)
+        return f"已发送按键: {key}"
+    except Exception as e:
+        return f"按键失败: {e}"
+
+
 # ── 子Bot ────────────────────────────────────────────
 _MEM_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".memory")
 
@@ -1174,8 +1283,8 @@ class ParentBot:
 - 搜索Agent: 联网搜索、查实时信息、天气、百科、新闻
 - 代码Agent: 编程、写代码、调试、算法、技术问题、Git版本回滚
 - 文件Agent: 读写文件、文件管理、文档处理、反编译、Git版本回滚
-- 电脑Agent: 系统控制、进程管理、资源监控（CPU/内存/磁盘/网络）、查看系统信息
-- 应用Agent: 软件包管理、安装/卸载/搜索/更新应用、查看应用信息
+- 电脑Agent: 系统控制、进程管理、资源监控（CPU/内存/磁盘/网络）、软件包管理（安装/卸载/搜索/更新）
+- 手机Agent: 手机控制、ADB 操作（截图/点击/滑动/输入/安装APP/启动APP）、Android 自动化
 
 用户消息：{query}
 
@@ -1205,6 +1314,27 @@ Spec（用中文）："""
 如果全部通过，第一行写"ALL_PASS"。
 
 验证报告（中文）："""
+
+    # ═══════════ 任务复杂度评估（三层模型路由）═══════════
+    CHEAP_COMPLEXITY_KW = ["翻译", "总结", "是什么", "怎么样", "天气", "几点", "日期", "缩写", "格式"]
+    NORMAL_KW = ["写", "代码", "生成", "分析", "脚本", "实现", "修复", "构建", "创建", "部署"]
+    STRONG_COMPLEXITY_KW = ["重构", "优化整个", "全面", "完整项目", "架构", "安全审计", "全部替换"]
+
+    def _assess_complexity(self, query: str) -> str:
+        """评估任务需要的模型能力：cheap / normal / strong。
+        cheap: 简单问答/翻译/格式化，用廉价模型（qwen2.5-32b）
+        strong: 大规模重构/完整项目，预留最强模型入口
+        normal: 其他，走 Agent 绑定的默认模型"""
+        q = query.strip()
+        if any(kw in q for kw in self.STRONG_COMPLEXITY_KW) or len(q) >= 400:
+            return "strong"
+        if any(kw in q for kw in self.NORMAL_KW):
+            return "normal"
+        if len(q) <= 12:
+            return "cheap"
+        if any(kw in q for kw in self.CHEAP_COMPLEXITY_KW) and len(q) < 80:
+            return "cheap"
+        return "normal"
 
     def __init__(self, pool: ModelPool, verbose: bool = True, coordinator_mode: bool = True, fallback_mode: bool = False):
         self.pool = pool
@@ -1257,10 +1387,10 @@ Spec（用中文）："""
         self.children = {
             "电脑Agent": ChildBot(
                 name="电脑Agent",
-                description="系统控制：查看系统信息、进程管理、资源监控（CPU/内存/磁盘/网络）、服务状态。可控制系统设置与运行态。",
-                system_prompt="""你是系统控制专家。你可以直接操作这台 Linux 服务器：
+                description="系统控制：查看系统信息、进程管理、资源监控（CPU/内存/磁盘/网络）、软件包管理（安装/卸载/搜索/更新）。完整管控这台 Linux 服务器。",
+                system_prompt="""你是系统控制专家。你可以完整管控这台 Linux 服务器：
 
-可用操作：
+系统运维：
 - sys_info：查看系统内核、主机名、运行时间、发行版
 - process_list：列出运行中的进程（默认 top 15，可用 limit 参数调整）
 - process_kill：终止指定进程（target=进程名或PID，signal=TERM/KILL）
@@ -1269,10 +1399,19 @@ Spec（用中文）："""
 - cpu_info：查看 CPU 型号和核心数
 - network_info：查看网络接口和监听端口
 
+软件管理：
+- pkg_search(query=关键词)：搜索软件包
+- pkg_list(name=包名可选)：列出已安装的包
+- pkg_info(name=包名)：查看包详细信息
+- pkg_install(name=包名)：安装软件包（需 sudo）
+- pkg_remove(name=包名)：卸载软件包（需 sudo）
+- pkg_update(name=包名可选)：检查或执行系统更新
+
 安全规则：
-- process_kill 前先 process_list 确认目标进程
-- 不确定的进程查询后询问再做决定
-- 不可 kill PID 1 (init/systemd) 或关键系统服务
+- process_kill 前先 process_list 确认目标进程，不可 kill PID 1 或关键系统服务
+- pkg_remove/install 为高风险操作，执行前说明影响
+- 不可卸载 kernel、systemd、glibc 等系统关键包
+- 不确定的包先 pkg_search 或 pkg_info 查看详情
 
 语言规则：所有思考和回复必须用中文。""",
                 tools=[
@@ -1286,28 +1425,6 @@ Spec（用中文）："""
                     Tool("memory_usage", "查看内存使用情况", {}, _memory_usage),
                     Tool("cpu_info", "查看CPU信息（型号/核心数）", {}, _cpu_info),
                     Tool("network_info", "查看网络接口和监听端口", {}, _network_info),
-                ] + mem_tools,
-            ),
-            "应用Agent": ChildBot(
-                name="应用Agent",
-                description="软件包管理：搜索、安装、卸载、更新系统软件包（dnf/yum）。查应用信息、版本等。",
-                system_prompt="""你是应用管理专家。你可以管理这台 Linux 服务器的软件包：
-
-可用操作：
-- pkg_search(query=关键词)：搜索软件包
-- pkg_list(name=包名可选)：列出已安装的包
-- pkg_info(name=包名)：查看包详细信息
-- pkg_install(name=包名)：安装软件包（需 sudo）
-- pkg_remove(name=包名)：卸载软件包（需 sudo）
-- pkg_update(name=包名可选)：检查或执行系统更新
-
-安全规则：
-- pkg_remove 和 pkg_install 为高风险操作，执行前说明影响
-- 不可卸载 kernel、systemd、glibc 等系统关键包
-- 不确定的包先 pkg_search 或 pkg_info 查看详情
-
-语言规则：所有思考和回复必须用中文。""",
-                tools=[
                     Tool("pkg_search", "搜索软件包（dnf search）",
                          {"query": {"type": "string", "description": "搜索关键词"}}, _pkg_search),
                     Tool("pkg_list", "列出已安装的包",
@@ -1321,6 +1438,62 @@ Spec（用中文）："""
                          {"name": {"type": "string", "description": "包名"}}, _pkg_remove),
                     Tool("pkg_update", "检查/执行系统更新",
                          {"name": {"type": "string", "description": "指定包名（可选），不填则检查全系统"}}, _pkg_update),
+                ] + mem_tools,
+            ),
+            "手机Agent": ChildBot(
+                name="手机Agent",
+                description="手机控制：通过 ADB 操控 Android 设备/模拟器。截图、点击、滑动、输入、安装APP、启动APP。需设备连接。",
+                system_prompt="""你是手机控制专家。你通过 ADB 操控一台 Android 设备或模拟器。
+
+可用操作：
+- adb_check：检测 ADB 环境和设备连接状态
+- adb_screenshot：截取手机屏幕（PNG）
+- adb_tap(x, y)：点击屏幕坐标
+- adb_swipe(x1, y1, x2, y2, duration=500)：滑动屏幕
+- adb_type(text)：输入文本（英文/拼音，中文需用输入法）
+- adb_install(apk)：安装 APK 文件
+- adb_start_app(package)：启动 APP（包名）
+- adb_key(key)：发送按键（KEYCODE_BACK / KEYCODE_HOME / KEYCODE_ENTER 等）
+
+工作流程（仿 AutoGLM 循环）：
+1. 先 adb_check 确认设备在线
+2. adb_screenshot 截取当前屏幕
+3. 看图理解界面状态（父Bot会把截图传给VLM，返回分析结果）
+4. 根据分析结果调用 adb_tap / adb_swipe / adb_type 执行下一步操作
+5. 重复 2-4 直到任务完成
+
+ADB 常用按键码：
+- KEYCODE_HOME（回主屏幕）
+- KEYCODE_BACK（返回）
+- KEYCODE_ENTER（确认/回车）
+- KEYCODE_DEL（删除）
+
+安全规则：
+- 涉及支付、密码输入时暂停并请求用户接管
+- 不确定的按钮/操作先截图确认，不要盲点
+- 首次启动陌生 APP 时注意权限弹窗
+
+语言规则：所有思考和回复必须用中文。""",
+                tools=[
+                    Tool("adb_check", "检测 ADB 环境和设备连接状态", {}, _adb_check),
+                    Tool("adb_screenshot", "截取手机屏幕（PNG）", {}, _adb_screenshot),
+                    Tool("adb_tap", "点击屏幕坐标",
+                         {"x": {"type": "integer", "description": "X 坐标"},
+                          "y": {"type": "integer", "description": "Y 坐标"}}, _adb_tap),
+                    Tool("adb_swipe", "滑动屏幕",
+                         {"x1": {"type": "integer", "description": "起始 X"},
+                          "y1": {"type": "integer", "description": "起始 Y"},
+                          "x2": {"type": "integer", "description": "目标 X"},
+                          "y2": {"type": "integer", "description": "目标 Y"},
+                          "duration": {"type": "integer", "description": "滑动时长ms，默认500"}}, _adb_swipe),
+                    Tool("adb_type", "输入文本（英文/拼音）",
+                         {"text": {"type": "string", "description": "输入内容"}}, _adb_type),
+                    Tool("adb_install", "安装 APK",
+                         {"apk": {"type": "string", "description": "APK 文件路径"}}, _adb_install),
+                    Tool("adb_start_app", "启动 APP",
+                         {"package": {"type": "string", "description": "APP 包名，如 com.tencent.mm"}}, _adb_start_app),
+                    Tool("adb_key", "发送按键事件",
+                         {"key": {"type": "string", "description": "按键码，如 KEYCODE_BACK"}}, _adb_key),
                 ] + mem_tools,
             ),
             "搜索Agent": ChildBot(
@@ -1511,25 +1684,27 @@ Git 版本回滚：
 
     def _keyword_route(self, query: str) -> str:
         q = query.lower()
-        # 电脑Agent优先路由
+        # 手机Agent优先路由
+        if any(k in q for k in ["手机", "adb", "截图", "点击屏幕", "滑动", "启动app", "安装apk",
+                                 "android", "模拟器", "云手机", "装到手机上"]):
+            self.log.sys(f'关键词路由 → "手机Agent"')
+            return "手机Agent"
+        # 电脑Agent优先路由（系统运维 + 软件管理）
         if any(k in q for k in ["系统信息", "主机名", "内核", "进程", "kill", "磁盘", "内存", "cpu", "网络", "端口",
-                                 "top", "ps", "df", "free", "lscpu", "ss -tlnp", "sys_info"]):
+                                 "top", "ps", "df", "free", "lscpu", "ss -tlnp", "sys_info",
+                                 "安装", "卸载", "更新包", "yum", "dnf", "rpm", "软件包", "pkg",
+                                 "装一个", "升级", "dnf install", "dnf remove"]):
             self.log.sys(f'关键词路由 → "电脑Agent"')
             return "电脑Agent"
-        # 应用Agent优先路由
-        if any(k in q for k in ["安装", "卸载", "更新包", "yum", "dnf", "rpm", "软件包", "pkg",
-                                 "装一个", "删掉包", "升级", "dnf install", "dnf remove"]):
-            self.log.sys(f'关键词路由 → "应用Agent"')
-            return "应用Agent"
+        if "保存" in q or "文件" in q or "读取" in q or "反编译" in q or "decompile" in q or "pyc" in q:
+            self.log.sys(f'关键词路由 → "文件Agent"')
+            return "文件Agent"
         if "搜索" in q or "查" in q:
             self.log.sys(f'关键词路由 → "搜索Agent"')
             return "搜索Agent"
         if "写" in q or "代码" in q:
             self.log.sys(f'关键词路由 → "代码Agent"')
             return "代码Agent"
-        if "保存" in q or "文件" in q or "读取" in q or "反编译" in q or "decompile" in q or "pyc" in q:
-            self.log.sys(f'关键词路由 → "文件Agent"')
-            return "文件Agent"
         # git 回滚关键词 → 代码/文件 Agent
         if any(k in q for k in ["回滚", "回退", "撤销", "还原", "恢复版本", "git revert", "git reset"]):
             self.log.sys(f'关键词路由 → "代码Agent"（回滚意图）')
@@ -1538,8 +1713,9 @@ Git 版本回滚：
             "搜索Agent": (["搜索", "查", "什么是", "天气", "百科", "维基", "wiki", "新闻", "几度"], 0),
             "代码Agent": (["代码", "编程", "脚本", "写", "python", "bug", "报错", "函数", "算法", "开发"], 0),
             "文件Agent": (["文件", "保存", "读取", "目录", "列表", "创建", "写入", "文档", "反编译", "decompile", "pyc", "二进制", "字节码"], 0),
-            "电脑Agent": (["系统", "进程", "磁盘", "内存", "cpu", "网络", "端口", "资源", "负载", "top", "ps", "df", "free"], 0),
-            "应用Agent": (["安装", "卸载", "更新", "yum", "dnf", "rpm", "软件包", "pkg", "升级"], 0),
+            "电脑Agent": (["系统", "进程", "磁盘", "内存", "cpu", "网络", "端口", "资源", "负载",
+                            "top", "ps", "df", "free", "安装", "卸载", "更新", "yum", "dnf", "rpm", "软件包", "pkg"], 0),
+            "手机Agent": (["手机", "adb", "android", "模拟器", "云手机", "点击", "截图", "apk", "包名", "启动app"], 0),
         }
         best = "搜索Agent"
         best_s = 0
@@ -1799,9 +1975,21 @@ Git 版本回滚：
             return self._simple_chat(user_input)
 
     # ═══════════ 对话 ═══════════
-    def chat(self, user_input: str, image: str = None) -> str:
+    def chat(self, user_input: str, image: str = None, model: str = None) -> str:
         import re
         stripped = user_input.strip()
+
+        # ── 三层模型路由：前端指定 > 复杂度评估 > Agent 绑定 ──
+        self._model_override = model or ""
+        if not self._model_override:
+            complexity = self._assess_complexity(stripped)
+            if complexity == "cheap":
+                # 廉价任务不传 override，让 Agent 用自己的绑定（绑了 cheap 就是 cheap）
+                pass
+            elif complexity == "strong":
+                # strong 也不 override——留最强模型给绑定链路
+                pass
+            # normal：走 Agent 绑定/默认，不干预
 
         # ── 通用权限命令：/screencap allow, /root deny, /screen allow(兼容) ──
         perm_cmd = re.match(r'^/(\w+) (allow|deny)$', stripped)
@@ -1874,9 +2062,6 @@ Git 版本回滚：
             thinking = reply.get("thinking", [])
             reply = reply["reply"]
         if not reply.startswith('[PERM:'):
-            # emoji 兜底：如果子Agent忘记插入emoji，根据情景自动补充
-            if not self._has_emoji(reply):
-                reply = self._inject_emoji(reply)
             return {"reply": reply, "thinking": thinking}
         # 解析权限类型
         if ParentBot.PERM_RE is None:
@@ -1903,46 +2088,6 @@ Git 版本回滚：
         self._perm_pending = (user_input, image)
         self.log.sys(f"子Agent请求权限: {perm_type}")
         return f"[PERM:{perm_type}]{desc}"
-
-    def _has_emoji(self, text: str) -> bool:
-        """检测文本是否已包含emoji"""
-        import re
-        return bool(re.search(r'[\U0001F300-\U0001FAFF\U0001F600-\U0001F64F\U0001F680-\U0001F6FF\U0001F900-\U0001F9FF\U00002600-\U000027BF\U00002B50\U00002764\U0000203C\U00002934\U0001F004\U0001F0CF]', text))
-
-    def _inject_emoji(self, text: str) -> str:
-        """根据文本内容语义注入1-2个emoji"""
-        import re, random
-        emoji_map = {
-            '完成|已处理|搞定|好了|成功|ok': '✅',
-            '错误|失败|出问题|不行|bug': '⚠️',
-            '需要|请|帮忙|可以[吗么]|能否': '🤔',
-            '谢谢|感谢|感恩|多谢': '🙏',
-            '推荐|建议|推荐你|你可以试试': '🌟',
-            '注意|小心|谨慎|警告|重要': '💡',
-            '你好|欢迎|嗨|哈喽': '👋',
-            '加油|真棒|厉害|优秀|不错': '👍',
-            '试试|尝试|探索|查查看': '🔍',
-            '开心|高兴|太[好棒]|完美|棒': '🤗',
-            '快|速度|高效|迅速|马上': '⚡',
-            '问题|疑问|不确定|困惑|\\?|？': '🤔',
-        }
-        # 按文本长度选择候选emoji
-        candidates = []
-        for pattern, emoji in emoji_map.items():
-            if re.search(pattern, text):
-                candidates.append(emoji)
-        if not candidates:
-            candidates = ['✨', '😊', '💡']  # 默认
-        n = min(random.randint(1, 2), len(candidates))
-        chosen = random.sample(candidates, n)
-        # 插在最后一个句号或末尾
-        last_punct = max(text.rfind('。'), text.rfind('.'),
-                         text.rfind('！'), text.rfind('!'),
-                         text.rfind('？'), text.rfind('?'))
-        if last_punct > len(text) * 0.5:
-            return text[:last_punct+1] + ' ' + ' '.join(chosen)
-        else:
-            return text + ' ' + ' '.join(chosen)
 
     # ═══════════ 屏幕命令 ═══════════
     def _handle_screen(self, trigger: str = "") -> str:
@@ -2088,9 +2233,10 @@ Git 版本回滚：
     def _llm_call(self, agent: str, messages: list, tools: list = None, extra_fallbacks: list = None) -> dict:
         """统一 LLM 调用入口：根据 fallback_mode 自动选择兜底或直调。
         兜底模式下主模型失败会依次尝试备用模型，返回结果中 _tried 记录尝试链。"""
+        ov = getattr(self, '_model_override', '') or ''
         if self.fallback_mode:
-            return self.pool.call_llm_with_fallback(agent, messages, tools, fallback_models=extra_fallbacks)
-        return self.pool.call_llm(agent, messages, tools)
+            return self.pool.call_llm_with_fallback(agent, messages, tools, fallback_models=extra_fallbacks, model_override=ov)
+        return self.pool.call_llm(agent, messages, tools, model_override=ov)
 
     def _build_child_msgs(self, child: ChildBot, user_input: str,
                           extra_context: str = "", image: str = None) -> list:
@@ -2111,10 +2257,7 @@ Git 版本回滚：
             f"注意：MEMORY.md 只记录长期演化经验（被反复验证有效的原则），"
             f"不是单次对话笔记（那些自动存入 JSON memory）。\n"
             f"只有当你在多轮对话中反复发现某条行为准则确实有效，"
-            f"才用 memdir_write 追加到 MEMORY.md 的「长期演化日志」章节。\n\n"
-            f"## Emoji 风格要求\n"
-            f"在所有回复中随机插入emoji：根据对话情景和语气选择合适的emoji，"
-            f"每条回复插入1~3个，放在句末或段落间。例如：高兴🤗 肯定👍 询问🤔 提醒💡 完成✅ 思考🧐 警告⚠️ 推荐🌟 感谢🙏"
+            f"才用 memdir_write 追加到 MEMORY.md 的「长期演化日志」章节。"
         )
         policy_lines = [boot_prompt]
         if child.knowledge:

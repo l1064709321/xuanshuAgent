@@ -12,6 +12,7 @@ push.py
 .skills/
 .sandbox/
 .pytest_cache/
+workspace_files/
 *.log
 req.log
 server.log

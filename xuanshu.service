@@ -4,9 +4,9 @@ After=network.target
 
 [Service]
 Type=simple
-User=aidlux
-WorkingDirectory=/home/aidlux/xuanshuAgent
-ExecStart=/usr/bin/python3 frontend.py
+User=marvis
+WorkingDirectory=/home/marvis/Marvis/User/77A0318BB6CBFBF7DD7DE820DE597C1E/workspace/conv_19e5d3037f5_3a9b862be1cb/temp/xuanshu_push
+ExecStart=/home/marvis/Marvis/User/77A0318BB6CBFBF7DD7DE820DE597C1E/workspace/conv_19e5d3037f5_3a9b862be1cb/temp/xuanshu_push/.venv/bin/python frontend.py
 Restart=always
 RestartSec=3
 

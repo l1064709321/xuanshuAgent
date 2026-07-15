@@ -86,7 +86,7 @@ pip install -r requirements.txt
 ### Web 界面（推荐）
 
 ```bash
-bash run.sh
+bash xuanshu
 # 浏览器打开 http://localhost:8901
 ```
 
@@ -96,6 +96,7 @@ bash run.sh
 source .venv/bin/activate
 python frontend.py
 ```
+
 
 ### 命令行模式
 
@@ -140,8 +141,8 @@ xuanshuAgent/
 ├── monitor.py        性能监控
 ├── logger.py         日志模块
 ├── main.py           命令行入口
-├── run.sh            一键启动脚本（含 venv 创建）
-├── start             旧版启动脚本
+├── xuanshu           一键启动脚本（自动创建 venv + 安装依赖）
+├── xuanshu.service   systemd 服务文件（开机自启）
 ├── index.html        Web 前端界面
 ├── .memdir/          子 Agent 持久记忆
 │   ├── skills/       自动学习 Skill

@@ -110,6 +110,38 @@ def switch_model():
     has_key = pool.model_has_key(model_key)
     return jsonify({"ok": True, "model": model_key, "name": model.name, "has_key": has_key})
 
+# ── Agent-模型绑定 ──
+@app.route("/bind-model", methods=["POST", "OPTIONS"])
+def bind_model():
+    if request.method == "OPTIONS":
+        return jsonify({})
+    data = request.get_json()
+    agent = data.get("agent", "").strip()
+    model_key = data.get("model", "").strip()
+    if not agent or not model_key:
+        return jsonify({"ok": False, "error": "agent 和 model 必填"})
+    if model_key not in pool.all_models:
+        return jsonify({"ok": False, "error": f"未知模型: {model_key}"})
+    pool.bind(agent, model_key)
+    return jsonify({"ok": True, "agent": agent, "model": model_key})
+
+@app.route("/bind-model", methods=["GET"])
+def list_bindings():
+    """列出所有 Agent 的模型绑定"""
+    bindings = {a: pool.get_key(a) for a in bot.children}
+    return jsonify({"bindings": bindings, "default": pool.default_key})
+
+@app.route("/unbind-model", methods=["POST", "OPTIONS"])
+def unbind_model():
+    if request.method == "OPTIONS":
+        return jsonify({})
+    data = request.get_json()
+    agent = data.get("agent", "").strip()
+    if not agent:
+        return jsonify({"ok": False, "error": "agent 必填"})
+    pool.unbind(agent)
+    return jsonify({"ok": True, "agent": agent})
+
 # ── API Key ──
 @app.route("/set-key", methods=["POST", "OPTIONS"])
 def set_key():
@@ -144,6 +176,7 @@ def chat():
     data = request.get_json()
     msg = data.get("msg", "")
     image = data.get("image", None)
+    model = data.get("model", None)  # 请求级模型覆盖，不传则由后端自动选择
 
     if msg.startswith("/"):
         parts = msg.split(maxsplit=1)
@@ -156,7 +189,7 @@ def chat():
         return jsonify({"reply": _cmd(action, arg), "cmd": True, "model": _model()})
 
     agent_name = bot._route(msg)
-    result = bot.chat(msg, image)
+    result = bot.chat(msg, image, model=model)
     return jsonify({
         "reply": result["reply"],
         "thinking": result.get("thinking", []),
@@ -413,6 +446,9 @@ def _model_cmd(arg):
 
 
 def _model():
+    """返回当前生效的模型名，优先返回请求级覆盖模型"""
+    if bot._model_override and bot._model_override in pool.all_models:
+        return pool.all_models[bot._model_override].name
     return pool.all_models[pool.default_key].name
 
 

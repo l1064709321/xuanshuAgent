@@ -434,9 +434,9 @@ class ModelPool:
                 return None
         return self._clients[cache_key]
 
-    def call_llm(self, agent: str, messages: list, tools: list = None) -> dict:
+    def call_llm(self, agent: str, messages: list, tools: list = None, model_override: str = None) -> dict:
         """单次调用，内部委托到 call_llm_with_fallback（不启用兜底）"""
-        return self.call_llm_with_fallback(agent, messages, tools, fallback_models=[], max_fallbacks=0)
+        return self.call_llm_with_fallback(agent, messages, tools, fallback_models=[], max_fallbacks=0, model_override=model_override)
 
     # ═══ 多模型兜底 ═══
 
@@ -457,6 +457,7 @@ class ModelPool:
     def call_llm_with_fallback(
         self, agent: str, messages: list, tools: list = None,
         fallback_models: list = None, max_fallbacks: int = 5,
+        model_override: str = None,
     ) -> dict:
         """多模型兜底调用：依次尝试主模型和备用模型，直至成功。
         
@@ -471,7 +472,7 @@ class ModelPool:
           _fallback_used: 是否使用了备用模型
         """
         tried = []
-        primary_key = self.get_key(agent)
+        primary_key = model_override if model_override and model_override in self.all_models else self.get_key(agent)
 
         # 构建尝试列表：去重，跳过冷却期模型
         candidates = [primary_key]

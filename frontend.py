@@ -11,6 +11,8 @@ app = Flask(__name__, static_folder=".", static_url_path="")
 _MEMDIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".memdir")
 os.makedirs(_MEMDIR, exist_ok=True)
 _ALLOWED_BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+_WORKSPACE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "workspace_files")
+os.makedirs(_WORKSPACE_DIR, exist_ok=True)
 
 # ── 请求日志（调试用）──
 import logging
@@ -265,74 +267,115 @@ def import_snapshots():
     count = bot.import_all_snapshots()
     return jsonify({"ok": True, "imported": count})
 
-# ── 本地文件夹浏览 ──
-@app.route("/browse", methods=["POST"])
-def browse_dir():
-    data = request.get_json()
-    path = (data.get("path") or _ALLOWED_BASE).strip()
-    if not os.path.exists(path):
-        path = _ALLOWED_BASE
-    real = os.path.realpath(path)
-    if not real.startswith(_ALLOWED_BASE):
-        return jsonify({"ok": False, "error": "禁止访问该路径"})
+# ── 工作区文件管理（用户上传的文件，隔离在 workspace_files/）──
+
+@app.route("/workspace/list", methods=["POST"])
+def workspace_list():
+    """列出 workspace_files 下的文件（仅一层，不支持子目录）"""
     entries = []
     try:
-        for name in sorted(os.listdir(real)):
-            full = os.path.join(real, name)
-            is_dir = os.path.isdir(full)
+        for name in sorted(os.listdir(_WORKSPACE_DIR)):
+            full = os.path.join(_WORKSPACE_DIR, name)
+            if not os.path.isfile(full):
+                continue
             try:
-                size = os.path.getsize(full) if not is_dir else 0
+                size = os.path.getsize(full)
             except OSError:
                 size = 0
             mtime = int(os.path.getmtime(full) * 1000)
             entries.append({
-                "name": name, "path": full, "dir": is_dir,
-                "size": size, "mtime": mtime
+                "name": name,
+                "path": full,
+                "size": size,
+                "mtime": mtime
             })
     except PermissionError:
         return jsonify({"ok": False, "error": "无权限访问"})
-    parent = os.path.dirname(real)
-    if not os.path.realpath(parent).startswith(_ALLOWED_BASE):
-        parent = real
-    return jsonify({"ok": True, "path": real, "parent": parent, "entries": entries})
+    return jsonify({"ok": True, "path": _WORKSPACE_DIR, "entries": entries})
 
-@app.route("/file/read", methods=["POST"])
-def read_local_file():
-    data = request.get_json()
-    path = (data.get("path") or "").strip()
-    if not path:
-        return jsonify({"ok": False, "error": "路径不能为空"})
-    real = os.path.realpath(path)
-    if not real.startswith(_ALLOWED_BASE):
-        return jsonify({"ok": False, "error": "禁止访问该路径"})
+@app.route("/workspace/upload", methods=["POST"])
+def workspace_upload():
+    """接收用户上传的文件，写入 workspace_files/"""
+    if "file" not in request.files:
+        return jsonify({"ok": False, "error": "未选择文件"})
+    f = request.files["file"]
+    if not f.filename:
+        return jsonify({"ok": False, "error": "文件名为空"})
+    # 防止路径穿越
+    safe_name = os.path.basename(f.filename)
+    if not safe_name:
+        return jsonify({"ok": False, "error": "无效文件名"})
+    dest = os.path.join(_WORKSPACE_DIR, safe_name)
+    f.save(dest)
+    size = os.path.getsize(dest)
+    return jsonify({"ok": True, "name": safe_name, "path": dest, "size": size})
+
+@app.route("/workspace/upload-batch", methods=["POST"])
+def workspace_upload_batch():
+    """批量上传多个文件"""
+    if "files" not in request.files:
+        return jsonify({"ok": False, "error": "未选择文件"})
+    uploaded = []
+    for f in request.files.getlist("files"):
+        if not f.filename:
+            continue
+        safe_name = os.path.basename(f.filename)
+        if not safe_name:
+            continue
+        dest = os.path.join(_WORKSPACE_DIR, safe_name)
+        f.save(dest)
+        uploaded.append({"name": safe_name, "path": dest, "size": os.path.getsize(dest)})
+    return jsonify({"ok": True, "uploaded": uploaded})
+
+@app.route("/workspace/read", methods=["POST"])
+def workspace_read():
+    """读取工作区文件内容"""
+    data = request.get_json(silent=True) or {}
+    name = (data.get("name") or "").strip()
+    if not name:
+        return jsonify({"ok": False, "error": "文件名不能为空"})
+    safe_name = os.path.basename(name)
+    real = os.path.realpath(os.path.join(_WORKSPACE_DIR, safe_name))
+    if not real.startswith(_WORKSPACE_DIR):
+        return jsonify({"ok": False, "error": "禁止访问"})
     if not os.path.isfile(real):
-        return jsonify({"ok": False, "error": "不是文件"})
-    mime, _ = mimetypes.guess_type(real)
-    is_text = mime and (mime.startswith("text/") or mime in (
-        "application/json", "application/javascript", "application/xml",
-        "application/x-yaml", "application/x-sh"))
-    if not is_text and mime is None:
-        ext = os.path.splitext(real)[1].lower()
-        text_exts = {".py", ".md", ".yaml", ".yml", ".toml", ".cfg", ".ini",
-                     ".txt", ".log", ".json", ".js", ".ts", ".jsx", ".tsx",
-                     ".css", ".html", ".xml", ".sh", ".bash", ".env", ".gitignore"}
-        is_text = ext in text_exts
+        return jsonify({"ok": False, "error": "文件不存在"})
     size = os.path.getsize(real)
+    text_exts = {
+        ".py", ".md", ".yaml", ".yml", ".toml", ".cfg", ".ini",
+        ".txt", ".log", ".json", ".js", ".ts", ".jsx", ".tsx",
+        ".css", ".html", ".xml", ".sh", ".bash", ".env", ".gitignore",
+        ".csv", ".c", ".cpp", ".h", ".java", ".rs", ".go", ".vue",
+        ".sql", ".r", ".m", ".swift", ".kt", ".rb", ".php"
+    }
+    ext = os.path.splitext(real)[1].lower()
+    is_text = ext in text_exts
     if is_text or size < 50 * 1024:
         try:
             with open(real, "r", encoding="utf-8", errors="replace") as f:
                 content = f.read(50000)
-            return jsonify({"ok": True, "path": real, "content": content, "size": size, "binary": False})
-        except Exception:
-            pass
-    # 二进制文件 → base64
-    try:
-        with open(real, "rb") as f:
-            raw = f.read(50000)
-        return jsonify({"ok": True, "path": real, "content": base64.b64encode(raw).decode(),
-                        "size": size, "binary": True, "mime": mime or "application/octet-stream"})
-    except Exception as e:
-        return jsonify({"ok": False, "error": str(e)})
+            return jsonify({"ok": True, "path": real, "name": safe_name,
+                            "content": content, "size": size, "lines": content.count("\n") + 1})
+        except Exception as e:
+            return jsonify({"ok": False, "error": str(e)})
+    return jsonify({"ok": True, "path": real, "name": safe_name,
+                    "type": "binary", "size": size, "ext": ext})
+
+@app.route("/workspace/delete", methods=["POST"])
+def workspace_delete():
+    """删除工作区文件"""
+    data = request.get_json(silent=True) or {}
+    name = (data.get("name") or "").strip()
+    if not name:
+        return jsonify({"ok": False, "error": "文件名不能为空"})
+    safe_name = os.path.basename(name)
+    real = os.path.realpath(os.path.join(_WORKSPACE_DIR, safe_name))
+    if not real.startswith(_WORKSPACE_DIR):
+        return jsonify({"ok": False, "error": "禁止访问"})
+    if not os.path.isfile(real):
+        return jsonify({"ok": False, "error": "文件不存在"})
+    os.remove(real)
+    return jsonify({"ok": True, "deleted": safe_name})
 
 # ── 记忆文件夹（.memdir）管理 ──
 @app.route("/memory/list", methods=["GET"])
@@ -664,7 +707,7 @@ def api_run():
     except Exception as e:
         return jsonify({"stdout": "", "stderr": str(e), "command": command, "returncode": -1})
 
-# ── 文件预览（适配前端 /read-file 响应格式）──
+# ── 文件预览（适配前端 /read-file 响应格式，仅限工作区）──
 @app.route("/read-file", methods=["POST"])
 def read_file_v2():
     data = request.get_json(silent=True) or {}
@@ -672,8 +715,8 @@ def read_file_v2():
     if not path:
         return jsonify({"ok": False, "error": "路径不能为空"})
     real = os.path.realpath(path)
-    if not real.startswith(_ALLOWED_BASE):
-        return jsonify({"ok": False, "error": "禁止访问该路径"})
+    if not real.startswith(_WORKSPACE_DIR):
+        return jsonify({"ok": False, "error": "只能预览工作区文件"})
     if not os.path.isfile(real):
         return jsonify({"ok": False, "error": "不是文件"})
     name = os.path.basename(real)

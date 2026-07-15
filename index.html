@@ -3,34 +3,32 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover">
-<title>玄姝Agent</title>
+<title>玄姝 Agent</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;500;600;700&family=DM+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
-<canvas id="particleCanvas"></canvas>
 <a href="#msg-input" class="skip-link">跳到输入框</a>
 
 <!-- 权限弹窗 -->
 <div class="permission-overlay" id="permOverlay">
   <div class="permission-dialog">
-    <div class="perm-icon" id="permIcon">🖥️</div>
     <h3 id="permTitle">权限请求</h3>
     <div class="perm-detail">
       <div class="perm-row">
         <span class="perm-label">权限类型</span>
-        <span class="perm-value" id="permTypeVal">—</span>
+        <span class="perm-value" id="permTypeVal">&mdash;</span>
       </div>
       <div class="perm-row">
         <span class="perm-label">操作目标</span>
-        <span class="perm-value perm-path" id="permTargetVal">—</span>
+        <span class="perm-value perm-path" id="permTargetVal">&mdash;</span>
       </div>
     </div>
     <p class="perm-reason" id="permReason"></p>
-    <div class="perm-btns">
-      <button class="perm-deny" onclick="permitReply('deny')">拒绝</button>
-      <button class="perm-allow" onclick="permitReply('allow')">允许</button>
+    <div class="perm-actions">
+      <button class="btn btn-ghost" onclick="permitReply('deny')">拒绝</button>
+      <button class="btn btn-primary" onclick="permitReply('allow')">允许</button>
     </div>
   </div>
 </div>
@@ -38,27 +36,40 @@
 <!-- 遮罩层 -->
 <div class="mobile-overlay" id="overlay" onclick="closeAllPanels()"></div>
 
+<!-- 粒子云画布 -->
+<canvas id="particleCanvas"></canvas>
+
 <div class="app">
 
   <!-- ===== 左侧边栏 ===== -->
   <aside class="left-sidebar" id="leftSidebar">
     <div class="sidebar-header">
-      <span class="logo">玄姝</span>
-      <button class="settings-btn" onclick="toggleLeft()" title="收起侧栏">×</button>
+      <span class="sidebar-logo">玄姝</span>
+      <button class="sidebar-close" onclick="toggleLeft()" title="收起侧栏">&times;</button>
     </div>
-    <!-- 导航 -->
     <nav class="sidebar-nav" id="sidebarNav">
-      <a class="sidebar-nav-item active" href="#chat" data-page="chat">💬 对话</a>
-      <a class="sidebar-nav-item" href="#settings" data-page="settings">⚙ 设置</a>
-      <a class="sidebar-nav-item" href="#profile" data-page="profile">👤 个人主页</a>
+      <a class="sidebar-nav-item active" href="#chat" data-page="chat">
+        <span class="sidebar-nav-icon">&diams;</span> 对话
+      </a>
+      <a class="sidebar-nav-item" href="#settings" data-page="settings">
+        <span class="sidebar-nav-icon">&diams;</span> 设置
+      </a>
+      <a class="sidebar-nav-item" href="#profile" data-page="profile">
+        <span class="sidebar-nav-icon">&diams;</span> 个人主页
+      </a>
     </nav>
-    <div class="session-list" id="sessionList"><div class="session-item active" tabindex="0" role="button" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click()}">当前对话</div></div>
-    <div class="sidebar-footer">
-      <div class="status-indicator">
-        <span class="status-dot offline" id="statusDot"></span>
-        <span id="statusLabel">未连接</span>
-      </div>
-      <span id="tokenCount" class="sidebar-token-count">0 tk</span>
+    <div class="sidebar-section-label">会话</div>
+    <div class="sidebar-sessions" id="sessionList">
+      <div class="session-item active" tabindex="0" role="button" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click()}">当前对话</div>
+    </div>
+    <div class="sidebar-section-label">📁 文件</div>
+    <div class="sidebar-file-tree" id="sidebarFileTree">
+      <div class="file-tree-loading">加载中…</div>
+    </div>
+    <div class="status-bar">
+      <span class="status-dot offline" id="statusDot"></span>
+      <span id="statusLabel">未连接</span>
+      <span id="tokenCount" style="margin-left:auto">0 tk</span>
     </div>
   </aside>
 
@@ -68,167 +79,240 @@
       <div class="toolbar-avatar" id="toolbarAvatar" onclick="navigateTo('#profile')" title="个人主页">玄</div>
       <span class="u-flex-1"></span>
       <span class="token-badge" id="tokenBadge" title="Token用量">0 tk</span>
-      <button class="toolbar-btn" onclick="navigateTo('#settings')" title="设置" aria-label="打开设置">⚙</button>
-      <button class="toolbar-btn" id="toolbarMoreBtn" onclick="toggleMoreMenu(event)" title="更多" aria-label="更多菜单">⋮</button>
+      <button class="toolbar-btn theme-btn" onclick="toggleThemeQuickPanel(event)" title="切换主题" aria-label="主题切换" id="toolbarThemeBtn">&#127912;</button>
+      <div class="theme-quick-panel" id="themeQuickPanel" style="display:none">
+        <div class="theme-quick-row">
+          <button class="tqp-chip" data-accent="cyber" data-mode="light" onclick="applyQuick('cyber','light')">科幻蓝·浅</button>
+          <button class="tqp-chip" data-accent="cyber" data-mode="dark" onclick="applyQuick('cyber','dark')">科幻蓝·深</button>
+        </div>
+        <div class="theme-quick-row">
+          <button class="tqp-chip" data-accent="forest" data-mode="light" onclick="applyQuick('forest','light')">护眼绿·浅</button>
+          <button class="tqp-chip" data-accent="forest" data-mode="dark" onclick="applyQuick('forest','dark')">护眼绿·深</button>
+        </div>
+        <div class="theme-quick-row">
+          <button class="tqp-chip" data-accent="sakura" data-mode="light" onclick="applyQuick('sakura','light')">樱粉·浅</button>
+          <button class="tqp-chip" data-accent="sakura" data-mode="dark" onclick="applyQuick('sakura','dark')">樱粉·深</button>
+        </div>
+        <div class="theme-quick-row">
+          <button class="tqp-chip" data-accent="leather" data-mode="light" onclick="applyQuick('leather','light')">书封棕·浅</button>
+          <button class="tqp-chip" data-accent="leather" data-mode="dark" onclick="applyQuick('leather','dark')">书封棕·深</button>
+        </div>
+      </div>
+      <button class="toolbar-btn" onclick="navigateTo('#settings')" title="设置" aria-label="打开设置">&#9881;</button>
+      <button class="toolbar-btn" id="toolbarMoreBtn" onclick="toggleMoreMenu(event)" title="更多" aria-label="更多菜单">&#8942;</button>
       <div class="more-menu" id="moreMenu" style="display:none">
         <div class="more-menu-header">Agent 管理</div>
-        <div class="more-menu-item" onclick="closeMoreMenu();navigateTo('#settings')">⚙ 全局设置</div>
-        <div class="more-menu-item" onclick="closeMoreMenu();toggleLeft()">📂 侧栏</div>
+        <div class="more-menu-item" onclick="closeMoreMenu();navigateTo('#settings')">全局设置</div>
+        <div class="more-menu-item" onclick="closeMoreMenu();toggleLeft()">侧栏开关</div>
         <div class="more-menu-div"></div>
         <div class="more-menu-header">权限与授权</div>
-        <div class="more-menu-item" onclick="closeMoreMenu();loadAgentConfig()">📋 Agent 配置</div>
-        <div class="more-menu-item" id="moreDownloadPerm" onclick="closeMoreMenu();showDownloadPermInfo()">📥 下载权限</div>
-        <div class="more-menu-item" onclick="closeMoreMenu();navigateTo('#profile')">👤 Agent 资料</div>
+        <div class="more-menu-item" onclick="closeMoreMenu();loadAgentConfig()">Agent 配置</div>
+        <div class="more-menu-item" id="moreDownloadPerm" onclick="closeMoreMenu();showDownloadPermInfo()">下载权限</div>
+        <div class="more-menu-item" onclick="closeMoreMenu();navigateTo('#profile')">Agent 资料</div>
       </div>
     </div>
+
+    <div class="page-stage">
 
     <!-- ===== 对话页 ===== -->
     <section id="page-chat" class="page-section active">
       <div class="conversation" id="conv">
-        <div class="welcome" id="welcome">
-          <div class="welcome-icon">⚡</div>
-          <div class="welcome-title">玄姝 Agent</div>
-          <div class="welcome-sub">多模型智能助手 · 已就绪</div>
-          <div class="welcome-hints">
-            <span>联网搜索</span><span>代码分析</span><span>文件管理</span><span>工具调用</span>
+        <div class="welcome conversation-empty" id="welcome">
+          <div class="empty-state">
+            <div class="greeting">玄姝</div>
+            <div class="subtitle">多模型智能助手 &middot; 已就绪</div>
           </div>
         </div>
       </div>
 
       <div class="input-area">
+        <div class="model-bar" id="modelChips"></div>
         <div class="input-row">
-          <button class="file-browse-btn" id="fileBrowseBtn" title="浏览本地文件" aria-label="浏览本地文件">+</button>
-          <input id="msg-input" type="text" placeholder="输入消息…" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();send()}" autocomplete="off">
+          <input type="file" id="fileInput" multiple style="display:none" onchange="uploadFiles()" accept="*/*">
+          <button class="file-browse-btn" id="fileBrowseBtn" title="上传本地文件" aria-label="上传本地文件" onclick="document.getElementById('fileInput').click()">+</button>
           <span id="imagePreview" style="display:none;margin-right:8px"></span>
-          <button class="send-btn" onclick="send()">↑</button>
+          <textarea id="msg-input" placeholder="输入消息…" rows="1" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();send()}"></textarea>
+          <button class="send-btn" onclick="send()">&uarr;</button>
         </div>
       </div>
 
-      <!-- 文件浏览器弹窗 -->
-      <div class="file-browser-popup" id="fileBrowserPopup" style="display:none">
-        <div class="file-browser-header">
-          <span id="fbBreadcrumb">📁 /</span>
-          <button class="file-browser-close" id="fileBrowseClose" aria-label="关闭文件浏览器">✕</button>
+      <!-- 文件查看面板 -->
+      <div class="file-viewer" id="fileViewerPanel" style="display:none">
+        <div class="file-viewer-header">
+          <span class="file-viewer-path" id="fvPath">—</span>
+          <button class="file-viewer-close" onclick="closeFileViewer()" aria-label="关闭文件查看器">&times;</button>
         </div>
-        <div class="file-browser-list" id="fbFileList"></div>
+        <div class="file-viewer-meta" id="fvMeta"></div>
+        <div class="file-viewer-content" id="fvContent"></div>
       </div>
-
-      <div class="model-bar" id="modelChips"></div>
     </section>
 
     <!-- ===== 设置页 ===== -->
     <section id="page-settings" class="page-section padded page-settings">
-      <button class="back-to-chat" onclick="navigateTo('#chat')" title="返回对话">← 返回</button>
+      <button class="back-to-chat" onclick="navigateTo('#chat')" title="返回对话">&larr; 返回</button>
       <div class="panel-tabs">
-        <div class="panel-tab active" tabindex="0" role="tab" aria-selected="true" onclick="switchPanelTab(this,'settings')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();switchPanelTab(this,'settings')}">设置</div>
+        <div class="panel-tab active" tabindex="0" role="tab" aria-selected="true" onclick="switchPanelTab(this,'settings')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();switchPanelTab(this,'settings')}">模型</div>
+        <div class="panel-tab" tabindex="0" role="tab" aria-selected="false" onclick="switchPanelTab(this,'theme')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();switchPanelTab(this,'theme')}">主题</div>
         <div class="panel-tab" tabindex="0" role="tab" aria-selected="false" onclick="switchPanelTab(this,'tools')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();switchPanelTab(this,'tools')}">工具</div>
         <div class="panel-tab" tabindex="0" role="tab" aria-selected="false" onclick="switchPanelTab(this,'agents')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();switchPanelTab(this,'agents')}">Agent</div>
       </div>
 
       <div class="panel-content" id="tab-settings">
         <div class="panel-section">
-          <h3>连接状态</h3>
+          <div class="section-title">连接状态</div>
           <div class="status-indicator panel-status-box">
             <span class="status-dot offline" id="panelStatusDot"></span>
             <span id="panelStatusLabel">未连接 API</span>
           </div>
         </div>
         <div class="panel-section">
-          <h3>API Key</h3>
-          <div class="setting-row">
-            <label for="keyInput" class="setting-label-inline">OpenAI API Key</label>
-            <input id="keyInput" type="password" placeholder="sk-xxxxxxxx" autocomplete="off">
+          <div class="section-title">API Key</div>
+          <div class="form-group">
+            <label for="keyInput" class="form-label">OpenAI API Key</label>
+            <input id="keyInput" type="password" class="form-input" placeholder="sk-xxxxxxxx" autocomplete="off">
           </div>
-          <button class="apply-btn" onclick="applyKey()">应用 Key</button>
-          <button class="apply-btn ghost" onclick="resetKey()" style="margin-top:6px">重置为本地模式</button>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button class="btn btn-primary" onclick="applyKey()">应用 Key</button>
+            <button class="btn btn-ghost" onclick="resetKey()">重置为本地模式</button>
+          </div>
         </div>
         <div class="panel-section">
-          <button class="apply-btn ghost" onclick="clearAllModelKeys()" style="width:100%;font-size:11px">清除所有独立 Key</button>
+          <button class="btn btn-ghost" onclick="clearAllModelKeys()" style="font-size:12px">清除所有独立 Key</button>
         </div>
         <div class="panel-section">
-          <h3>模型选择</h3>
-          <label for="modelSearch" class="setting-label-inline">搜索模型</label>
-          <input id="modelSearch" type="text" placeholder="搜索模型…" oninput="filterModels()" class="model-search-input" style="margin-bottom:8px">
-          <label for="providerFilter" class="setting-label-inline">筛选厂商</label>
-          <select id="providerFilter" onchange="filterModels()" class="model-search-input" style="margin-bottom:8px">
-            <option value="">全部厂商</option>
-          </select>
-          <div id="modelList" style="max-height:280px;overflow-y:auto;display:flex;flex-direction:column;gap:4px"></div>
-          <button class="apply-btn ghost" id="showCustomBtn" onclick="showCustomModel()" style="margin-top:10px;width:100%;touch-action:manipulation">+ 自定义模型</button>
-          <div id="customModelForm" style="display:none;margin-top:12px;padding-top:12px;border-top:1px solid var(--glass-border)">
-            <h3 style="margin-top:0">添加自定义模型</h3>
-            <label for="customName" class="setting-label-inline">模型名称</label>
-            <input id="customName" placeholder="模型名称 (如 MyModel)" class="model-search-input" style="margin-bottom:6px">
-            <label for="customUrl" class="setting-label-inline">API Base URL</label>
-            <input id="customUrl" placeholder="API Base URL (如 https://api.xxx.com/v1)" oninput="autoDetectUrl()" autocomplete="url" class="model-search-input" style="margin-bottom:6px">
-            <label for="customModelId" class="setting-label-inline">Model ID</label>
-            <input id="customModelId" placeholder="Model ID (如 gpt-4o，默认同名称)" class="model-search-input" style="margin-bottom:6px">
-            <div id="urlDetect" style="font-size:11px;color:var(--text-dim);margin-bottom:8px"></div>
+          <div class="section-title">模型选择</div>
+          <div class="form-group">
+            <label for="modelSearch" class="form-label">搜索模型</label>
+            <input id="modelSearch" type="text" class="form-input model-search-input" placeholder="搜索模型…" oninput="filterModels()">
+          </div>
+          <div class="form-group">
+            <label for="providerFilter" class="form-label">筛选厂商</label>
+            <select id="providerFilter" class="form-input model-search-input" onchange="filterModels()">
+              <option value="">全部厂商</option>
+            </select>
+          </div>
+          <div id="modelList" style="max-height:320px;overflow-y:auto;display:flex;flex-direction:column;gap:4px"></div>
+          <button class="btn btn-ghost" id="showCustomBtn" onclick="showCustomModel()" style="margin-top:12px;width:100%">+ 自定义模型</button>
+          <div id="customModelForm" style="display:none;margin-top:16px;padding-top:16px;border-top:1px solid var(--rule)">
+            <div class="section-title" style="margin-top:0">添加自定义模型</div>
+            <div class="form-group">
+              <label for="customName" class="form-label">模型名称</label>
+              <input id="customName" class="form-input" placeholder="如 MyModel">
+            </div>
+            <div class="form-group">
+              <label for="customUrl" class="form-label">API Base URL</label>
+              <input id="customUrl" class="form-input" placeholder="如 https://api.xxx.com/v1" oninput="autoDetectUrl()" autocomplete="url">
+            </div>
+            <div class="form-group">
+              <label for="customModelId" class="form-label">Model ID</label>
+              <input id="customModelId" class="form-input" placeholder="默认同名称">
+            </div>
+            <div id="urlDetect" style="font-size:12px;color:var(--text-muted);margin-bottom:8px"></div>
             <div style="display:flex;gap:8px">
-              <button class="apply-btn" onclick="addCustomModel()" style="flex:1">添加</button>
-              <button class="apply-btn ghost" onclick="hideCustomModel()" style="flex:1">取消</button>
+              <button class="btn btn-primary" onclick="addCustomModel()" style="flex:1">添加</button>
+              <button class="btn btn-ghost" onclick="hideCustomModel()" style="flex:1">取消</button>
             </div>
           </div>
         </div>
         <div class="panel-section">
-          <h3>Token统计</h3>
-          <div style="font-size:13px;color:var(--text-dim)">累计: <span id="tokenCount">0 tk</span></div>
-          <div style="font-size:13px;color:var(--text-dim);margin-top:4px">模型: <span id="panelModel">本地模拟</span></div>
+          <div class="section-title">Token 统计</div>
+          <div style="font-size:13px;color:var(--text-muted)">累计: <span id="tokenCount">0 tk</span></div>
+          <div style="font-size:13px;color:var(--text-muted);margin-top:4px">模型: <span id="panelModel">本地模拟</span></div>
+        </div>
+      </div>
+
+      <div class="panel-content" id="tab-theme" style="display:none">
+        <div class="panel-section">
+          <div class="section-title">背景模式</div>
+          <div class="mode-switch-row">
+            <div class="mode-card active" id="modeDark" onclick="setMode('dark')">
+              <div class="mode-thumb dark-thumb"></div>
+              <span>深色</span>
+            </div>
+            <div class="mode-card" id="modeLight" onclick="setMode('light')">
+              <div class="mode-thumb light-thumb"></div>
+              <span>浅色</span>
+            </div>
+          </div>
+        </div>
+        <div class="panel-section">
+          <div class="section-title">配色方案</div>
+          <div class="accent-palette">
+            <div class="accent-chip active" id="chipCyber" onclick="setAccent('cyber')" title="科幻蓝">
+              <span class="chip-dot" style="background:oklch(0.62 0.20 230)"></span>
+              <span class="chip-label">科幻蓝</span>
+            </div>
+            <div class="accent-chip" id="chipForest" onclick="setAccent('forest')" title="护眼绿">
+              <span class="chip-dot" style="background:oklch(0.50 0.15 145)"></span>
+              <span class="chip-label">护眼绿</span>
+            </div>
+            <div class="accent-chip" id="chipSakura" onclick="setAccent('sakura')" title="樱粉">
+              <span class="chip-dot" style="background:oklch(0.62 0.16 5)"></span>
+              <span class="chip-label">樱粉</span>
+            </div>
+            <div class="accent-chip" id="chipLeather" onclick="setAccent('leather')" title="书封棕">
+              <span class="chip-dot" style="background:oklch(0.50 0.10 55)"></span>
+              <span class="chip-label">书封棕</span>
+            </div>
+          </div>
         </div>
       </div>
 
       <div class="panel-content" id="tab-tools" style="display:none">
         <div class="panel-section">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
-            <h3 style="margin:0">工具适配层</h3>
-            <span id="toolAdapterStatus" style="font-size:10px;color:var(--text-muted)">⚫ 未连接</span>
+            <div class="section-title" style="margin:0">工具适配层</div>
+            <span id="toolAdapterStatus" style="font-size:12px;color:var(--text-muted)">未连接</span>
           </div>
-          <div style="display:flex;gap:6px;margin-bottom:10px">
-            <input id="toolAdapterUrl" placeholder="适配层地址" value="http://127.0.0.1:9010" style="flex:1;padding:7px 10px;border-radius:8px;border:1px solid var(--glass-border);background:var(--glass);color:var(--text);font-size:11px">
-            <button class="apply-btn" onclick="checkToolEnv()" style="padding:7px 12px;font-size:11px">扫描</button>
+          <div style="display:flex;gap:8px;margin-bottom:12px">
+            <input id="toolAdapterUrl" class="form-input" placeholder="适配层地址" value="http://127.0.0.1:9010" style="flex:1;">
+            <button class="btn btn-primary" onclick="checkToolEnv()" style="white-space:nowrap">扫描</button>
           </div>
-          <div id="toolEnvResult" style="font-size:11px;color:var(--text-dim);margin-bottom:8px"></div>
-          <div id="toolGrid" style="display:grid;grid-template-columns:1fr 1fr;gap:6px"></div>
+          <div id="toolEnvResult" style="font-size:12px;color:var(--text-muted);margin-bottom:8px"></div>
+          <div class="tool-grid" id="toolGrid"></div>
         </div>
         <div class="panel-section" id="presetSection" style="display:none">
-          <h3 id="presetTitle">预设操作</h3>
-          <div id="presetList" style="display:flex;flex-direction:column;gap:6px"></div>
-          <div id="presetParams" style="margin-top:8px;display:none"></div>
+          <div class="section-title" id="presetTitle">预设操作</div>
+          <div id="presetList" style="display:flex;flex-direction:column;gap:8px"></div>
+          <div id="presetParams" style="margin-top:12px;display:none"></div>
         </div>
         <div class="panel-section">
-          <h3>自定义命令</h3>
-          <div style="display:flex;gap:6px;margin-bottom:6px">
-            <select id="customToolSelect" onchange="updateCustomTool()" style="flex:1;padding:7px 10px;border-radius:8px;border:1px solid var(--glass-border);background:var(--glass);color:var(--text);font-size:11px">
+          <div class="section-title">自定义命令</div>
+          <div class="form-group">
+            <select id="customToolSelect" class="form-input" onchange="updateCustomTool()">
               <option value="">选择工具</option>
             </select>
           </div>
-          <input id="customCmd" placeholder="输入命令…" onkeydown="if(event.key==='Enter'){runCustomCmd()}" style="width:100%;padding:8px 12px;border-radius:8px;border:1px solid var(--glass-border);background:var(--glass);color:var(--text);font-size:12px;font-family:var(--mono);margin-bottom:6px">
-          <button class="apply-btn" onclick="runCustomCmd()" style="width:100%;font-size:12px">执行</button>
+          <div class="form-group">
+            <input id="customCmd" class="form-input" placeholder="输入命令…" onkeydown="if(event.key==='Enter'){runCustomCmd()}" style="font-family:var(--mono)">
+          </div>
+          <button class="btn btn-primary" onclick="runCustomCmd()" style="width:100%">执行</button>
         </div>
         <div class="panel-section" id="toolOutput" style="display:none">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
-            <h3 style="margin:0">执行结果 <span id="toolExitCode" style="font-size:11px;font-weight:400"></span></h3>
-            <button class="apply-btn ghost" onclick="document.getElementById('toolOutput').style.display='none'" style="padding:4px 10px;font-size:11px">X</button>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+            <div class="section-title" style="margin:0">执行结果</div>
+            <button class="btn btn-ghost btn-sm" onclick="document.getElementById('toolOutput').style.display='none'">关闭</button>
           </div>
-          <pre id="toolOutputContent" style="max-height:260px;overflow:auto;padding:10px;border-radius:8px;border:1px solid var(--glass-border);background:rgba(0,0,0,0.2);font-size:11px;font-family:var(--mono);white-space:pre-wrap;word-break:break-all;color:var(--text)"></pre>
+          <div id="toolExitCode" style="font-size:12px;color:var(--text-muted);margin-bottom:4px"></div>
+          <pre id="toolOutputContent" class="tool-output"></pre>
         </div>
       </div>
 
       <div class="panel-content" id="tab-agents" style="display:none">
         <div class="panel-section">
-          <h3>子Agent列表</h3>
-          <div id="agentList" style="display:flex;flex-direction:column;gap:8px">
-            <div style="padding:10px 14px;border-radius:10px;border:1px solid var(--glass-border);font-size:12px">
-              <div style="font-weight:600;color:var(--primary-text)">搜索Agent</div>
-              <div style="color:var(--text-dim);margin-top:4px">联网检索 / 百科 / 天气</div>
+          <div class="section-title">子 Agent 列表</div>
+          <div id="agentList" style="display:flex;flex-direction:column;gap:10px">
+            <div style="padding:14px;border-radius:var(--radius-sm);border:1px solid var(--rule);background:var(--ink-surface);font-size:13px">
+              <div style="font-weight:600;color:var(--text-paper)">搜索 Agent</div>
+              <div style="color:var(--text-muted);margin-top:4px">联网检索 / 百科 / 天气</div>
             </div>
-            <div style="padding:10px 14px;border-radius:10px;border:1px solid var(--glass-border);font-size:12px">
-              <div style="font-weight:600;color:var(--primary-text)">代码Agent</div>
-              <div style="color:var(--text-dim);margin-top:4px">编程 / 调试 / 算法</div>
+            <div style="padding:14px;border-radius:var(--radius-sm);border:1px solid var(--rule);background:var(--ink-surface);font-size:13px">
+              <div style="font-weight:600;color:var(--text-paper)">代码 Agent</div>
+              <div style="color:var(--text-muted);margin-top:4px">编程 / 调试 / 算法</div>
             </div>
-            <div style="padding:10px 14px;border-radius:10px;border:1px solid var(--glass-border);font-size:12px">
-              <div style="font-weight:600;color:var(--primary-text)">文件Agent</div>
-              <div style="color:var(--text-dim);margin-top:4px">文件管理 / 读写</div>
+            <div style="padding:14px;border-radius:var(--radius-sm);border:1px solid var(--rule);background:var(--ink-surface);font-size:13px">
+              <div style="font-weight:600;color:var(--text-paper)">文件 Agent</div>
+              <div style="color:var(--text-muted);margin-top:4px">文件管理 / 读写</div>
             </div>
           </div>
         </div>
@@ -237,244 +321,70 @@
 
     <!-- ===== 个人主页 ===== -->
     <section id="page-profile" class="page-section padded">
-      <button class="back-to-chat" onclick="navigateTo('#chat')" title="返回对话">← 返回</button>
+      <button class="back-to-chat" onclick="navigateTo('#chat')" title="返回对话">&larr; 返回</button>
       <div class="page-profile-avatar">
         <div class="sidebar-avatar" id="profileAvatar">玄</div>
-        <button class="avatar-upload-btn" onclick="document.getElementById('profileAvatarUpload').click()" style="margin-top:8px">换头像</button>
+        <button class="avatar-upload-btn" onclick="document.getElementById('profileAvatarUpload').click()">更换头像</button>
         <input type="file" id="profileAvatarUpload" accept="image/*" onchange="uploadProfileAvatar()" style="display:none">
       </div>
 
-      <div class="sidebar-mem-section" style="margin-bottom:20px">
-        <div class="sidebar-mem-header">
-          <span class="sidebar-mem-label">记忆</span>
-          <button class="apply-btn ghost sidebar-mem-btn" onclick="refreshSidebarMemdir()">刷新</button>
+      <div class="profile-section">
+        <div class="section-title">记忆</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--s3)">
+          <span class="section-desc">浏览和管理你的记忆文件</span>
+          <button class="btn btn-ghost btn-sm" onclick="refreshSidebarMemdir()">刷新</button>
         </div>
-        <div id="sidebarMemList" class="sidebar-mem-list" style="max-height:300px">
-          <div style="text-align:center;padding:8px">点击刷新</div>
+        <div class="profile-list" id="sidebarMemList" style="max-height:260px;overflow-y:auto">
+          <div style="text-align:center;padding:12px;color:var(--text-muted);font-size:13px">点击刷新加载</div>
         </div>
       </div>
 
-      <div class="sidebar-mem-section">
-        <div class="sidebar-mem-header">
-          <span class="sidebar-mem-label">技能</span>
-          <button class="apply-btn ghost sidebar-mem-btn" onclick="refreshSkills()">刷新</button>
-          <button class="apply-btn ghost sidebar-mem-btn" onclick="newSkill()" style="margin-left:4px">+</button>
+      <div class="profile-section">
+        <div class="section-title">技能</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--s3)">
+          <span class="section-desc">Agent 已学习的技能</span>
+          <div style="display:flex;gap:4px">
+            <button class="btn btn-ghost btn-sm" onclick="refreshSkills()">刷新</button>
+            <button class="btn btn-ghost btn-sm" onclick="newSkill()">+ 新建</button>
+          </div>
         </div>
-        <div id="sidebarSkillList" class="sidebar-mem-list" style="max-height:300px">
-          <div style="font-size:12px;color:var(--text-dim);text-align:center;padding:12px">暂无技能</div>
+        <div class="profile-list" id="sidebarSkillList" style="max-height:260px;overflow-y:auto">
+          <div style="text-align:center;padding:12px;color:var(--text-muted);font-size:13px">暂无技能</div>
         </div>
       </div>
     </section>
+
+    </div><!-- /page-stage -->
+
   </main>
 
   <!-- ===== 底部导航（移动端） ===== -->
   <nav class="bottom-nav">
     <button class="bottom-nav-item active" onclick="navigateTo('#chat')">
-      <span class="nav-icon">💬</span> 对话
+      <span class="nav-icon">&diams;</span> 对话
     </button>
     <button class="bottom-nav-item" onclick="navigateTo('#settings')">
-      <span class="nav-icon">⚙</span> 设置
+      <span class="nav-icon">&diams;</span> 设置
     </button>
     <button class="bottom-nav-item" onclick="navigateTo('#profile')">
-      <span class="nav-icon">👤</span> 主页
+      <span class="nav-icon">&diams;</span> 主页
     </button>
   </nav>
 
 </div>
 
 <script>
-/* ═══ 星云粒子系统 ═══ */
-(function(){
-  const c=document.getElementById('particleCanvas'),
-        ctx=c.getContext('2d'),
-        body=document.body;
-  let w,h,ps=[],clouds=[],rgb=[0,240,255];
-  const N=200;
-
-  // 思考强度
-  let thinkTarget=0, thinkCurrent=0;
-
-  function readThemeColor(){
-    const v=getComputedStyle(body).getPropertyValue('--neon-cyan').trim();
-    const m=v.match(/^#?([a-f0-9]{2})([a-f0-9]{2})([a-f0-9]{2})$/i);
-    if(m) rgb=[parseInt(m[1],16),parseInt(m[2],16),parseInt(m[3],16)];
-  }
-  readThemeColor();
-
-  // 距离平方衰减：中心密集、边缘稀疏
-  function nebulaDensity(dist, radius){
-    const t=dist/radius;
-    return Math.exp(-t*t*4); // 高斯衰减
-  }
-
-  function resize(){
-    w=c.width=window.innerWidth;
-    h=c.height=window.innerHeight;
-    clouds=[];
-    const cxCount=Math.max(2,Math.floor((w*h)/180000));
-    for(let i=0;i<cxCount;i++){
-      clouds.push({
-        x:w*(0.1+Math.random()*0.8),
-        y:h*(0.1+Math.random()*0.8),
-        vx:(Math.random()-0.5)*0.2,
-        vy:(Math.random()-0.5)*0.2,
-        radius:Math.min(w,h)*(0.08+Math.random()*0.12),
-        arms:2+Math.floor(Math.random()*3), // 旋臂数
-        twist:0.3+Math.random()*0.5,        // 旋臂卷曲度
-        phase:Math.random()*Math.PI*2
-      });
-    }
-    // 按密度分布生成粒子
-    ps=[];
-    for(let i=0;i<N;i++){
-      const cx=clouds[Math.floor(Math.random()*clouds.length)];
-      // 用拒绝采样实现中心密集分布
-      let dist;
-      do{ dist=Math.random()*cx.radius; }
-      while(Math.random()>nebulaDensity(dist,cx.radius));
-      const baseAngle=Math.random()*Math.PI*2;
-      // 旋臂扰动：粒子更倾向于落在旋臂角度附近
-      const armIdx=Math.floor(Math.random()*cx.arms);
-      const armAngle=(armIdx/cx.arms)*Math.PI*2;
-      const angle=armAngle+(Math.random()-0.5)*cx.twist*(1+dist/cx.radius);
-      ps.push({
-        x:cx.x+Math.cos(angle)*dist,
-        y:cx.y+Math.sin(angle)*dist,
-        cxIdx:clouds.indexOf(cx),
-        orbitAngle:angle,
-        orbitDist:dist,
-        orbitSpeed:0.003+Math.random()*0.008 - dist/cx.radius*0.004, // 内圈快外圈慢
-        baseAlpha:0.08+nebulaDensity(dist,cx.radius)*0.7, // 中心亮边缘暗
-        phase:Math.random()*Math.PI*2,
-        r:0.3+Math.random()*2.5*nebulaDensity(dist,cx.radius), // 中心粒子更大
-        jitter:Math.random()*1.2
-      });
-    }
-  }
-  resize();window.addEventListener('resize',resize);
-
-  let fc=0;
-  function draw(){
-    fc++;
-    if(fc%45===0) readThemeColor();
-    thinkCurrent+=(thinkTarget-thinkCurrent)*0.025;
-
-    const t=fc*0.016;
-    const intensity=thinkCurrent;
-    const speedMul=1+intensity*2.5;
-    const linkDist=60+intensity*180;
-    const linkAlpha=0.02+intensity*0.15;
-    const breathFreq=1.2+intensity*0.8;
-
-    // 云团漂移
-    for(const cx of clouds){
-      cx.x+=cx.vx*speedMul;
-      cx.y+=cx.vy*speedMul;
-      if(cx.x<-cx.radius*2) cx.x=w+cx.radius*2;
-      if(cx.x>w+cx.radius*2) cx.x=-cx.radius*2;
-      if(cx.y<-cx.radius*2) cx.y=h+cx.radius*2;
-      if(cx.y>h+cx.radius*2) cx.y=-cx.radius*2;
-    }
-
-    ctx.clearRect(0,0,w,h);
-    const [cr,cg,cb]=rgb;
-
-    // ── 第一遍：星云底层光晕 ──
-    for(const cx of clouds){
-      const glowR=cx.radius*(0.85+intensity*0.3);
-      const breath=0.5+0.5*Math.sin(t*breathFreq+cx.phase);
-      const glowAlpha=0.03+intensity*0.04+breath*0.02;
-      const grad=ctx.createRadialGradient(cx.x,cx.y,0,cx.x,cx.y,glowR);
-      grad.addColorStop(0,`rgba(${Math.min(255,cr+100)},${Math.min(255,cg+100)},${Math.min(255,cb+100)},${glowAlpha*2})`);
-      grad.addColorStop(0.3,`rgba(${cr},${cg},${cb},${glowAlpha})`);
-      grad.addColorStop(0.7,`rgba(${cr},${cg},${cb},${glowAlpha*0.4})`);
-      grad.addColorStop(1,'rgba(0,0,0,0)');
-      ctx.fillStyle=grad;
-      ctx.fillRect(cx.x-glowR,cx.y-glowR,glowR*2,glowR*2);
-    }
-
-    // ── 第二遍：粒子 ──
-    for(let i=0;i<ps.length;i++){
-      const p=ps[i];
-      const cx=clouds[p.cxIdx]||clouds[0];
-      p.orbitAngle+=p.orbitSpeed*speedMul;
-      // 旋臂扭曲：越远扭曲越大
-      const twist=p.orbitDist/cx.radius*cx.twist*Math.sin(t*0.4+p.phase)*speedMul*0.5;
-      const a=p.orbitAngle+twist;
-      const tx=cx.x+Math.cos(a)*p.orbitDist;
-      const ty=cx.y+Math.sin(a)*p.orbitDist;
-      p.x=tx+Math.sin(t*2.5+p.phase)*p.jitter*speedMul*0.3;
-      p.y=ty+Math.cos(t*3.1+p.phase)*p.jitter*speedMul*0.3;
-
-      const breath=0.4+0.6*Math.sin(t*breathFreq+p.phase);
-      const distNorm=p.orbitDist/cx.radius;
-      // 中心粒子偏白（热点），外圈纯主题色
-      const whiteness=Math.max(0,1-distNorm*2);
-      const sr=Math.min(255,cr+Math.floor(whiteness*(255-cr)));
-      const sg=Math.min(255,cg+Math.floor(whiteness*(255-cg)));
-      const sb=Math.min(255,cb+Math.floor(whiteness*(255-cb)));
-      const alpha=p.baseAlpha*(0.5+breath*0.5)*(0.5+intensity*0.5);
-
-      // 内层光晕
-      ctx.beginPath();
-      ctx.arc(p.x,p.y,p.r*4,0,Math.PI*2);
-      ctx.fillStyle=`rgba(${sr},${sg},${sb},${alpha*0.15})`;
-      ctx.fill();
-      // 中层
-      ctx.beginPath();
-      ctx.arc(p.x,p.y,p.r*1.8,0,Math.PI*2);
-      ctx.fillStyle=`rgba(${sr},${sg},${sb},${alpha*0.4})`;
-      ctx.fill();
-      // 内核亮点
-      ctx.beginPath();
-      ctx.arc(p.x,p.y,p.r,0,Math.PI*2);
-      ctx.fillStyle=`rgba(${sr},${sg},${sb},${alpha})`;
-      ctx.fill();
-    }
-
-    // ── 第三遍：旋臂丝状连线 ──
-    for(let i=0;i<ps.length;i++){
-      const pi=ps[i];
-      for(let j=i+1;j<ps.length;j++){
-        const pj=ps[j];
-        if(pi.cxIdx!==pj.cxIdx) continue;
-        const dx=pi.x-pj.x, dy=pi.y-pj.y;
-        const d=Math.sqrt(dx*dx+dy*dy);
-        if(d<linkDist){
-          ctx.beginPath();
-          ctx.moveTo(pi.x,pi.y);
-          ctx.lineTo(pj.x,pj.y);
-          const la=linkAlpha*(1-d/linkDist);
-          ctx.strokeStyle=`rgba(${cr},${cg},${cb},${la.toFixed(3)})`;
-          ctx.lineWidth=0.3+intensity*0.5;
-          ctx.stroke();
-        }
-      }
-    }
-
-    requestAnimationFrame(draw);
-  }
-  draw();
-
-  window.setThinkingLevel=function(lv){thinkTarget=Math.max(0,Math.min(1,lv));};
-  window.startThinking=function(){thinkTarget=0.7;};
-  window.stopThinking=function(){thinkTarget=0;};
-  window.refreshParticleColor=readThemeColor;
-})();
-
 // ========== 状态 ==========
-const API = '';  // 同端口，无需跨域
-
+const API = '';
 let currentModel = 'deepseek-v3';
 let hasKey = false;
-let savedKey = '';           // 已成功应用的全局Key（input清空后保留）
+let savedKey = '';
 let totalTokens = 0;
 let currentSessionId = 'sess_' + Date.now();
 const conv = document.getElementById('conv');
 const inp = document.getElementById('msg-input');
-let pendingImage = null;  // 待发送的屏幕截图 base64
+let pendingImage = null;
 
-// 截图粘贴支持 — Ctrl+V 将剪贴板图片转为 base64
 inp.addEventListener('paste', async (e) => {
   const items = e.clipboardData?.items;
   if (!items) return;
@@ -484,9 +394,9 @@ inp.addEventListener('paste', async (e) => {
       const blob = item.getAsFile();
       const reader = new FileReader();
       reader.onload = () => {
-        pendingImage = reader.result; // data:image/png;base64,...
+        pendingImage = reader.result;
         const preview = document.getElementById('imagePreview');
-        preview.innerHTML = `<img src="${pendingImage}" style="max-height:60px;border-radius:8px;border:2px solid var(--primary);vertical-align:middle">`;
+        preview.innerHTML = '<img src="'+pendingImage+'" style="max-height:60px;border-radius:6px;border:2px solid var(--cinnabar);vertical-align:middle">';
         preview.style.display = 'inline-block';
       };
       reader.readAsDataURL(blob);
@@ -526,36 +436,29 @@ function closeAllPanels() {
 // ========== Hash 路由 ==========
 function navigateTo(hash) {
   if (window.location.hash === hash) {
-    // pulse current-page nav as "you're already here" feedback
     document.querySelectorAll('.sidebar-nav-item, .bottom-nav-item').forEach(el => {
       el.classList.add('nav-pulse');
       setTimeout(() => el.classList.remove('nav-pulse'), 400);
     });
     return;
   }
-  // mobile: auto-close sidebar on navigation
   if (IS_MOBILE.matches) closeAllPanels();
   window.location.hash = hash;
 }
 function onHashChange() {
   const hash = window.location.hash || '#chat';
-  // 切换页面
   document.querySelectorAll('.page-section').forEach(s => s.classList.remove('active'));
   const page = document.getElementById('page-' + hash.slice(1));
   if (page) page.classList.add('active');
-  // 高亮侧栏导航
   document.querySelectorAll('.sidebar-nav-item').forEach(a => {
     a.classList.toggle('active', a.getAttribute('href') === hash);
   });
-  // 底部导航高亮
   document.querySelectorAll('.bottom-nav-item').forEach((b, i) => {
     b.classList.toggle('active', ['#chat','#settings','#profile'][i] === hash);
   });
-  // 进入个人主页时刷新数据
   if (hash === '#profile') {
     refreshSidebarMemdir(); refreshSkills();
   }
-  // 进入设置页时刷新模型
   if (hash === '#settings') { loadModels(); }
 }
 window.addEventListener('hashchange', onHashChange);
@@ -567,12 +470,31 @@ function switchPanelTab(el, tab) {
   document.querySelectorAll('.panel-tab').forEach(t => { t.classList.remove('active'); t.setAttribute('aria-selected', 'false'); });
   el.classList.add('active');
   el.setAttribute('aria-selected', 'true');
-  ['settings','tools','agents'].forEach(id => {
-    const panel = document.getElementById('tab-' + id);
-    panel.style.display = id === tab ? 'block' : 'none';
-    panel.classList.toggle('active', id === tab);
+  ['settings','theme','tools','agents'].forEach(id => {
+    document.getElementById('tab-' + id).style.display = id === tab ? '' : 'none';
   });
 }
+
+// ========== 主题切换 ==========
+function setMode(mode) {
+  document.documentElement.setAttribute('data-mode', mode);
+  localStorage.setItem('marvis-mode', mode);
+  document.getElementById('modeDark').classList.toggle('active', mode === 'dark');
+  document.getElementById('modeLight').classList.toggle('active', mode === 'light');
+}
+function setAccent(accent) {
+  document.documentElement.setAttribute('data-accent', accent);
+  localStorage.setItem('marvis-accent', accent);
+  ['Cyber','Forest','Sakura','Leather'].forEach(a => {
+    document.getElementById('chip' + a).classList.toggle('active', a.toLowerCase() === accent);
+  });
+}
+(function initTheme() {
+  const savedMode = localStorage.getItem('marvis-mode') || 'dark';
+  const savedAccent = localStorage.getItem('marvis-accent') || 'cyber';
+  setMode(savedMode);
+  setAccent(savedAccent);
+})();
 
 // ========== 连接状态 ==========
 function setStatus(state, label) {
@@ -589,7 +511,7 @@ function setStatus(state, label) {
 // ========== API Key ==========
 async function applyKey() {
   let key = document.getElementById('keyInput').value.trim();
-  if (!key) key = savedKey;  // input被清空后，使用已保存的Key重新应用
+  if (!key) key = savedKey;
   if (!key) { showToast('请输入 API Key'); return; }
   if (currentModel === 'local') {
     showToast('请先在模型列表中选择一个真实模型');
@@ -611,11 +533,11 @@ async function applyKey() {
       closeAllPanels();
       loadModels();
     } else {
-      setStatus('error', d.error || '连接失败');
+      setStatus('offline', d.error || '连接失败');
       showToast('失败: ' + (d.error || '未知错误'));
     }
   } catch(e) {
-    setStatus('error', 'API 服务未启动');
+    setStatus('offline', 'API 服务未启动');
     showToast('API 服务未启动 (端口8900)');
   }
 }
@@ -696,7 +618,7 @@ function filterModels() {
 
 function renderModelList(models) {
   const list = document.getElementById('modelList');
-  if (!models.length) { list.innerHTML = '<div style="padding:12px;color:var(--text-muted);text-align:center">无匹配模型</div>'; return; }
+  if (!models.length) { list.innerHTML = '<div style="padding:12px;color:var(--text-muted);text-align:center;font-size:13px">无匹配模型</div>'; return; }
   const groups = {};
   models.forEach(m => {
     if (!groups[m.provider]) groups[m.provider] = [];
@@ -705,56 +627,56 @@ function renderModelList(models) {
   let html = '';
   for (const [provider, items] of Object.entries(groups)) {
     const count = items.length;
-    html += '<div style="display:flex;align-items:center;padding:8px 4px 4px;font-size:10px;color:var(--text-muted);font-weight:600;letter-spacing:0.5px;text-transform:uppercase">'+
+    html += '<div style="display:flex;align-items:center;padding:10px 4px 4px;font-size:11px;color:var(--text-muted);font-weight:600;letter-spacing:0.5px;text-transform:uppercase">'+
       provider+' <span style="font-weight:400;margin-left:4px">'+count+'个</span></div>';
     html += items.map(m => {
       const isActive = m.key === currentModel;
-      const border = isActive ? 'var(--primary)' : 'var(--glass-border)';
-      const bg = isActive ? 'background:var(--glass-active);box-shadow:0 0 12px var(--primary-glow);' : '';
-      const marker = isActive ? '<span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--primary);margin-right:8px;flex-shrink:0"></span>'
+      const border = isActive ? 'var(--cinnabar)' : 'var(--rule)';
+      const bg = isActive ? 'background:var(--cinnabar-smoke);' : '';
+      const marker = isActive ? '<span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--cinnabar);margin-right:8px;flex-shrink:0"></span>'
         : '<span style="display:inline-block;width:7px;height:7px;margin-right:8px;flex-shrink:0"></span>';
       const desc = m.description ? ' <span style="color:var(--text-muted)">'+m.description+'</span>' : '';
-      const delBtn = m.custom ? '<button onclick="event.stopPropagation();delModel(\''+m.key+'\')" title="删除" style="background:none;border:none;color:var(--danger);cursor:pointer;font-size:16px;padding:0 4px;line-height:1">×</button>' : '';
+      const delBtn = m.custom ? '<button onclick="event.stopPropagation();delModel(\''+m.key+'\')" title="删除" style="background:none;border:none;color:var(--cinnabar);cursor:pointer;font-size:16px;padding:0 4px;line-height:1">&times;</button>' : '';
       const areaId = 'k_' + m.key.replace(/[^a-zA-Z0-9]/g, '_');
       const esName = m.name.replace(/'/g,"\\'");
 
       if (m.has_key) {
         const keyVal = modelKeyValues[m.key] || '';
         const masked = keyVal ? maskKeyText(keyVal) : '••••••••';
-        return '<div onclick="pickModel(\''+m.key+'\',\''+esName+'\')" style="padding:10px 12px;border-radius:10px;border:1px solid '+border+';cursor:pointer;font-size:12px;transition:all var(--transition);'+bg+'">'+
+        return '<div onclick="pickModel(\''+m.key+'\',\''+esName+'\')" style="padding:10px 12px;border-radius:8px;border:1px solid '+border+';cursor:pointer;font-size:13px;transition:all var(--transition);'+bg+'">'+
           '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">'+
           '<div style="display:flex;align-items:center;flex:1;min-width:0">'+marker+
           '<span style="font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+m.name+'</span>'+desc+'</div>'+
           '<div style="display:flex;align-items:center;gap:6px;flex-shrink:0;margin-left:8px">'+
           '<span style="font-size:10px;color:var(--success);background:var(--success-bg);padding:2px 8px;border-radius:10px;white-space:nowrap">已配置</span>'+delBtn+'</div></div>'+
-          '<div style="display:flex;align-items:center;gap:6px;font-size:10px">'+
-          '<code style="font-family:var(--mono);color:var(--text-secondary);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+masked+'</code>'+
-          (keyVal ? '<button onclick="event.stopPropagation();copyModelKey(\''+m.key+'\')" title="复制Key" style="background:none;border:none;color:var(--primary-text);cursor:pointer;font-size:11px;white-space:nowrap">📋 复制</button>' : '')+
+          '<div style="display:flex;align-items:center;gap:6px;font-size:11px">'+
+          '<code style="font-family:var(--mono);color:var(--text-muted);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+masked+'</code>'+
+          (keyVal ? '<button onclick="event.stopPropagation();copyModelKey(\''+m.key+'\')" title="复制Key" style="background:none;border:none;color:var(--cinnabar);cursor:pointer;font-size:12px;white-space:nowrap">复制</button>' : '')+
           '</div></div>';
       }
 
-      const keyArea = '<div id="'+areaId+'" style="display:none;margin-top:10px;padding-top:10px;border-top:1px solid var(--border)" onclick="event.stopPropagation()">'+
+      const keyArea = '<div id="'+areaId+'" style="display:none;margin-top:10px;padding-top:10px;border-top:1px solid var(--rule)" onclick="event.stopPropagation()">'+
         '<div style="display:flex;gap:6px;align-items:flex-start">'+
         '<div style="position:relative;flex:1">'+
         '<input id="'+areaId+'_inp" type="password" placeholder="输入 API Key" '+
-        'style="width:100%;padding:8px 34px 8px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:13px;font-family:var(--mono);transition:border-color var(--transition)" '+
+        'style="width:100%;padding:8px 34px 8px 12px;border-radius:6px;border:1px solid var(--rule);background:var(--ink-deep);color:var(--text-body);font-size:13px;font-family:var(--mono);transition:border-color var(--transition)" '+
         'onkeydown="if(event.key===\'Enter\'){applyInlineKey(\''+areaId+'\',\''+m.key+'\',\''+esName+'\')}" '+
         'oninput="clearKeyStatus(\''+areaId+'\')">'+
-        '<span onclick="toggleKeyVis(\''+areaId+'\')" title="显示/隐藏" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);cursor:pointer;color:var(--text-dim);font-size:14px;user-select:none;line-height:1">👁</span>'+
+        '<span onclick="toggleKeyVis(\''+areaId+'\')" title="显示/隐藏" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);cursor:pointer;color:var(--text-muted);font-size:14px;user-select:none">&#9673;</span>'+
         '</div>'+
         '<button onclick="applyInlineKey(\''+areaId+'\',\''+m.key+'\',\''+esName+'\')" id="'+areaId+'_btn" '+
-        'style="padding:8px 14px;border-radius:8px;border:none;background:var(--primary);color:#fff;font-size:13px;cursor:pointer;white-space:nowrap;font-family:var(--font);transition:opacity var(--transition)">验证连接</button>'+
+        'style="padding:8px 14px;border-radius:6px;border:none;background:var(--cinnabar);color:var(--text-paper);font-size:13px;cursor:pointer;white-space:nowrap;transition:opacity var(--transition)">验证连接</button>'+
         '</div>'+
         '<div id="'+areaId+'_status" style="font-size:11px;margin-top:6px;min-height:18px"></div>'+
         '</div>';
 
-      return '<div onclick="toggleInlineKey(\''+areaId+'\')" style="padding:10px 12px;border-radius:10px;border:1px solid '+border+';cursor:pointer;font-size:12px;transition:all var(--transition);'+bg+'">'+
+      return '<div onclick="toggleInlineKey(\''+areaId+'\')" style="padding:10px 12px;border-radius:8px;border:1px solid '+border+';cursor:pointer;font-size:13px;transition:all var(--transition);'+bg+'">'+
         '<div style="display:flex;justify-content:space-between;align-items:center">'+
         '<div style="display:flex;align-items:center;flex:1;min-width:0">'+marker+
         '<div style="min-width:0"><div style="font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+m.name+desc+'</div>'+
-        '<div style="color:var(--text-dim);font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+m.base_url+'</div></div></div>'+
+        '<div style="color:var(--text-muted);font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+m.base_url+'</div></div></div>'+
         '<div style="display:flex;align-items:center;gap:6px;flex-shrink:0;margin-left:8px">'+
-        '<span style="color:var(--text-muted);font-size:11px;white-space:nowrap">🔒 未配置</span>'+delBtn+'</div></div>'+
+        '<span style="color:var(--text-muted);font-size:12px;white-space:nowrap">未配置</span>'+delBtn+'</div></div>'+
         keyArea+'</div>';
     }).join('');
   }
@@ -769,10 +691,8 @@ function pickModel(key, name) {
   applyModelSwitch();
 }
 
-// 工具栏模型 Chip 渲染
 function buildModelChips() {
   const container = document.getElementById('modelChips');
-  // 只显示已配置 Key 的模型 + 当前模型
   let chips = allModels.filter(m => m.has_key || m.key === currentModel || m.key === 'deepseek-v3');
   const seen = new Set();
   chips = chips.filter(m => { if (seen.has(m.key)) return false; seen.add(m.key); return true; });
@@ -783,17 +703,17 @@ function buildModelChips() {
   const dotClass = cur && cur.has_key ? 'ok' : 'no';
 
   container.innerHTML =
-    '<span style="font-size:10px;color:var(--text-dim);flex-shrink:0;margin-right:2px">'+
-    '<span class="chip-dot '+dotClass+'" style="display:inline-block;vertical-align:middle"></span> '+curName+
+    '<span style="font-size:11px;color:var(--text-muted);flex-shrink:0;margin-right:2px;display:flex;align-items:center;gap:4px">'+
+    '<span class="chip-dot '+dotClass+'"></span> '+curName+
     '</span>' +
     chips.map(m => {
       const active = m.key === currentModel ? ' active' : '';
       const dot = m.has_key ? 'ok' : 'no';
       const shortName = m.name.length > 10 ? m.name.slice(0, 9) + '…' : m.name;
-      return '<div class="model-chip'+active+'" tabindex="0" role="button" aria-pressed="'+(active?'true':'false')+'" onclick="switchChip(\''+m.key+'\')" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();switchChip(\''+m.key+'\')}" title="'+(m.has_key?'已配Key':'未配Key')+' | '+m.provider+'">'+
+      return '<button class="model-chip'+active+'" onclick="switchChip(\''+m.key+'\')" title="'+(m.has_key?'已配Key':'未配Key')+' | '+m.provider+'">'+
         '<span class="chip-dot '+dot+'"></span>'+
         '<span>'+shortName+'</span>'+
-        '</div>';
+        '</button>';
     }).join('');
 }
 
@@ -803,7 +723,6 @@ function switchChip(key) {
   pickModel(key, m.name);
 }
 
-// 切换模型时尝试应用已有的独立 Key
 async function applyModelSwitch() {
   const m = allModels.find(x => x.key === currentModel);
   if (!m) {
@@ -823,7 +742,7 @@ async function applyModelSwitch() {
     }
   } catch(e) {
     hasKey = false;
-    setStatus('error', 'API 未启动');
+    setStatus('offline', 'API 未启动');
   }
 }
 
@@ -848,7 +767,7 @@ async function applyInlineKey(areaId, modelKey, modelName) {
   btn.disabled = true;
   btn.textContent = '验证中…';
   btn.style.opacity = '0.7';
-  status.innerHTML = '<span style="color:var(--warning)">⏳ 正在验证连接…</span>';
+  status.innerHTML = '<span style="color:var(--warning)">正在验证连接…</span>';
   try {
     const r = await fetch(API + '/model-key', {
       method: 'POST', headers: {'Content-Type':'application/json'},
@@ -859,23 +778,23 @@ async function applyInlineKey(areaId, modelKey, modelName) {
       currentModel = d.current_model || modelKey;
       hasKey = true;
       setStatus('online', '已连接 ' + modelName);
-      status.innerHTML = '<span style="color:var(--success)">✅ 连接成功 — ' + modelName + '</span>';
+      status.innerHTML = '<span style="color:var(--success)">连接成功 — ' + modelName + '</span>';
       modelKeyValues[modelKey] = key;
       if (inp) { inp.style.borderColor = 'var(--success)'; inp.value = ''; }
       btn.style.display = 'none';
       setTimeout(() => loadModels(), 600);
     } else {
-      setStatus('error', d.error || '配置失败');
-      status.innerHTML = '<span style="color:var(--danger)">❌ ' + (d.error || '验证失败') + '</span>';
-      if (inp) inp.style.borderColor = 'var(--danger)';
+      setStatus('offline', d.error || '配置失败');
+      status.innerHTML = '<span style="color:var(--cinnabar)">' + (d.error || '验证失败') + '</span>';
+      if (inp) inp.style.borderColor = 'var(--cinnabar)';
       btn.disabled = false;
       btn.textContent = '重试';
       btn.style.opacity = '1';
       showToast('失败: ' + (d.error || '未知错误'));
     }
   } catch(e) {
-    status.innerHTML = '<span style="color:var(--danger)">❌ 网络错误 — API 服务未启动</span>';
-    if (inp) inp.style.borderColor = 'var(--danger)';
+    status.innerHTML = '<span style="color:var(--cinnabar)">网络错误 — API 服务未启动</span>';
+    if (inp) inp.style.borderColor = 'var(--cinnabar)';
     btn.disabled = false;
     btn.textContent = '重试';
     btn.style.opacity = '1';
@@ -896,7 +815,7 @@ function toggleKeyVis(areaId) {
 function clearKeyStatus(areaId) {
   const inp = document.getElementById(areaId + '_inp');
   const status = document.getElementById(areaId + '_status');
-  if (inp) inp.style.borderColor = 'var(--border)';
+  if (inp) inp.style.borderColor = 'var(--rule)';
   if (status) status.innerHTML = '';
   const btn = document.getElementById(areaId + '_btn');
   if (btn) { btn.textContent = '验证连接'; btn.disabled = false; btn.style.opacity = '1'; }
@@ -909,7 +828,6 @@ async function copyModelKey(modelKey) {
     await navigator.clipboard.writeText(val);
     showToast('Key 已复制到剪贴板');
   } catch(e) {
-    // fallback for older browsers
     const ta = document.createElement('textarea');
     ta.value = val; ta.style.position = 'fixed'; ta.style.left = '-9999px';
     document.body.appendChild(ta); ta.select();
@@ -918,11 +836,8 @@ async function copyModelKey(modelKey) {
   }
 }
 
-// ========== 模型切换时应用 Key ==========
-
 async function clearAllModelKeys() {
   if (!confirm('确定要清除所有模型的独立 Key 配置吗？此操作不可撤销。')) return;
-  // 逐个清除
   for (const m of allModels) {
     if (m.has_key) {
       await fetch(API + '/model-key', {
@@ -956,29 +871,17 @@ function hideCustomModel() {
 function autoDetectUrl() {
   const url = document.getElementById('customUrl').value.trim();
   if (!url) { document.getElementById('urlDetect').textContent = ''; return; }
-  // 从URL推断厂商
   const map = {
-    'api.openai.com': 'OpenAI',
-    'api.anthropic.com': 'Anthropic',
-    'generativelanguage.googleapis.com': 'Google',
-    'api.deepseek.com': 'DeepSeek',
-    'dashscope.aliyuncs.com': '阿里通义',
-    'open.bigmodel.cn': '智谱',
-    'api.moonshot.cn': '月之暗面',
-    'ark.cn-beijing.volces.com': '字节豆包',
-    'api.baichuan-ai.com': '百川',
-    'api.minimax.chat': 'Minimax',
-    'api.lingyiwanwu.com': '零一万物',
-    'spark-api': '讯飞星火',
-    'hunyuan': '腾讯混元',
-    'api.mistral.ai': 'Mistral',
-    'api.llama.com': 'Meta',
-    'api.x.ai': 'xAI',
-    'api.cohere.ai': 'Cohere',
-    'api.siliconflow.cn': 'SiliconFlow',
-    'openrouter.ai': 'OpenRouter',
-    'api.together.xyz': 'Together AI',
-    'integrate.api.nvidia.com': 'NVIDIA',
+    'api.openai.com': 'OpenAI', 'api.anthropic.com': 'Anthropic',
+    'generativelanguage.googleapis.com': 'Google', 'api.deepseek.com': 'DeepSeek',
+    'dashscope.aliyuncs.com': '阿里通义', 'open.bigmodel.cn': '智谱',
+    'api.moonshot.cn': '月之暗面', 'ark.cn-beijing.volces.com': '字节豆包',
+    'api.baichuan-ai.com': '百川', 'api.minimax.chat': 'Minimax',
+    'api.lingyiwanwu.com': '零一万物', 'spark-api': '讯飞星火',
+    'hunyuan': '腾讯混元', 'api.mistral.ai': 'Mistral',
+    'api.llama.com': 'Meta', 'api.x.ai': 'xAI', 'api.cohere.ai': 'Cohere',
+    'api.siliconflow.cn': 'SiliconFlow', 'openrouter.ai': 'OpenRouter',
+    'api.together.xyz': 'Together AI', 'integrate.api.nvidia.com': 'NVIDIA',
     'ai.api.nvidia.com': 'NVIDIA',
   };
   for (const [host, name] of Object.entries(map)) {
@@ -1023,7 +926,6 @@ async function delModel(key) {
   } catch(e) {}
 }
 
-// 初始化
 loadModels();
 loadSidebarAvatar();
 
@@ -1043,7 +945,6 @@ async function send() {
   const img = pendingImage;
   if (img) { body.image = img; pendingImage = null; document.getElementById('imagePreview').style.display = 'none'; }
   const typingEl = addTyping();
-  window.startThinking&&window.startThinking();
   try {
     const r = await fetch(API + '/chat', {
       method: 'POST', headers: {'Content-Type':'application/json'},
@@ -1051,9 +952,7 @@ async function send() {
     });
     const d = await r.json();
     typingEl.remove();
-    window.stopThinking&&window.stopThinking();
 
-    // 权限请求拦截：[PERM:type]description
     if (d.reply && d.reply.startsWith('[PERM:')) {
       const m = d.reply.match(/^\[PERM:(\w+)\]([\s\S]*)/);
       if (m) { showPermission(m[1], m[2].trim()); }
@@ -1061,10 +960,11 @@ async function send() {
       return;
     }
 
+    const thinkings = d.thinking || [];
     if (d.cmd) {
       addBubble('system', d.reply);
     } else {
-      addBubble('agent', d.reply, d.agent);
+      addBubble('agent', d.reply, d.agent, thinkings);
     }
     if (d.model) {
       currentModel = d.model;
@@ -1074,15 +974,13 @@ async function send() {
     updateTokenBadge();
   } catch(e) {
     typingEl.remove();
-    window.stopThinking&&window.stopThinking();
     addBubble('system', '请求失败 — 请检查 API Key 或当前模型');
   }
   btn.disabled = false;
   inp.focus();
 }
 
-function addBubble(role, content, agentName) {
-  // 隐藏欢迎页
+function addBubble(role, content, agentName, thinkings) {
   const welcome = document.getElementById('welcome');
   if (welcome) welcome.style.display = 'none';
 
@@ -1090,12 +988,19 @@ function addBubble(role, content, agentName) {
   d.className = 'bubble ' + role;
   let html = renderMarkdown(content);
   if (agentName) {
-    d.innerHTML = '<div class="agent-label">'+
-      '<span class="agent-icon">⚡</span>'+
-      '<span class="agent-name">'+agentName+'</span></div>'+
-      '<div class="agent-body">'+html+'</div>';
+    let thinkingHtml = '';
+    if (thinkings && thinkings.length > 0) {
+      const steps = thinkings.map(t =>
+        '<div class="thinking-step">'+
+          '<span class="tstep-tool"><span class="tstep-round">#'+t.round+'</span>'+t.tool+'</span>'+
+          t.thought+
+        '</div>'
+      ).join('');
+      thinkingHtml = '<details class="thinking-chain"><summary>思考过程 ('+thinkings.length+' 步)</summary>'+steps+'</details>';
+    }
+    d.innerHTML = '<div class="agent-label"><span class="agent-name">'+agentName+'</span></div><div class="agent-body">'+thinkingHtml+html+'</div>';
   } else if (role==='system') {
-    d.innerHTML = '<div style="text-align:center">'+html+'</div>';
+    d.innerHTML = '<div style="text-align:center;color:var(--text-muted)">'+html+'</div>';
   } else {
     d.innerHTML = html;
   }
@@ -1105,40 +1010,22 @@ function addBubble(role, content, agentName) {
 }
 
 function renderMarkdown(text) {
-  // Escape HTML
   let html = text
     .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-
-  // Code blocks (``` ... ```)
   html = html.replace(/```(\w*)\n([\s\S]*?)```/g, function(_, lang, code) {
     return '<pre class="code-block"><code>' + code.replace(/\n$/, '') + '</code></pre>';
   });
-
-  // Inline code
   html = html.replace(/`([^`]+)`/g, '<code class="inline-code">$1</code>');
-
-  // Bold
   html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
-
-  // Headers (### ...)
   html = html.replace(/^### (.+)$/gm, '<h3 class="md-h3">$1</h3>');
   html = html.replace(/^## (.+)$/gm, '<h2 class="md-h2">$1</h2>');
-
-  // Unordered lists
   html = html.replace(/^[*-] (.+)$/gm, '<li>$1</li>');
   html = html.replace(/(<li>[\s\S]*?<\/li>)/g, function(m) {
-    // wrap consecutive li into ul
     return '<ul class="md-ul">' + m + '</ul>';
   });
-  // fix: merge adjacent ul tags
   html = html.replace(/<\/ul>\n<ul class="md-ul">/g, '\n');
-
-  // Horizontal rule
   html = html.replace(/^---$/gm, '<hr class="md-hr">');
-
-  // Line breaks
   html = html.replace(/\n/g, '<br>');
-
   return html;
 }
 
@@ -1154,201 +1041,41 @@ function addTyping() {
 function updateTokenBadge() {
   const k = (totalTokens / 1000).toFixed(1);
   document.getElementById('tokenBadge').textContent = k + 'k tk';
-  document.getElementById('tokenCount').textContent = k + 'k tk';
+  const tc = document.getElementById('tokenCount');
+  if (tc) tc.textContent = k + 'k tk';
 }
 
-// ========== 输入框文件浏览器 ==========
-let fbCurrentPath = '';
-
-async function toggleFileBrowser(e) {
-  if (e) { e.preventDefault(); e.stopPropagation(); }
-  const popup = document.getElementById('fileBrowserPopup');
-  const btn = document.getElementById('fileBrowseBtn');
-  if (popup.style.display === 'none' || !popup.style.display) {
-    popup.style.display = '';
-    btn.classList.add('active');
-    // 显示加载状态
-    document.getElementById('fbFileList').innerHTML = '<div style="padding:16px;color:var(--text-dim);text-align:center;font-size:13px">加载中…</div>';
-    try {
-      await fbBrowse('');
-    } catch(e) {
-      document.getElementById('fbFileList').innerHTML = '<div style="padding:16px;color:#e74c3c;text-align:center;font-size:13px">加载失败: ' + (e.message || '未知错误') + '</div>';
-    }
-    // 点击外部关闭
-    setTimeout(() => {
-      document.addEventListener('click', fbClickOutside);
-      document.addEventListener('keydown', fbEscClose);
-    }, 100);
-  } else {
-    fbClose();
+// ========== 输入框文件上传 ==========
+async function uploadFiles() {
+  const input = document.getElementById('fileInput');
+  const files = input.files;
+  if (!files.length) return;
+  const formData = new FormData();
+  for (const f of files) { formData.append('files', f); }
+  try {
+    const r = await fetch(API + '/workspace/upload-batch', { method: 'POST', body: formData });
+    const d = await r.json();
+    if (!d.ok) { showToast('上传失败: ' + (d.error || '未知错误')); return; }
+    showToast('已上传 ' + d.uploaded.length + ' 个文件');
+    // 刷新侧栏文件树
+    loadWorkspaceFiles();
+    // 把文件路径填入输入框
+    const paths = d.uploaded.map(u => u.path).join('\n');
+    document.getElementById('msg-input').value = (document.getElementById('msg-input').value + '\n' + paths).trim();
+  } catch(e) {
+    showToast('上传失败: 服务未启动');
   }
+  input.value = '';
 }
 
-// 绑定事件（兼容移动端触屏与桌面端点击）
 document.addEventListener('DOMContentLoaded', function() {
-  const btn = document.getElementById('fileBrowseBtn');
-  if (btn) {
-    btn.addEventListener('click', toggleFileBrowser);
-    btn.addEventListener('touchend', function(e) {
-      e.preventDefault();
-      toggleFileBrowser(e);
-    });
-  }
-  const closeBtn = document.getElementById('fileBrowseClose');
-  if (closeBtn) {
-    closeBtn.addEventListener('click', function(e) { e.stopPropagation(); fbClose(); });
-    closeBtn.addEventListener('touchend', function(e) { e.preventDefault(); e.stopPropagation(); fbClose(); });
-  }
-  // 弹窗内点击不关闭
-  const popup = document.getElementById('fileBrowserPopup');
-  if (popup) {
-    popup.addEventListener('click', function(e) { e.stopPropagation(); });
-    popup.addEventListener('touchend', function(e) { e.stopPropagation(); });
-  }
-  // 初始加载技能列表
   setTimeout(refreshSkills, 800);
 });
-
-function fbClose() {
-  document.getElementById('fileBrowserPopup').style.display = 'none';
-  const btn = document.getElementById('fileBrowseBtn');
-  if (btn) btn.classList.remove('active');
-  document.removeEventListener('click', fbClickOutside);
-  document.removeEventListener('keydown', fbEscClose);
-}
-
-function fbClickOutside(e) {
-  const popup = document.getElementById('fileBrowserPopup');
-  if (popup.style.display === 'none') return;
-  const btn = document.getElementById('fileBrowseBtn');
-  if (!popup.contains(e.target) && e.target !== btn && !btn.contains(e.target)) {
-    fbClose();
-  }
-}
-
-function fbEscClose(e) {
-  if (e.key === 'Escape') fbClose();
-}
-
-async function fbBrowse(path) {
-  try {
-    const r = await fetch(API + '/browse', {
-      method: 'POST', headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({path: path || fbCurrentPath})
-    });
-    const d = await r.json();
-    if (!d.ok) { showToast(d.error); return; }
-    fbCurrentPath = d.path;
-    document.getElementById('fbBreadcrumb').textContent = '📁 ' + d.path;
-    fbRenderList(d.entries, d.parent);
-  } catch(e) { showToast('浏览失败: 服务未启动'); }
-}
-
-function fbRenderList(entries, parent) {
-  const list = document.getElementById('fbFileList');
-  if (!entries.length && !parent) {
-    list.innerHTML = '<div style="padding:16px;color:var(--text-dim);text-align:center;font-size:13px">空文件夹</div>';
-    return;
-  }
-  let html = '';
-  if (parent) {
-    html += '<div class="fb-item fb-up" tabindex="0" onclick="fbBrowse(\'' + parent.replace(/'/g, "\\'") + '\')" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();fbBrowse(\'' + parent.replace(/'/g, "\\'") + '\')}"><span class="fb-name">📂 ..</span></div>';
-  }
-  entries.forEach(e => {
-    const icon = e.dir ? '📁' : '📄';
-    const size = formatSize(e.size);
-    const action = e.dir ? 'fbBrowse' : 'fbSelectFile';
-    const path = e.path.replace(/'/g, "\\'");
-    html += '<div class="fb-item" tabindex="0" onclick="' + action + '(\'' + path + '\')" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();' + action + '(\'' + path + '\')}">' +
-      '<span class="fb-name">' + icon + ' ' + e.name + '</span>' +
-      '<span class="fb-size">' + size + '</span></div>';
-  });
-  list.innerHTML = html;
-}
-
-function fbSelectFile(path) {
-  document.getElementById('msg-input').value = path;
-  toggleFileBrowser();
-  document.getElementById('msg-input').focus();
-}
 
 function formatSize(bytes) {
   if (bytes < 1024) return bytes + ' B';
   if (bytes < 1024*1024) return (bytes/1024).toFixed(1) + ' KB';
   return (bytes/(1024*1024)).toFixed(1) + ' MB';
-}
-
-// ========== 记忆文件夹管理 ==========
-async function refreshMemdir() {
-  try {
-    const r = await fetch(API + '/memory/list');
-    const d = await r.json();
-    if (!d.ok) { showToast(d.error); return; }
-    const list = document.getElementById('memList');
-    if (!d.entries.length) {
-      list.innerHTML = '<div style="font-size:12px;color:var(--text-dim);text-align:center;padding:12px">记忆文件夹为空</div>';
-      return;
-    }
-    let html = '';
-    d.entries.forEach(e => {
-      html += '<div style="display:flex;align-items:center;justify-content:space-between;padding:6px 10px;border-radius:8px;border:1px solid var(--glass-border);font-size:12px">' +
-        '<div style="display:flex;align-items:center;gap:6px;flex:1;min-width:0;cursor:pointer" onclick="readMemdir(\'' + e.rel.replace(/'/g, "\\'") + '\')">📄 <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+e.rel+'</span></div>' +
-        '<span style="color:var(--text-muted);font-size:10px;margin:0 8px;flex-shrink:0">'+formatSize(e.size)+'</span>' +
-        '<button onclick="event.stopPropagation();deleteMemdir(\'' + e.rel.replace(/'/g, "\\'") + '\')" style="background:none;border:none;color:var(--danger);cursor:pointer;font-size:14px;padding:0 4px">×</button></div>';
-    });
-    list.innerHTML = html;
-  } catch(e) { showToast('加载失败'); }
-}
-
-async function readMemdir(rel) {
-  try {
-    const r = await fetch(API + '/memory/read', {
-      method: 'POST', headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({rel})
-    });
-    const d = await r.json();
-    if (!d.ok) { showToast(d.error); return; }
-    document.getElementById('memViewer').style.display = '';
-    document.getElementById('memViewerPath').textContent = rel;
-    document.getElementById('memViewerContent').textContent = d.content;
-  } catch(e) { showToast('读取失败'); }
-}
-
-async function writeMemdir() {
-  const filename = document.getElementById('memFilename').value.trim();
-  const content = document.getElementById('memContent').value;
-  if (!filename) { showToast('文件名不能为空'); return; }
-  try {
-    const r = await fetch(API + '/memory/write', {
-      method: 'POST', headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({filename, content})
-    });
-    const d = await r.json();
-    if (d.ok) {
-      showToast('已保存: ' + filename);
-      document.getElementById('memWriteForm').style.display = 'none';
-      document.getElementById('memFilename').value = '';
-      document.getElementById('memContent').value = '';
-      refreshMemdir();
-    } else { showToast('失败: ' + (d.error || '错误')); }
-  } catch(e) { showToast('保存失败'); }
-}
-
-async function deleteMemdir(rel) {
-  if (!confirm('删除 ' + rel + ' ？')) return;
-  try {
-    const r = await fetch(API + '/memory/delete', {
-      method: 'POST', headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({rel})
-    });
-    const d = await r.json();
-    if (d.ok) { showToast('已删除'); refreshMemdir(); }
-    else { showToast('失败: ' + (d.error || '错误')); }
-  } catch(e) { showToast('删除失败'); }
-}
-
-function showMemWrite() {
-  document.getElementById('memWriteForm').style.display = '';
 }
 
 // ========== 侧栏个人主页 ==========
@@ -1394,21 +1121,21 @@ async function refreshSidebarMemdir() {
     const r = await fetch(API + '/memory/list');
     const d = await r.json();
     const list = document.getElementById('sidebarMemList');
-    if (!d.ok) { list.innerHTML = '<div style="text-align:center;padding:8px;color:var(--danger)">加载失败</div>'; return; }
+    if (!d.ok) { list.innerHTML = '<div style="text-align:center;padding:8px;color:var(--cinnabar);font-size:13px">加载失败</div>'; return; }
     if (!d.entries.length) {
-      list.innerHTML = '<div style="text-align:center;padding:8px">空</div>';
+      list.innerHTML = '<div style="text-align:center;padding:12px;color:var(--text-muted);font-size:13px">暂无记忆文件</div>';
       return;
     }
     let html = '';
     d.entries.forEach(e => {
-      html += '<div style="display:flex;align-items:center;justify-content:space-between;padding:4px 6px;border-radius:6px;cursor:pointer;transition:background .15s" ' +
-        'onmouseenter="this.style.background=\'var(--glass-hover)\'" onmouseleave="this.style.background=\'\'" ' +
-        'onclick="readSidebarMemdir(\'' + e.rel.replace(/'/g, "\\'") + '\')">' +
-        '<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0">📄 '+e.rel+'</span>' +
-        '<button onclick="event.stopPropagation();deleteSidebarMemdir(\'' + e.rel.replace(/'/g, "\\'") + '\')" style="background:none;border:none;color:var(--danger);cursor:pointer;font-size:14px;padding:0 2px;flex-shrink:0">×</button></div>';
+      html += '<div class="profile-item" onclick="readSidebarMemdir(\'' + e.rel.replace(/'/g, "\\'") + '\')">' +
+        '<span class="pf-dot"></span>' +
+        '<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0">'+e.rel+'</span>' +
+        '<span style="font-size:11px;color:var(--text-muted);margin:0 8px;flex-shrink:0">'+formatSize(e.size)+'</span>' +
+        '<button class="pf-actions" onclick="event.stopPropagation();deleteSidebarMemdir(\'' + e.rel.replace(/'/g, "\\'") + '\')" style="background:none;border:none;color:var(--cinnabar);cursor:pointer;font-size:14px;padding:0 4px">&times;</button></div>';
     });
     list.innerHTML = html;
-  } catch(e) { list.innerHTML = '<div style="text-align:center;padding:8px;color:var(--danger)">加载失败</div>'; }
+  } catch(e) { list.innerHTML = '<div style="text-align:center;padding:12px;color:var(--cinnabar);font-size:13px">加载失败</div>'; }
 }
 
 async function readSidebarMemdir(rel) {
@@ -1450,21 +1177,16 @@ async function refreshSkills(agent) {
   const d = await res.json();
   const list = document.getElementById('sidebarSkillList');
   if (!d.ok || !d.skills || !d.skills.length) {
-    list.innerHTML = '<div style="font-size:12px;color:var(--text-dim);text-align:center;padding:12px">暂无技能</div>';
+    list.innerHTML = '<div style="font-size:13px;color:var(--text-muted);text-align:center;padding:12px">暂无技能</div>';
     return;
   }
   list.innerHTML = d.skills.map(s => {
     const ag = s.agent || d.agent || '';
-    return `<div style="display:flex;align-items:center;justify-content:space-between;padding:4px 6px;border-radius:6px;cursor:pointer;transition:background .15s"
-      onmouseenter="this.style.background='var(--glass-hover)'" onmouseleave="this.style.background=''"
-      onclick="readSkill(${s.id},'${ag}')">
-      <div style="display:flex;align-items:center;gap:6px;flex:1;min-width:0">
-        <span class="skill-agent-badge">${ag}</span>
-        <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${s.name}</span>
-      </div>
-      <button onclick="event.stopPropagation();deleteSkill(${s.id},'${ag}')"
-        style="background:none;border:none;color:var(--danger);cursor:pointer;font-size:14px;padding:0 2px;flex-shrink:0">×</button>
-    </div>`;
+    return '<div class="profile-item" onclick="readSkill('+s.id+',\''+ag+'\')">'+
+      '<span class="pf-dot"></span>'+
+      '<span class="skill-agent-badge" style="font-size:10px;background:var(--ink-hover);padding:1px 6px;border-radius:99px;color:var(--text-muted);flex-shrink:0">'+ag+'</span>'+
+      '<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0">'+s.name+'</span>'+
+      '<button class="pf-actions" onclick="event.stopPropagation();deleteSkill('+s.id+',\''+ag+'\')" style="background:none;border:none;color:var(--cinnabar);cursor:pointer;font-size:14px;padding:0 4px">&times;</button></div>';
   }).join('');
 }
 
@@ -1476,18 +1198,12 @@ async function readSkill(id, agent) {
   const d = await res.json();
   if (!d.ok) { showToast('读取失败'); return; }
   const s = d.skill;
-  // 用浮层展示，点击遮罩关闭
   const overlay = document.createElement('div');
   overlay.className = 'skill-viewer-overlay';
   overlay.onclick = function(e) { if (e.target === overlay) overlay.remove(); };
-  overlay.innerHTML = `
-    <div class="skill-viewer-card">
-      <div class="skill-viewer-header">
-        <span class="skill-viewer-title">技能: ${s.name} <span class="skill-agent-badge">${agent}</span></span>
-        <button class="skill-viewer-close" onclick="this.closest('.skill-viewer-overlay').remove()">×</button>
-      </div>
-      <div class="skill-viewer-body">${escapeHtml(s.content)}</div>
-    </div>`;
+  overlay.innerHTML = '<div class="skill-viewer-panel"><button class="skill-viewer-close" onclick="this.closest(\'.skill-viewer-overlay\').remove()">&times;</button>'+
+    '<h2>'+s.name+' <span class="skill-agent-badge" style="font-size:11px;background:var(--ink-hover);padding:2px 8px;border-radius:99px;color:var(--text-muted)">'+agent+'</span></h2>'+
+    '<p>'+escapeHtml(s.content)+'</p></div>';
   document.body.appendChild(overlay);
 }
 
@@ -1503,40 +1219,27 @@ async function deleteSkill(id, agent) {
 }
 
 function newSkill() {
-  // 弹窗表单：选 Agent → 填名称 → 填内容
   const overlay = document.createElement('div');
   overlay.className = 'skill-form-overlay';
   overlay.onclick = function(e) { if (e.target === overlay) overlay.remove(); };
-
-  // 收集当前已有的 agent 名
   const agentNames = [];
   document.querySelectorAll('.skill-agent-badge').forEach(b => {
     const n = b.textContent.trim();
     if (n && !agentNames.includes(n)) agentNames.push(n);
   });
-
-  overlay.innerHTML = `
-    <div class="skill-form-card">
-      <h3>新建技能</h3>
-      <div class="skill-form-field">
-        <label>Agent</label>
-        <select id="skillFormAgent">
-          ${agentNames.map(n => `<option value="${n}">${n}</option>`).join('') || '<option value="搜索Agent">搜索Agent</option>'}
-        </select>
-      </div>
-      <div class="skill-form-field">
-        <label>技能名称</label>
-        <input id="skillFormName" placeholder="如: flask-perf、excel-layout">
-      </div>
-      <div class="skill-form-field">
-        <label>技能内容 (Markdown)</label>
-        <textarea id="skillFormContent" placeholder="描述经验/规则/步骤……"></textarea>
-      </div>
-      <div class="skill-form-actions">
-        <button class="apply-btn ghost" onclick="this.closest('.skill-form-overlay').remove()">取消</button>
-        <button class="apply-btn" onclick="submitNewSkill()">创建</button>
-      </div>
-    </div>`;
+  overlay.innerHTML = '<div class="skill-form-panel">'+
+    '<h2 style="font-family:var(--serif);font-size:20px;color:var(--text-paper);margin-bottom:20px">新建技能</h2>'+
+    '<div class="form-group"><label class="form-label">Agent</label>'+
+    '<select id="skillFormAgent" class="form-input">'+
+    (agentNames.map(n => '<option value="'+n+'">'+n+'</option>').join('') || '<option value="搜索Agent">搜索Agent</option>')+
+    '</select></div>'+
+    '<div class="form-group"><label class="form-label">技能名称</label>'+
+    '<input id="skillFormName" class="form-input" placeholder="如: flask-perf、excel-layout"></div>'+
+    '<div class="form-group"><label class="form-label">技能内容 (Markdown)</label>'+
+    '<textarea id="skillFormContent" class="form-input" placeholder="描述经验/规则/步骤…" style="min-height:120px"></textarea></div>'+
+    '<div style="display:flex;gap:8px;justify-content:flex-end">'+
+    '<button class="btn btn-ghost" onclick="this.closest(\'.skill-form-overlay\').remove()">取消</button>'+
+    '<button class="btn btn-primary" onclick="submitNewSkill()">创建</button></div></div>';
   document.body.appendChild(overlay);
 }
 
@@ -1560,43 +1263,26 @@ async function submitNewSkill() {
 }
 
 // ========== 权限弹窗 ==========
-const PERM_INFO = {
-  screencap: { icon: '🖥️', title: '屏幕读取权限' },
-  root:      { icon: '🛡️', title: '系统级权限' },
-  file_sensitive: { icon: '🔑', title: '敏感文件访问' },
-  file_write:     { icon: '📝', title: '文件写入权限' },
-  net_outbound:   { icon: '🌐', title: '外部网络访问' },
-  default:  { icon: '🔐', title: '权限请求' }
-};
 function showPermission(permType, desc) {
-  const info = PERM_INFO[permType] || PERM_INFO.default;
-  document.getElementById('permIcon').textContent = info.icon;
-  document.getElementById('permTitle').textContent = info.title;
+  document.getElementById('permTitle').textContent = '权限请求: ' + permType;
   document.getElementById('permTypeVal').textContent = permType;
-  // 解析 target||reason 格式
   const sep = desc.indexOf('||');
-  const target = sep !== -1 ? desc.slice(0, sep).trim() : '—';
+  const target = sep !== -1 ? desc.slice(0, sep).trim() : '&mdash;';
   const reason = sep !== -1 ? desc.slice(sep + 2).trim() : desc;
   document.getElementById('permTargetVal').textContent = target;
   document.getElementById('permReason').textContent = reason;
   document.getElementById('permOverlay').setAttribute('data-perm', permType);
   document.getElementById('permOverlay').classList.add('show');
 }
-function hidePermission() {
-  document.getElementById('permOverlay').classList.remove('show');
-}
+function hidePermission() { document.getElementById('permOverlay').classList.remove('show'); }
 function permitReply(action) {
   const permType = document.getElementById('permOverlay').getAttribute('data-perm') || 'screencap';
   hidePermission();
   const cmd = '/' + permType + ' ' + action;
-  window.startThinking&&window.startThinking();
   fetch(API + '/chat', {
     method: 'POST', headers: {'Content-Type':'application/json'},
     body: JSON.stringify({msg: cmd})
-  }).then(r => r.json()).then(d => {
-    window.stopThinking&&window.stopThinking();
-    addBubble('system', d.reply);
-  });
+  }).then(r => r.json()).then(d => addBubble('system', d.reply));
 }
 
 // ========== Toast ==========
@@ -1608,8 +1294,6 @@ function showToast(msg) {
   setTimeout(() => t.remove(), 2500);
 }
 
-// ========== 会话（已禁用多对话切换）==========
-
 // ========== 工具适配层 ==========
 let toolAdapterBase = '';
 let cachedTools = {};
@@ -1620,42 +1304,32 @@ async function checkToolEnv() {
   const result = document.getElementById('toolEnvResult');
   const grid = document.getElementById('toolGrid');
   const select = document.getElementById('customToolSelect');
-
   toolAdapterBase = document.getElementById('toolAdapterUrl').value.replace(/\/$/, '');
-  status.textContent = '🟡 扫描中…';
+  status.textContent = '扫描中…';
   status.style.color = 'var(--warning)';
-
   try {
     const resp = await fetch(toolAdapterBase + '/api/check_env');
     cachedTools = await resp.json();
-
     const available = Object.values(cachedTools).filter(t => t.available).length;
     const total = Object.keys(cachedTools).length;
-    status.textContent = `🟢 已连接 (${available}/${total})`;
+    status.textContent = '已连接 ('+available+'/'+total+')';
     status.style.color = 'var(--success)';
-
-    // 环境信息
     result.innerHTML = '';
     for (const [tid, t] of Object.entries(cachedTools)) {
-      result.innerHTML += `<div style="display:flex;align-items:center;gap:6px;margin-bottom:2px">
-        <span style="color:${t.available ? 'var(--success)' : 'var(--text-muted)'}">${t.available ? '●' : '○'}</span>
-        <span style="font-size:11px">${t.available ? '<b>' + tid + '</b>' : tid} ${t.path || ''}</span>
-        ${!t.available ? '<span style="font-size:10px;color:var(--text-muted)">' + (t.install_hint||'') + '</span>' : ''}
-      </div>`;
+      result.innerHTML += '<div style="display:flex;align-items:center;gap:6px;margin-bottom:2px;font-size:12px">'+
+        '<span style="color:'+(t.available?'var(--success)':'var(--text-muted)')+'">'+(t.available?'&#9679;':'&#9675;')+'</span>'+
+        '<span>'+(t.available?'<b>'+tid+'</b>':tid)+' '+ (t.path||'') +'</span>'+
+        (!t.available ? '<span style="font-size:11px;color:var(--text-muted)">'+(t.install_hint||'')+'</span>' : '')+'</div>';
     }
-
-    // 工具网格
     buildToolGrid();
-
-    // 自定义命令下拉
     select.innerHTML = '<option value="">选择工具</option>';
     for (const [tid, t] of Object.entries(cachedTools)) {
-      select.innerHTML += `<option value="${tid}" ${!t.available ? 'disabled' : ''}>${t.available ? '✅' : '❌'} ${tid}</option>`;
+      select.innerHTML += '<option value="'+tid+'" '+(t.available?'':'disabled')+'>'+(t.available?'':'')+' '+tid+'</option>';
     }
   } catch (e) {
-    status.textContent = '🔴 连接失败';
-    status.style.color = 'var(--danger)';
-    result.innerHTML = '<span style="color:var(--danger)">无法连接适配层，请确认服务已启动</span>';
+    status.textContent = '连接失败';
+    status.style.color = 'var(--cinnabar)';
+    result.innerHTML = '<span style="color:var(--cinnabar);font-size:12px">无法连接适配层，请确认服务已启动</span>';
   }
 }
 
@@ -1663,53 +1337,36 @@ function buildToolGrid() {
   const grid = document.getElementById('toolGrid');
   grid.innerHTML = '';
   for (const [tid, t] of Object.entries(cachedTools)) {
-    grid.innerHTML += `<div class="tool-card" onclick="selectTool('${tid}')" style="
-      padding:10px;border-radius:10px;border:1px solid var(--glass-border);
-      background:${t.available?'rgba(34,197,94,0.06)':'rgba(255,255,255,0.02)'};
-      cursor:pointer;transition:all var(--transition);
-      opacity:${t.available ? '1' : '0.5'}
-    " onmouseenter="this.style.borderColor='var(--primary)'" onmouseleave="this.style.borderColor='var(--glass-border)'">
-      <div style="font-size:18px;margin-bottom:2px">${t.available ? '🟢' : '⚫'}</div>
-      <div style="font-size:12px;font-weight:600;color:var(--text)">${tid}</div>
-      <div style="font-size:10px;color:var(--text-dim);margin-top:2px">${t.available ? '已就绪' : '未安装'}</div>
-    </div>`;
+    grid.innerHTML += '<div class="tool-card" onclick="selectTool(\''+tid+'\')" style="'+
+      (t.available?'':'opacity:0.5;')+
+      'cursor:pointer;transition:all var(--transition)">'+
+      '<div class="tool-card-header">'+
+      '<span class="tool-card-status '+(t.available?'online':'offline')+'"></span>'+
+      '<span class="tool-card-name">'+tid+'</span></div>'+
+      '<div class="tool-card-desc">'+(t.available ? '已就绪' : '未安装')+'</div></div>';
   }
 }
 
 async function selectTool(toolId) {
   activeToolId = toolId;
   document.getElementById('customToolSelect').value = toolId;
-
-  // 加载预设
   const presetSection = document.getElementById('presetSection');
   const presetTitle = document.getElementById('presetTitle');
   const presetList = document.getElementById('presetList');
-
   try {
     const resp = await fetch(toolAdapterBase + '/api/presets?tool=' + toolId);
     const presets = await resp.json();
-
-    if (Object.keys(presets).length === 0) {
-      presetSection.style.display = 'none';
-      return;
-    }
-
+    if (Object.keys(presets).length === 0) { presetSection.style.display = 'none'; return; }
     presetSection.style.display = 'block';
-    presetTitle.textContent = `预设操作 - ${toolId}`;
+    presetTitle.textContent = '预设操作 - ' + toolId;
     presetList.innerHTML = '';
     for (const [pid, p] of Object.entries(presets)) {
-      presetList.innerHTML += `<div class="preset-item" onclick="loadPreset('${toolId}', '${pid}')" style="
-        padding:10px 12px;border-radius:8px;border:1px solid var(--glass-border);
-        cursor:pointer;transition:all var(--transition);
-        background:var(--glass)
-      " onmouseenter="this.style.borderColor='var(--primary)'" onmouseleave="this.style.borderColor='var(--glass-border)'">
-        <div style="font-size:12px;font-weight:600;color:var(--text)">${p.label}</div>
-        <div style="font-size:10px;color:var(--text-dim);margin-top:2px">${p.desc}</div>
-      </div>`;
+      presetList.innerHTML += '<div class="preset-item" onclick="loadPreset(\''+toolId+'\', \''+pid+'\')" style="'+
+        'padding:10px 12px;border-radius:8px;border:1px solid var(--rule);cursor:pointer;transition:all var(--transition);background:var(--ink-surface)">'+
+        '<div style="font-size:13px;font-weight:600;color:var(--text-body)">'+p.label+'</div>'+
+        '<div style="font-size:11px;color:var(--text-muted);margin-top:2px">'+p.desc+'</div></div>';
     }
-  } catch (e) {
-    presetSection.style.display = 'none';
-  }
+  } catch (e) { presetSection.style.display = 'none'; }
 }
 
 let currentPreset = null;
@@ -1721,24 +1378,18 @@ async function loadPreset(toolId, presetId) {
     const presets = await resp.json();
     currentPreset = presets[presetId];
     currentPresetId = presetId;
-
     if (!currentPreset || !currentPreset.params) return;
-
     const paramsDiv = document.getElementById('presetParams');
     paramsDiv.style.display = 'block';
     paramsDiv.innerHTML = '';
-
     for (const param of currentPreset.params) {
-      paramsDiv.innerHTML += `<div style="margin-bottom:6px">
-        <label style="font-size:10px;color:var(--text-dim);display:block;margin-bottom:2px">${param.label}</label>
-        <input class="preset-param" data-key="${param.key}" placeholder="${param.placeholder}"
-          style="width:100%;padding:6px 10px;border-radius:6px;border:1px solid var(--glass-border);background:var(--glass);color:var(--text);font-size:11px;font-family:var(--mono)">
-      </div>`;
+      paramsDiv.innerHTML += '<div class="form-group">'+
+        '<label class="form-label">'+param.label+'</label>'+
+        '<input class="preset-param form-input" data-key="'+param.key+'" placeholder="'+param.placeholder+'" style="font-family:var(--mono)"></div>';
     }
-    paramsDiv.innerHTML += `<div style="display:flex;gap:6px;margin-top:8px">
-      <button class="apply-btn" onclick="runPreset('${toolId}')" style="flex:1;font-size:11px">执行</button>
-      <button class="apply-btn ghost" onclick="previewCmd('${toolId}')" style="font-size:11px">预览</button>
-    </div>`;
+    paramsDiv.innerHTML += '<div style="display:flex;gap:8px;margin-top:12px">'+
+      '<button class="btn btn-primary" onclick="runPreset(\''+toolId+'\')" style="flex:1">执行</button>'+
+      '<button class="btn btn-ghost" onclick="previewCmd(\''+toolId+'\')">预览</button></div>';
   } catch (e) {}
 }
 
@@ -1747,20 +1398,13 @@ function buildCmd() {
   let cmd = currentPreset.template;
   document.querySelectorAll('.preset-param').forEach(el => {
     const val = el.value.trim() || el.placeholder;
-    cmd = cmd.replace('{' + el.dataset.key + '}', val);
+    cmd = cmd.replace('{'+el.dataset.key+'}', val);
   });
   return cmd;
 }
 
-function previewCmd(toolId) {
-  const cmd = buildCmd();
-  showOutput(cmd, '', '(预览)', 0);
-}
-
-async function runPreset(toolId) {
-  const cmd = buildCmd();
-  await runCommand(toolId, cmd);
-}
+function previewCmd(toolId) { const cmd = buildCmd(); showOutput(cmd, '', '(预览)', 0); }
+async function runPreset(toolId) { const cmd = buildCmd(); await runCommand(toolId, cmd); }
 
 async function runCustomCmd() {
   const toolId = document.getElementById('customToolSelect').value;
@@ -1774,54 +1418,41 @@ async function runCommand(toolId, command) {
   const output = document.getElementById('toolOutput');
   const content = document.getElementById('toolOutputContent');
   const code = document.getElementById('toolExitCode');
-
   output.style.display = 'block';
   content.textContent = '执行中…';
   code.textContent = '';
-
   try {
     const resp = await fetch(toolAdapterBase + '/api/run', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
+      method: 'POST', headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({tool: toolId, command: command})
     });
     const data = await resp.json();
     showOutput(data.stdout, data.stderr, data.command, data.returncode);
-  } catch (e) {
-    content.textContent = '请求失败: ' + e.message;
-    code.textContent = '(网络错误)';
-  }
+  } catch (e) { content.textContent = '请求失败: ' + e.message; code.textContent = '(网络错误)'; }
 }
 
 function showOutput(stdout, stderr, cmd, code) {
   const output = document.getElementById('toolOutput');
   const content = document.getElementById('toolOutputContent');
   const exitCode = document.getElementById('toolExitCode');
-
   output.style.display = 'block';
   let text = '';
-  if (cmd) text += '$ ' + cmd + '\n' + '─'.repeat(40) + '\n';
+  if (cmd) text += '$ ' + cmd + '\n' + '\u2500'.repeat(40) + '\n';
   if (stdout) text += stdout;
-  if (stderr) text += (stdout ? '\n' : '') + '── STDERR ──\n' + stderr;
+  if (stderr) text += (stdout ? '\n' : '') + '\u2500\u2500 STDERR \u2500\u2500\n' + stderr;
   if (!stdout && !stderr) text += '(无输出)';
-
   content.textContent = text;
   exitCode.textContent = code === 0 ? '(成功)' : '(退出码: ' + code + ')';
   exitCode.style.color = code === 0 ? 'var(--success)' : 'var(--warning)';
 }
 
-function updateCustomTool() {
-  const toolId = document.getElementById('customToolSelect').value;
-  if (toolId) selectTool(toolId);
-}
+function updateCustomTool() { const toolId = document.getElementById('customToolSelect').value; if (toolId) selectTool(toolId); }
 
-// ========== 对话持久化（服务端） ==========
-// localStorage 仅作降级缓存，主存储为服务端 .memdir/.parent_context.json
+// ========== 对话持久化 ==========
 const CONV_KEY = 'xuan_conv';
 const META_KEY = 'xuan_meta';
 
 function saveConv() {
-  // 写入 localStorage 作为降级缓存（页面刷新恢复）
   const bubbles = conv.querySelectorAll('.bubble');
   const msgs = [];
   bubbles.forEach(b => {
@@ -1835,12 +1466,10 @@ function saveConv() {
   });
   const meta = {model:currentModel, tokens:totalTokens, at:Date.now()};
   try { localStorage.setItem(CONV_KEY, JSON.stringify(msgs)); localStorage.setItem(META_KEY, JSON.stringify(meta)); } catch(e) {}
-  // 服务端持久化：每条消息后自动保存到 .memdir/.parent_context.json
   fetch('/context/save', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(msgs.slice(-60))}).catch(()=>{});
 }
 
 function loadConv() {
-  // 优先从 localStorage 快速恢复（页面刷新时即时显示）
   try {
     const raw = localStorage.getItem(CONV_KEY);
     if (!raw) return false;
@@ -1855,13 +1484,11 @@ function loadConv() {
   } catch(e) { localStorage.removeItem(CONV_KEY); return false; }
 }
 
-// 服务端恢复：页面完全重启（非刷新）时从服务端恢复完整对话
 async function restoreFromServer() {
   try {
     const resp = await fetch('/context');
     const data = await resp.json();
     if (!data.ok || !data.shared_msgs || !data.shared_msgs.length) return false;
-    // 重建消息
     const msgs = data.shared_msgs;
     msgs.forEach(m => {
       if (m.role === 'user') renderRestoredMsg({r:'user', c:m.content});
@@ -1872,12 +1499,11 @@ async function restoreFromServer() {
     if (data.context_summary) {
       const d = document.createElement('div');
       d.className = 'bubble system';
-      d.innerHTML = '📋 <b>记忆摘要：</b>'+data.context_summary;
+      d.innerHTML = '记忆摘要：'+data.context_summary;
       conv.appendChild(d);
     }
     updateTokenBadge(); buildModelChips();
     conv.lastElementChild?.scrollIntoView();
-    // 同步到 localStorage 加速后续刷新
     saveConv();
     return true;
   } catch(e) { return false; }
@@ -1887,13 +1513,10 @@ function renderRestoredMsg(m) {
   const d = document.createElement('div');
   d.className = 'bubble ' + (m.r==='agent'?'agent system':m.r);
   if (m.r==='agent') {
-    d.innerHTML = '<div class="agent-label" style="display:flex;align-items:center;gap:6px;margin-bottom:8px">'+
-      '<span style="display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:6px;background:var(--primary);font-size:11px">⚡</span>'+
-      '<span style="font-weight:600;font-size:13px;color:var(--primary-text)">'+m.a+'</span></div>'+
+    d.innerHTML = '<div class="agent-label">'+
+      '<span class="agent-name">'+m.a+'</span></div>'+
       '<div style="line-height:1.7">'+m.c+'</div>';
-  } else {
-    d.innerHTML = m.c;
-  }
+  } else { d.innerHTML = m.c; }
   conv.appendChild(d);
 }
 
@@ -1903,15 +1526,10 @@ function clearConv() {
   localStorage.removeItem(META_KEY);
 }
 
-// 启动时恢复：先尝试 localStorage（刷新场景），失败则从服务端恢复（重启场景）
-if (!loadConv()) {
-  restoreFromServer();
-}
+if (!loadConv()) { restoreFromServer(); }
 
-// 恢复后刷新技能列表
 setTimeout(refreshSkills, 1200);
 
-// 自动检测工具适配层
 setTimeout(() => {
   if (document.getElementById('tab-tools').offsetParent !== null ||
       sessionStorage.getItem('toolAdapterChecked')) {
@@ -1921,6 +1539,46 @@ setTimeout(() => {
 }, 2000);
 
 // ========== 更多菜单 ==========
+let themePanelOpen = false;
+function toggleThemeQuickPanel(e) {
+  e.stopPropagation();
+  const panel = document.getElementById('themeQuickPanel');
+  const btn = document.getElementById('toolbarThemeBtn');
+  if (themePanelOpen) {
+    panel.style.display = 'none';
+    themePanelOpen = false;
+    btn.classList.remove('ring');
+  } else {
+    panel.style.display = 'flex';
+    themePanelOpen = true;
+    btn.classList.add('ring');
+    // close more menu if open
+    const mm = document.getElementById('moreMenu');
+    if (mm) mm.style.display = 'none';
+    moreMenuOpen = false;
+    // highlight current accent
+    const curAccent = document.documentElement.getAttribute('data-accent') || 'cyber';
+    const curMode = document.documentElement.getAttribute('data-mode') || 'dark';
+    document.querySelectorAll('.tqp-chip').forEach(c => {
+      c.classList.toggle('active', c.dataset.accent === curAccent && c.dataset.mode === curMode);
+    });
+    setTimeout(() => { document.addEventListener('click', () => { panel.style.display = 'none'; themePanelOpen = false; btn.classList.remove('ring'); }, { once: true }); }, 10);
+  }
+}
+function applyQuick(accent, mode) {
+  document.documentElement.setAttribute('data-accent', accent);
+  document.documentElement.setAttribute('data-mode', mode);
+  localStorage.setItem('marvis-theme-accent', accent);
+  localStorage.setItem('marvis-theme-mode', mode);
+  // update chips
+  document.querySelectorAll('.tqp-chip').forEach(c => c.classList.toggle('active', c.dataset.accent === accent && c.dataset.mode === mode));
+  // also update settings page dropdowns if they exist
+  const accSel = document.getElementById('themeAccent');
+  const modeSel = document.getElementById('themeMode');
+  if (accSel) accSel.value = accent;
+  if (modeSel) modeSel.value = mode;
+}
+
 let moreMenuOpen = false;
 function toggleMoreMenu(e) {
   e.stopPropagation();
@@ -1931,10 +1589,11 @@ function toggleMoreMenu(e) {
   } else {
     menu.style.display = 'block';
     moreMenuOpen = true;
-    // 点击外部关闭
-    setTimeout(() => {
-      document.addEventListener('click', closeMoreMenu, { once: true });
-    }, 10);
+    // close quick panel if open
+    const tp = document.getElementById('themeQuickPanel');
+    if (tp) tp.style.display = 'none';
+    themePanelOpen = false;
+    setTimeout(() => { document.addEventListener('click', closeMoreMenu, { once: true }); }, 10);
   }
 }
 function closeMoreMenu() {
@@ -1949,62 +1608,198 @@ function loadAgentConfig() {
     name: '玄姝 Agent',
     version: '1.0.0',
     description: '多模型智能助手，支持文件管理、联网搜索、代码分析等',
-    permissions: {
-      fileAccess: true,
-      webSearch: true,
-      toolExecution: true,
-      download: false
-    },
-    created: '2026-07-08',
-    lastUpdated: '2026-07-08'
+    permissions: { fileAccess: true, webSearch: true, toolExecution: true, download: false },
+    created: '2026-07-08', lastUpdated: '2026-07-08'
   };
   const blob = new Blob([JSON.stringify(config, null, 2)], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
-  a.href = url;
-  a.download = 'agent_config.json';
-  a.click();
+  a.href = url; a.download = 'agent_config.json'; a.click();
   URL.revokeObjectURL(url);
   showToast('Agent 配置已下载');
 }
 
-// ========== 下载权限信息 ==========
 function showDownloadPermInfo() {
   const overlay = document.createElement('div');
-  overlay.className = 'download-perm-overlay show';
-  overlay.innerHTML = `
-    <div class="download-perm-card">
-      <h3>📥 下载权限</h3>
-      <p>当前 Agent 仅拥有下载权限（仅可下载文件，不可上传或修改）。如需完整文件管理权限，请在设置中授权文件夹。</p>
-      <div class="perm-detail">
-        <div class="perm-row">
-          <span class="perm-label">权限类型</span>
-          <span class="perm-value">下载</span>
-        </div>
-        <div class="perm-row">
-          <span class="perm-label">范围</span>
-          <span class="perm-value">仅限 Agent 生成的文件</span>
-        </div>
-        <div class="perm-row">
-          <span class="perm-label">状态</span>
-          <span class="perm-value">已启用</span>
-        </div>
-      </div>
-      <button class="perm-ok" onclick="this.parentElement.parentElement.remove()">知道了</button>
-    </div>
-  `;
+  overlay.className = 'permission-overlay show';
+  overlay.innerHTML = '<div class="permission-dialog">'+
+    '<h3>下载权限</h3>'+
+    '<p>当前 Agent 仅拥有下载权限（仅可下载文件，不可上传或修改）。如需完整文件管理权限，请在设置中授权文件夹。</p>'+
+    '<div class="perm-detail">'+
+    '<div class="perm-row"><span class="perm-label">权限类型</span><span class="perm-value">下载</span></div>'+
+    '<div class="perm-row"><span class="perm-label">范围</span><span class="perm-value">仅限 Agent 生成的文件</span></div>'+
+    '<div class="perm-row"><span class="perm-label">状态</span><span class="perm-value">已启用</span></div></div>'+
+    '<div class="perm-actions"><button class="btn btn-primary" onclick="this.parentElement.parentElement.parentElement.remove()">知道了</button></div></div>';
   document.body.appendChild(overlay);
-  overlay.addEventListener('click', (e) => {
-    if (e.target === overlay) overlay.remove();
-  });
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
 }
 
-// ========== 初始化 ==========
 window.addEventListener('DOMContentLoaded', function() {
-  // 确保头像点击跳转主页
   const toolbarEl = document.getElementById('toolbarAvatar');
   if (toolbarEl) toolbarEl.onclick = () => navigateTo('#profile');
+  setTimeout(loadWorkspaceFiles, 300);
+  setTimeout(initParticles, 100);
 });
+
+// ========== 侧栏工作区文件树 ==========
+async function loadWorkspaceFiles() {
+  try {
+    const r = await fetch(API + '/workspace/list', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({})
+    });
+    const d = await r.json();
+    if (!d.ok) {
+      document.getElementById('sidebarFileTree').innerHTML = '<div class="file-tree-loading">文件服务未启动</div>';
+      return;
+    }
+    let html = '';
+    d.entries.forEach(e => {
+      html += '<div class="ft-item ft-file" onclick="openFileInViewer(\'' + e.path.replace(/'/g, "\\'") + '\',\'' + e.name.replace(/'/g, "\\'") + '\')">' +
+        '📄 <span class="ft-name">' + e.name + '</span><span class="ft-size">' + formatSize(e.size) + '</span></div>';
+    });
+    document.getElementById('sidebarFileTree').innerHTML = html || '<div class="file-tree-loading">暂无上传文件，点击输入框旁的 + 上传</div>';
+  } catch(e) {
+    document.getElementById('sidebarFileTree').innerHTML = '<div class="file-tree-loading">文件服务未启动</div>';
+  }
+}
+
+// ========== 文件查看器 ==========
+async function openFileInViewer(path, name) {
+  const panel = document.getElementById('fileViewerPanel');
+  document.getElementById('fvPath').textContent = path;
+  document.getElementById('fvMeta').textContent = '加载中…';
+  document.getElementById('fvContent').innerHTML = '<div style="padding:20px;color:var(--text-muted);text-align:center">加载中…</div>';
+  panel.style.display = '';
+
+  try {
+    const r = await fetch(API + '/read-file', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({path})
+    });
+    const d = await r.json();
+    if (!d.ok) {
+      document.getElementById('fvMeta').textContent = '错误: ' + d.error;
+      document.getElementById('fvContent').innerHTML = '';
+      return;
+    }
+    document.getElementById('fvMeta').textContent = name + ' — ' + formatSize(d.size) + ' — ' + d.lines + ' 行';
+    if (d.type === 'binary') {
+      document.getElementById('fvContent').innerHTML = '<div style="padding:20px;color:var(--text-muted);text-align:center">无法预览二进制文件 (' + d.ext + ')</div>';
+    } else {
+      document.getElementById('fvContent').innerHTML = '<pre class="fv-code">' + escapeHtml(d.content) + '</pre>';
+    }
+    panel.scrollIntoView({behavior:'smooth'});
+  } catch(e) {
+    document.getElementById('fvMeta').textContent = '加载失败: 服务未启动';
+    document.getElementById('fvContent').innerHTML = '';
+  }
+}
+
+function closeFileViewer() {
+  document.getElementById('fileViewerPanel').style.display = 'none';
+}
+
+function escapeHtml(str) { return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+// ========== 粒子云画布 ==========
+function initParticles() {
+  const canvas = document.getElementById('particleCanvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  let w, h, particles = [];
+  const PARTICLE_COUNT = 80;
+
+  function resize() {
+    w = canvas.width = window.innerWidth;
+    h = canvas.height = window.innerHeight;
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  // 从 CSS 变量读取 accent color
+  function getAccentColor() {
+    const style = getComputedStyle(document.documentElement);
+    const accent = style.getPropertyValue('--accent').trim() || 'oklch(0.62 0.20 230)';
+    return accent;
+  }
+
+  class Particle {
+    constructor() {
+      this.reset();
+    }
+    reset() {
+      this.x = Math.random() * w;
+      this.y = Math.random() * h;
+      this.vx = (Math.random() - 0.5) * 0.4;
+      this.vy = (Math.random() - 0.5) * 0.4;
+      this.radius = Math.random() * 2 + 0.5;
+      this.opacity = Math.random() * 0.4 + 0.1;
+    }
+    update() {
+      this.x += this.vx;
+      this.y += this.vy;
+      if (this.x < 0 || this.x > w) this.vx *= -1;
+      if (this.y < 0 || this.y > h) this.vy *= -1;
+    }
+    draw(ctx, accent) {
+      ctx.beginPath();
+      ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+      ctx.fillStyle = accent.replace(')', ' / ' + this.opacity + ')')
+        .replace('oklch(', 'oklch(');
+      ctx.fill();
+    }
+  }
+
+  for (let i = 0; i < PARTICLE_COUNT; i++) particles.push(new Particle());
+
+  let mouseX = -100, mouseY = -100;
+  document.addEventListener('mousemove', (e) => { mouseX = e.clientX; mouseY = e.clientY; });
+
+  function animate() {
+    ctx.clearRect(0, 0, w, h);
+    const accent = getAccentColor();
+
+    particles.forEach(p => {
+      p.update();
+      p.draw(ctx, accent);
+    });
+
+    // 连线：近距离粒子之间
+    for (let i = 0; i < particles.length; i++) {
+      for (let j = i + 1; j < particles.length; j++) {
+        const dx = particles[i].x - particles[j].x;
+        const dy = particles[i].y - particles[j].y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist < 100) {
+          ctx.beginPath();
+          ctx.moveTo(particles[i].x, particles[i].y);
+          ctx.lineTo(particles[j].x, particles[j].y);
+          ctx.strokeStyle = accent.replace(')', ' / ' + (0.06 * (1 - dist/100)) + ')');
+          ctx.lineWidth = 0.5;
+          ctx.stroke();
+        }
+      }
+      // 鼠标吸引
+      const dmx = particles[i].x - mouseX;
+      const dmy = particles[i].y - mouseY;
+      const dm = Math.sqrt(dmx * dmx + dmy * dmy);
+      if (dm < 150) {
+        particles[i].vx += dmx / dm * 0.02;
+        particles[i].vy += dmy / dm * 0.02;
+      }
+    }
+
+    // 速度衰减
+    particles.forEach(p => {
+      p.vx *= 0.999;
+      p.vy *= 0.999;
+    });
+
+    requestAnimationFrame(animate);
+  }
+  animate();
+}
 </script>
 </body>
 </html>

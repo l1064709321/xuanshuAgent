@@ -568,7 +568,9 @@ function switchPanelTab(el, tab) {
   el.classList.add('active');
   el.setAttribute('aria-selected', 'true');
   ['settings','tools','agents'].forEach(id => {
-    document.getElementById('tab-' + id).style.display = id === tab ? '' : 'none';
+    const panel = document.getElementById('tab-' + id);
+    panel.style.display = id === tab ? 'block' : 'none';
+    panel.classList.toggle('active', id === tab);
   });
 }
 

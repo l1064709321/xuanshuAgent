@@ -176,9 +176,46 @@ sudo systemctl enable --now xuanshu
 
 ## 模型配置
 
-内置 128+ 模型预设，覆盖 OpenAI / Anthropic / DeepSeek / 通义千问 / 智谱 / 豆包 / MiniMax / SiliconFlow / OpenRouter / NVIDIA / Ollama。
+在 Web 界面设置页填入 API Key 并选择模型。也可设为 `local`（本地模拟模式，免 Key）。
 
-在 Web 界面设置页填入 API Key 并选择模型即可。也可设为 `local`（本地模拟模式，免 Key）。
+### 直连官方 API
+
+| 厂商 | 标签 / 模型 |
+|------|------------|
+| OpenAI | 旗舰 1.1M上下文 `gpt-5.5`、极致推理 `gpt-5.5-pro`、多模态旗舰 `gpt-4o`、轻量多模态 `gpt-4o-mini` |
+| Anthropic | 旗舰 1M上下文 `claude-opus-4.8`、速度智能平衡 `claude-sonnet-4.6`、最快 `claude-haiku-4.5`、Mythos级 `claude-fable-5` |
+| Google | 旗舰多模态 `gemini-3.1-pro`、默认首选 `gemini-3-flash` |
+| DeepSeek | 旗舰 1M上下文 `deepseek-v4-pro`、高性价比 `deepseek-v4-flash`、旧版 `deepseek-v3`、旧版推理 `deepseek-r1` |
+| 阿里通义 | 最新旗舰 `qwen3.7-max`、Plus版 `qwen3.7-plus`、开源千亿 `qwen2.5-72b`、高性价比 `qwen2.5-32b` |
+| 智谱 GLM | MoE 744B MIT开源 `glm-5.2`、旗舰付费 `glm-4.7`、轻量 `glm-4.7-flash`、轻量低成本 `glm-4-air` |
+| 月之暗面 | 200万字上下文 `moonshot-v1`、增强推理 `kimi-k2` |
+| 字节豆包 | 旗舰通用 `doubao-pro`、轻量低成本 `doubao-lite` |
+| 百川 | 通用多模态 `baichuan4` |
+| MiniMax | 多模态语音(旧) `abab6.5`、最新原生多模态 `minimax-m3`、自主迭代旗舰 `minimax-m2.7`、高速版 `minimax-m2.7-fast` |
+| 零一万物 | 千亿参数 `yi-large` |
+| 讯飞星火 | 多模态 `spark-4.0` |
+| 腾讯混元 | 旗舰多模态 `hunyuan-pro` |
+| Mistral | 多语言/函数调用 `mistral-large`、轻量快速 `mistral-small` |
+| Meta | 官方托管 `llama-4`、70B `llama-3.3` |
+| xAI | 实时联网 `grok-3` |
+| Cohere | 企业级RAG `command-r-plus` |
+| NVIDIA | 120B `nemotron-super` |
+| AI21 | Mamba混合架构 `jamba-1.6` |
+| Reka | 多模态快速 `reka-flash` |
+
+### 聚合平台
+
+可通过以下平台接入更多模型（详见 `models.py`）：
+
+- **NVIDIA NIM** — MiniMax-M2.7、MiniMax-M3
+- **SiliconFlow** — Qwen3.7/GLM-5.2/DeepSeek-V4/Kimi-K2/MiniMax-M1 等 40+ 国产模型
+- **OpenRouter** — DeepSeek-V4/Gemini/Claude/Llama/Qwen3.7/Nemotron 等 30+ 海外模型
+- **Groq** — Llama-4 超快推理
+- **Together AI** — 开源模型托管
+
+### 本地推理
+
+- **Ollama** / **LM Studio** / **vLLM** — 接入本地部署模型，数据不出机
 
 ---
 

@@ -7,13 +7,13 @@ cd "$PROJECT_DIR"
 
 # 检查 Python
 PYTHON=""
-for py in python3.11 python3.10 python3.12 python3; do
-    if command -v "$py" &>/dev/null && "$py" -c "import sys; sys.exit(0 if sys.version_info >= (3,10) else 1)" 2>/dev/null; then
+for py in python3 python3.11 python3.10 python3.12 python3.8; do
+    if command -v "$py" &>/dev/null && "$py" -c "import sys; sys.exit(0 if sys.version_info >= (3,8) else 1)" 2>/dev/null; then
         PYTHON="$py"; break
     fi
 done
 if [ -z "$PYTHON" ]; then
-    echo "[玄姝] 错误: 未找到 Python 3.10+，请先安装"; exit 1
+    echo "[玄姝] 错误: 未找到 Python 3.8+，请先安装"; exit 1
 fi
 
 echo "╔══════════════════════════════════════╗"

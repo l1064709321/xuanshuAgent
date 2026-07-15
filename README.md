@@ -180,28 +180,28 @@ sudo systemctl enable --now xuanshu
 
 ### 直连官方 API
 
-| 厂商 | 标签 / 模型 |
-|------|------------|
-| OpenAI | 旗舰 1.1M上下文 `gpt-5.5`、极致推理 `gpt-5.5-pro`、多模态旗舰 `gpt-4o`、轻量多模态 `gpt-4o-mini` |
-| Anthropic | 旗舰 1M上下文 `claude-opus-4.8`、速度智能平衡 `claude-sonnet-4.6`、最快 `claude-haiku-4.5`、Mythos级 `claude-fable-5` |
-| Google | 旗舰多模态 `gemini-3.1-pro`、默认首选 `gemini-3-flash` |
-| DeepSeek | 旗舰 1M上下文 `deepseek-v4-pro`、高性价比 `deepseek-v4-flash`、旧版 `deepseek-v3`、旧版推理 `deepseek-r1` |
-| 阿里通义 | 最新旗舰 `qwen3.7-max`、Plus版 `qwen3.7-plus`、开源千亿 `qwen2.5-72b`、高性价比 `qwen2.5-32b` |
-| 智谱 GLM | MoE 744B MIT开源 `glm-5.2`、旗舰付费 `glm-4.7`、轻量 `glm-4.7-flash`、轻量低成本 `glm-4-air` |
-| 月之暗面 | 200万字上下文 `moonshot-v1`、增强推理 `kimi-k2` |
-| 字节豆包 | 旗舰通用 `doubao-pro`、轻量低成本 `doubao-lite` |
-| 百川 | 通用多模态 `baichuan4` |
-| MiniMax | 多模态语音(旧) `abab6.5`、最新原生多模态 `minimax-m3`、自主迭代旗舰 `minimax-m2.7`、高速版 `minimax-m2.7-fast` |
-| 零一万物 | 千亿参数 `yi-large` |
-| 讯飞星火 | 多模态 `spark-4.0` |
-| 腾讯混元 | 旗舰多模态 `hunyuan-pro` |
-| Mistral | 多语言/函数调用 `mistral-large`、轻量快速 `mistral-small` |
-| Meta | 官方托管 `llama-4`、70B `llama-3.3` |
-| xAI | 实时联网 `grok-3` |
-| Cohere | 企业级RAG `command-r-plus` |
-| NVIDIA | 120B `nemotron-super` |
-| AI21 | Mamba混合架构 `jamba-1.6` |
-| Reka | 多模态快速 `reka-flash` |
+| 厂商 | 模型 |
+|------|------|
+| OpenAI | ![gpt-5.5](https://img.shields.io/badge/旗舰_1.1M上下文-gpt--5.5-412991?style=flat) ![gpt-5.5-pro](https://img.shields.io/badge/极致推理-gpt--5.5--pro-412991?style=flat) ![gpt-4o](https://img.shields.io/badge/多模态旗舰-gpt--4o-412991?style=flat) ![gpt-4o-mini](https://img.shields.io/badge/轻量多模态-gpt--4o--mini-412991?style=flat) |
+| Anthropic | ![claude-opus-4.8](https://img.shields.io/badge/旗舰_1M上下文-claude--opus--4.8-d4a574?style=flat) ![claude-sonnet-4.6](https://img.shields.io/badge/速度智能平衡-claude--sonnet--4.6-d4a574?style=flat) ![claude-haiku-4.5](https://img.shields.io/badge/最快-claude--haiku--4.5-d4a574?style=flat) ![claude-fable-5](https://img.shields.io/badge/Mythos级-claude--fable--5-d4a574?style=flat) |
+| Google | ![gemini-3.1-pro](https://img.shields.io/badge/旗舰多模态-gemini--3.1--pro-4285F4?style=flat) ![gemini-3-flash](https://img.shields.io/badge/默认首选-gemini--3--flash-4285F4?style=flat) |
+| DeepSeek | ![deepseek-v4-pro](https://img.shields.io/badge/旗舰_1M上下文-deepseek--v4--pro-4B8BBE?style=flat) ![deepseek-v4-flash](https://img.shields.io/badge/高性价比-deepseek--v4--flash-4B8BBE?style=flat) ![deepseek-v3](https://img.shields.io/badge/旧版-deepseek--v3-999?style=flat) ![deepseek-r1](https://img.shields.io/badge/旧版推理-deepseek--r1-999?style=flat) |
+| 阿里通义 | ![qwen3.7-max](https://img.shields.io/badge/最新旗舰-qwen3.7--max-FF6A00?style=flat) ![qwen3.7-plus](https://img.shields.io/badge/Plus版-qwen3.7--plus-FF6A00?style=flat) ![qwen2.5-72b](https://img.shields.io/badge/开源千亿-qwen2.5--72b-FF6A00?style=flat) ![qwen2.5-32b](https://img.shields.io/badge/高性价比-qwen2.5--32b-FF6A00?style=flat) |
+| 智谱 GLM | ![glm-5.2](https://img.shields.io/badge/MoE_744B_MIT开源-glm--5.2-1a6bc4?style=flat) ![glm-4.7](https://img.shields.io/badge/旗舰付费-glm--4.7-1a6bc4?style=flat) ![glm-4.7-flash](https://img.shields.io/badge/轻量-glm--4.7--flash-1a6bc4?style=flat) ![glm-4-air](https://img.shields.io/badge/轻量低成本-glm--4--air-1a6bc4?style=flat) |
+| 月之暗面 | ![moonshot-v1](https://img.shields.io/badge/200万字上下文-moonshot--v1-7B5EA7?style=flat) ![kimi-k2](https://img.shields.io/badge/增强推理-kimi--k2-7B5EA7?style=flat) |
+| 字节豆包 | ![doubao-pro](https://img.shields.io/badge/旗舰通用-doubao--pro-3377FF?style=flat) ![doubao-lite](https://img.shields.io/badge/轻量低成本-doubao--lite-3377FF?style=flat) |
+| 百川 | ![baichuan4](https://img.shields.io/badge/通用多模态-baichuan4-FF6B6B?style=flat) |
+| MiniMax | ![abab6.5](https://img.shields.io/badge/多模态语音旧-abab6.5-9B59B6?style=flat) ![minimax-m3](https://img.shields.io/badge/最新原生多模态-minimax--m3-9B59B6?style=flat) ![minimax-m2.7](https://img.shields.io/badge/自主迭代旗舰-minimax--m2.7-9B59B6?style=flat) ![minimax-m2.7-fast](https://img.shields.io/badge/高速版-minimax--m2.7--fast-9B59B6?style=flat) |
+| 零一万物 | ![yi-large](https://img.shields.io/badge/千亿参数-yi--large-2ECC71?style=flat) |
+| 讯飞星火 | ![spark-4.0](https://img.shields.io/badge/多模态-spark--4.0-FF9900?style=flat) |
+| 腾讯混元 | ![hunyuan-pro](https://img.shields.io/badge/旗舰多模态-hunyuan--pro-00A4FF?style=flat) |
+| Mistral | ![mistral-large](https://img.shields.io/badge/多语言函数调用-mistral--large-FF7000?style=flat) ![mistral-small](https://img.shields.io/badge/轻量快速-mistral--small-FF7000?style=flat) |
+| Meta | ![llama-4](https://img.shields.io/badge/官方托管-llama--4-0668E1?style=flat) ![llama-3.3](https://img.shields.io/badge/70B-llama--3.3-0668E1?style=flat) |
+| xAI | ![grok-3](https://img.shields.io/badge/实时联网-grok--3-1DA1F2?style=flat) |
+| Cohere | ![command-r-plus](https://img.shields.io/badge/企业级RAG-command--r--plus-39594D?style=flat) |
+| NVIDIA | ![nemotron-super](https://img.shields.io/badge/120B-nemotron--super-76B900?style=flat) |
+| AI21 | ![jamba-1.6](https://img.shields.io/badge/Mamba混合架构-jamba--1.6-C75233?style=flat) |
+| Reka | ![reka-flash](https://img.shields.io/badge/多模态快速-reka--flash-6C5CE7?style=flat) |
 
 ### 聚合平台
 

@@ -199,7 +199,6 @@ sudo systemctl enable --now xuanshu
 | Meta | ![llama-4](https://img.shields.io/badge/官方托管-llama--4-0668E1?style=flat) ![llama-3.3](https://img.shields.io/badge/70B-llama--3.3-0668E1?style=flat) |
 | xAI | ![grok-3](https://img.shields.io/badge/实时联网-grok--3-1DA1F2?style=flat) |
 | Cohere | ![command-r-plus](https://img.shields.io/badge/企业级RAG-command--r--plus-39594D?style=flat) |
-| NVIDIA | ![nemotron-super](https://img.shields.io/badge/120B-nemotron--super-76B900?style=flat) |
 | AI21 | ![jamba-1.6](https://img.shields.io/badge/Mamba混合架构-jamba--1.6-C75233?style=flat) |
 | Reka | ![reka-flash](https://img.shields.io/badge/多模态快速-reka--flash-6C5CE7?style=flat) |
 

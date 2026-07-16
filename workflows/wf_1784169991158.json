@@ -1,0 +1,24 @@
+{
+  "id": "wf_1784169991158",
+  "name": "新闻类",
+  "enabled": true,
+  "trigger": {
+    "type": "keyword",
+    "keywords": [
+      "新闻",
+      "热点",
+      "资讯"
+    ],
+    "mode": "any"
+  },
+  "steps": [
+    {
+      "action": "web_search",
+      "params": {
+        "query": "{user_message}"
+      }
+    }
+  ],
+  "created_at": "2026-07-16 10:46:31",
+  "updated_at": "2026-07-16 10:46:31"
+}

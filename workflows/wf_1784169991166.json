@@ -1,0 +1,19 @@
+{
+  "id": "wf_1784169991166",
+  "name": "翻译类",
+  "enabled": true,
+  "trigger": {
+    "type": "prefix",
+    "prefix": "/translate"
+  },
+  "steps": [
+    {
+      "action": "ai_summary",
+      "params": {
+        "prompt": "翻译以下内容"
+      }
+    }
+  ],
+  "created_at": "2026-07-16 10:46:31",
+  "updated_at": "2026-07-16 10:46:31"
+}

@@ -818,6 +818,63 @@ def git_revert_restore():
     except Exception as e:
         return jsonify({"ok": False, "error": str(e)})
 
+# ── 工作流（自动化规则）──
+from workflow import list_workflows, create_workflow, update_workflow, delete_workflow, AVAILABLE_ACTIONS, get_metrics, reset_metrics
+
+@app.route("/workflow/list", methods=["GET"])
+def workflow_list():
+    return jsonify({"ok": True, "workflows": list_workflows(), "available_actions": AVAILABLE_ACTIONS})
+
+@app.route("/workflow/create", methods=["POST"])
+def workflow_create():
+    data = request.get_json() or {}
+    name = (data.get("name") or "").strip()
+    trigger = data.get("trigger", {})
+    steps = data.get("steps", [])
+    enabled = data.get("enabled", True)
+    if not name:
+        return jsonify({"ok": False, "error": "规则名称不能为空"})
+    if not trigger.get("type"):
+        return jsonify({"ok": False, "error": "触发条件不能为空"})
+    if not steps:
+        return jsonify({"ok": False, "error": "至少需要一个执行步骤"})
+    try:
+        wf = create_workflow(name, trigger, steps, enabled)
+        return jsonify({"ok": True, "workflow": wf})
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)})
+
+@app.route("/workflow/update", methods=["POST"])
+def workflow_update():
+    data = request.get_json() or {}
+    wf_id = (data.get("id") or "").strip()
+    if not wf_id:
+        return jsonify({"ok": False, "error": "工作流 ID 不能为空"})
+    updates = data.get("updates", {}) or {}
+    wf = update_workflow(wf_id, updates)
+    if wf is None:
+        return jsonify({"ok": False, "error": "工作流不存在"})
+    return jsonify({"ok": True, "workflow": wf})
+
+@app.route("/workflow/delete", methods=["POST"])
+def workflow_delete():
+    data = request.get_json() or {}
+    wf_id = (data.get("id") or "").strip()
+    if not wf_id:
+        return jsonify({"ok": False, "error": "工作流 ID 不能为空"})
+    ok = delete_workflow(wf_id)
+    return jsonify({"ok": ok})
+
+@app.route("/workflow/metrics", methods=["GET"])
+def workflow_metrics():
+    return jsonify(get_metrics())
+
+@app.route("/workflow/metrics/reset", methods=["POST"])
+def workflow_metrics_reset():
+    reset_metrics()
+    return jsonify({"ok": True, "message": "指标已重置"})
+
+
 if __name__ == "__main__":
     print("玄姝多Agent API → http://0.0.0.0:8901")
     app.run(host="0.0.0.0", port=8901, debug=False)

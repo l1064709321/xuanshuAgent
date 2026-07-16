@@ -219,6 +219,64 @@ sudo systemctl enable --now xuanshu
 
 ---
 
+## 常见问题
+
+### Aidlux / ARM 设备部署
+
+**问题 1：Git Clone TLS 错误**
+
+在 Aidlux 等 ARM 设备上 `git clone` GitHub 仓库时报 `GnuTLS recv error (-110)`：
+
+```bash
+# 优先使用 Gitee 镜像（国内节点更稳定）
+git clone https://gitee.com/lord-of-the-star/xuan-shu-agent.git
+
+# 或禁用 SSL 验证
+GIT_SSL_NO_VERIFY=1 git clone --depth 1 https://github.com/l1064709321/xuanshuAgent.git
+
+# 或 wget 下载 zip
+wget --no-check-certificate https://github.com/l1064709321/xuanshuAgent/archive/refs/heads/main.zip
+unzip main.zip && mv xuanshuAgent-main xuanshuAgent
+```
+
+**问题 2：pip install 权限错误**
+
+执行 `pip install -r requirements.txt` 时 `wikipedia` 包报错，常见两种：
+
+```
+# 错误 1：权限不足
+error: [Errno 13] Permission denied: '.../wikipedia-1.4.0.egg-info/dependency_links.txt'
+
+# 错误 2：缺少 wheel
+error: invalid command 'bdist_wheel'
+ERROR: Failed building wheel for wikipedia
+```
+
+解决方案 A——补全权限，安装全部依赖：
+
+```bash
+# 先卸载残留在 site-packages 中的 wikipedia
+rm -rf .venv/lib/python3.*/site-packages/wikipedia*
+
+# 修复整个虚拟环境目录权限
+chmod -R u+w .venv
+
+# 升级工具链并重装
+source .venv/bin/activate
+pip install --upgrade pip setuptools wheel
+pip install -r requirements.txt
+```
+
+解决方案 B——跳过非必需包（快速启动）：
+
+```bash
+rm -rf .venv && python3 -m venv .venv && source .venv/bin/activate
+pip install --upgrade pip setuptools wheel
+pip install flask requests httpx beautifulsoup4 lxml python-dotenv markdown
+```
+
+`wikipedia` 包非核心依赖，方案 B 跳过不影响系统运行。
+
 ## API 端点
 
 ### 对话

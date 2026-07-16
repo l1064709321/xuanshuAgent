@@ -1,0 +1,19 @@
+{
+  "id": "wf_1784169991170",
+  "name": "情感分析",
+  "enabled": true,
+  "trigger": {
+    "type": "regex",
+    "pattern": "分析.{0,5}(心情|情绪|评论)"
+  },
+  "steps": [
+    {
+      "action": "ai_summary",
+      "params": {
+        "prompt": "情感分析"
+      }
+    }
+  ],
+  "created_at": "2026-07-16 10:46:31",
+  "updated_at": "2026-07-16 10:46:31"
+}

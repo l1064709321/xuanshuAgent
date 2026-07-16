@@ -155,6 +155,7 @@
         <div class="panel-tab" tabindex="0" role="tab" aria-selected="false" onclick="switchPanelTab(this,'theme')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();switchPanelTab(this,'theme')}">主题</div>
         <div class="panel-tab" tabindex="0" role="tab" aria-selected="false" onclick="switchPanelTab(this,'tools')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();switchPanelTab(this,'tools')}">工具</div>
         <div class="panel-tab" tabindex="0" role="tab" aria-selected="false" onclick="switchPanelTab(this,'agents')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();switchPanelTab(this,'agents')}">Agent</div>
+        <div class="panel-tab" tabindex="0" role="tab" aria-selected="false" onclick="switchPanelTab(this,'workflow')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();switchPanelTab(this,'workflow')}">工作流</div>
       </div>
 
       <div class="panel-content" id="tab-settings">
@@ -315,6 +316,92 @@
               <div style="color:var(--text-muted);margin-top:4px">文件管理 / 读写</div>
             </div>
           </div>
+        </div>
+      </div>
+
+      <div class="panel-content" id="tab-workflow" style="display:none">
+        <!-- 顶部工具栏 -->
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+          <div class="section-title" style="margin:0">可视化编排</div>
+          <div style="display:flex;gap:6px">
+            <button class="btn btn-ghost btn-sm" onclick="showWFCreate()">新建</button>
+            <button class="btn btn-primary btn-sm" onclick="saveCanvasWF()">保存到云端</button>
+          </div>
+        </div>
+
+        <!-- 规则名称 + 触发条件 -->
+        <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap">
+          <input id="wfCanvasName" class="form-input" placeholder="规则名称" style="width:160px" value="">
+          <select id="wfCanvasTriggerType" class="form-input" style="width:120px" onchange="onCanvasTriggerChange()">
+            <option value="keyword">关键词匹配</option>
+            <option value="prefix">前缀匹配</option>
+            <option value="regex">正则匹配</option>
+          </select>
+          <input id="wfCanvasTriggerVal" class="form-input" placeholder="关键词，逗号分隔" style="flex:1;min-width:160px" value="">
+          <select id="wfCanvasTriggerMode" class="form-input" style="width:100px" onchange="syncCanvasWF()">
+            <option value="any">任一</option>
+            <option value="all">全词</option>
+          </select>
+          <label style="font-size:12px;display:flex;align-items:center;gap:4px;white-space:nowrap">
+            <input type="checkbox" id="wfCanvasEnabled" checked onchange="syncCanvasWF()">启用
+          </label>
+        </div>
+
+        <!-- 节点面板 + 画布 -->
+        <div style="display:flex;gap:0;border:1px solid var(--rule);border-radius:var(--radius-md);overflow:hidden;height:420px">
+          <!-- 左侧节点模板 -->
+          <div style="width:100px;background:var(--ink-surface);border-right:1px solid var(--rule);padding:8px;display:flex;flex-direction:column;gap:8px;overflow-y:auto">
+            <div style="font-size:11px;color:var(--text-muted);text-align:center;margin-bottom:4px">拖入画布</div>
+            <div class="wf-palette-node" draggable="true" data-action="web_search" ondragstart="onPaletteDrag(event)">
+              <div class="wf-palette-dot" style="background:#3b82f6"></div>
+              <span>搜索</span>
+            </div>
+            <div class="wf-palette-node" draggable="true" data-action="ai_summary" ondragstart="onPaletteDrag(event)">
+              <div class="wf-palette-dot" style="background:#8b5cf6"></div>
+              <span>AI总结</span>
+            </div>
+            <div class="wf-palette-node" draggable="true" data-action="write_file" ondragstart="onPaletteDrag(event)">
+              <div class="wf-palette-dot" style="background:#10b981"></div>
+              <span>写文件</span>
+            </div>
+            <div class="wf-palette-node" draggable="true" data-action="notify" ondragstart="onPaletteDrag(event)">
+              <div class="wf-palette-dot" style="background:#f59e0b"></div>
+              <span>通知</span>
+            </div>
+          </div>
+          <!-- SVG 画布 -->
+          <div style="flex:1;position:relative;overflow:auto;background:var(--ink-bg)"
+               ondragover="onCanvasDragOver(event)" ondrop="onCanvasDrop(event)"
+               onclick="onCanvasClick(event)">
+            <svg id="wfCanvas" width="800" height="420" style="display:block;cursor:default">
+              <defs>
+                <marker id="arrowhead" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+                  <polygon points="0 0, 8 3, 0 6" fill="var(--text-muted)"/>
+                </marker>
+              </defs>
+            </svg>
+          </div>
+        </div>
+
+        <!-- 节点属性编辑浮层 -->
+        <div id="wfNodeEditor" style="display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:999;
+          background:var(--ink-surface);border:1px solid var(--rule);border-radius:var(--radius-md);padding:16px;
+          min-width:280px;box-shadow:0 8px 32px rgba(0,0,0,0.3)">
+          <div style="font-weight:600;margin-bottom:12px" id="wfNodeEditorTitle">编辑节点</div>
+          <div id="wfNodeEditorBody"></div>
+          <div style="display:flex;gap:8px;margin-top:12px">
+            <button class="btn btn-primary btn-sm" onclick="applyNodeEdit()" style="flex:1">确定</button>
+            <button class="btn btn-ghost btn-sm" onclick="closeNodeEdit()" style="flex:1">取消</button>
+          </div>
+        </div>
+        <div id="wfNodeOverlay" style="display:none;position:fixed;inset:0;z-index:998;background:rgba(0,0,0,0.3)" onclick="closeNodeEdit()"></div>
+
+        <!-- 规则列表 -->
+        <div class="panel-section" style="margin-top:12px">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+            <div class="section-title" style="margin:0">已保存规则</div>
+          </div>
+          <div id="wfList" style="display:flex;flex-direction:column;gap:8px;max-height:240px;overflow-y:auto"></div>
         </div>
       </div>
     </section>
@@ -1701,6 +1788,442 @@ function closeFileViewer() {
 }
 
 function escapeHtml(str) { return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+// ========== 粒子云画布 ==========
+
+// ========== 工作流（自动化规则）==========
+let wfEditingId = null;
+const WF_ACTIONS = [
+  { value: 'web_search', label: '联网搜索', color: '#3b82f6' },
+  { value: 'ai_summary', label: 'AI 总结',  color: '#8b5cf6' },
+  { value: 'write_file', label: '写文件',   color: '#10b981' },
+  { value: 'notify',     label: '通知',     color: '#f59e0b' },
+];
+
+// ═══════════════════════ 工作流可视画布 ═══════════════════════
+let wfCanvasNodes = [];  // [{id, action, label, x, y, params:{...}}]
+let wfNodeIdSeq = 0;
+let wfDragNode = null;      // 画布内拖拽状态：{nodeId, offsetX, offsetY}
+let wfSelectedNode = null;  // 当前选中节点 id
+let wfEditTarget = null;    // 正在编辑参数的节点 id
+
+// ── 画布渲染 ──
+function renderCanvas() {
+  const svg = document.getElementById('wfCanvas');
+  // 保留 defs，清空其他
+  const defs = svg.querySelector('defs');
+  svg.innerHTML = ''; svg.appendChild(defs);
+
+  const NODE_W = 130, NODE_H = 48, PAD = 10;
+
+  // 画连接线
+  for (let i = 0; i < wfCanvasNodes.length - 1; i++) {
+    const a = wfCanvasNodes[i], b = wfCanvasNodes[i+1];
+    const x1 = a.x + NODE_W, y1 = a.y + NODE_H/2;
+    const x2 = b.x, y2 = b.y + NODE_H/2;
+    const cx1 = x1 + Math.abs(x2-x1)*0.4, cx2 = x2 - Math.abs(x2-x1)*0.4;
+    const g = document.createElementNS('http://www.w3.org/2000/svg','g');
+    g.setAttribute('class','wf-connector-group');
+    const path = document.createElementNS('http://www.w3.org/2000/svg','path');
+    path.setAttribute('d',`M ${x1},${y1} C ${cx1},${y1} ${cx2},${y2} ${x2},${y2}`);
+    path.setAttribute('class','wf-connector-line');
+    g.appendChild(path);
+    svg.appendChild(g);
+  }
+
+  // 画节点
+  wfCanvasNodes.forEach((node, idx) => {
+    const act = WF_ACTIONS.find(a=>a.value===node.action) || {};
+    const g = document.createElementNS('http://www.w3.org/2000/svg','g');
+    g.setAttribute('class','wf-canvas-node' + (node.id===wfSelectedNode?' selected':''));
+    g.setAttribute('transform',`translate(${node.x},${node.y})`);
+    g.setAttribute('data-id', node.id);
+
+    // body
+    const r = document.createElementNS('http://www.w3.org/2000/svg','rect');
+    r.setAttribute('width', NODE_W); r.setAttribute('height', NODE_H);
+    r.setAttribute('class','node-body');
+    r.setAttribute('rx','6');
+    g.appendChild(r);
+
+    // color bar
+    const bar = document.createElementNS('http://www.w3.org/2000/svg','rect');
+    bar.setAttribute('x','0'); bar.setAttribute('y','0');
+    bar.setAttribute('width','3'); bar.setAttribute('height',NODE_H);
+    bar.setAttribute('fill', act.color||'#888');
+    bar.setAttribute('rx','3');
+    g.appendChild(bar);
+
+    // label
+    const t = document.createElementNS('http://www.w3.org/2000/svg','text');
+    t.setAttribute('x','12'); t.setAttribute('y','20');
+    t.setAttribute('class','node-label');
+    t.textContent = node.label || act.label || node.action;
+    g.appendChild(t);
+
+    // sub
+    const s = document.createElementNS('http://www.w3.org/2000/svg','text');
+    s.setAttribute('x','12'); s.setAttribute('y','36');
+    s.setAttribute('class','node-sub');
+    s.textContent = idx===0 ? '步骤 '+(idx+1) : '步骤 '+(idx+1);
+    g.appendChild(s);
+
+    // output handle (right)
+    if (idx < wfCanvasNodes.length - 1) {
+      const h = document.createElementNS('http://www.w3.org/2000/svg','circle');
+      h.setAttribute('cx', NODE_W); h.setAttribute('cy', NODE_H/2);
+      h.setAttribute('r','4'); h.setAttribute('class','wf-canvas-handle');
+      g.appendChild(h);
+    }
+
+    // events
+    g.addEventListener('mousedown', (e) => onNodeMouseDown(e, node.id));
+    g.addEventListener('dblclick', (e) => { e.stopPropagation(); openNodeEditor(node.id); });
+
+    svg.appendChild(g);
+  });
+}
+
+function refreshCanvas() {
+  // re-layout: vertical stack with fixed spacing
+  const NODE_W = 130, NODE_H = 48;
+  const startX = 80, startY = 30, gapY = 80;
+  wfCanvasNodes.forEach((n, i) => {
+    n.x = startX;
+    n.y = startY + i * (NODE_H + gapY);
+  });
+  renderCanvas();
+}
+
+// ── 画布交互 ──
+function onNodeMouseDown(e, nodeId) {
+  if (e.button !== 0) return;
+  e.stopPropagation();
+  const node = wfCanvasNodes.find(n=>n.id===nodeId);
+  if (!node) return;
+  wfSelectedNode = nodeId;
+  const svgEl = document.getElementById('wfCanvas');
+  const rect = svgEl.getBoundingClientRect();
+  wfDragNode = { nodeId, offsetX: e.clientX - rect.left - node.x, offsetY: e.clientY - rect.top - node.y };
+  renderCanvas();
+  document.addEventListener('mousemove', onCanvasMouseMove);
+  document.addEventListener('mouseup', onCanvasMouseUp);
+}
+
+function onCanvasMouseMove(e) {
+  if (!wfDragNode) return;
+  const svgEl = document.getElementById('wfCanvas');
+  const rect = svgEl.getBoundingClientRect();
+  const node = wfCanvasNodes.find(n=>n.id===wfDragNode.nodeId);
+  if (!node) return;
+  node.x = Math.max(0, e.clientX - rect.left - wfDragNode.offsetX);
+  node.y = Math.max(0, e.clientY - rect.top - wfDragNode.offsetY);
+  renderCanvas();
+}
+
+function onCanvasMouseUp() {
+  wfDragNode = null;
+  document.removeEventListener('mousemove', onCanvasMouseMove);
+  document.removeEventListener('mouseup', onCanvasMouseUp);
+}
+
+function onCanvasClick(e) {
+  if (e.target.closest('.wf-canvas-node')) return;
+  wfSelectedNode = null;
+  renderCanvas();
+}
+
+// ── 左侧面板拖入 ──
+function onPaletteDrag(e) {
+  e.dataTransfer.setData('action', e.target.closest('.wf-palette-node').getAttribute('data-action'));
+}
+
+function onCanvasDragOver(e) {
+  e.preventDefault();
+}
+
+function onCanvasDrop(e) {
+  e.preventDefault();
+  const action = e.dataTransfer.getData('action');
+  if (!action || !WF_ACTIONS.find(a=>a.value===action)) return;
+  const act = WF_ACTIONS.find(a=>a.value===action);
+  const svgEl = document.getElementById('wfCanvas');
+  const rect = svgEl.getBoundingClientRect();
+  wfNodeIdSeq++;
+  const node = {
+    id: 'node_'+wfNodeIdSeq,
+    action: action,
+    label: act.label,
+    x: Math.max(0, e.clientX - rect.left - 65),
+    y: Math.max(0, e.clientY - rect.top - 24),
+    params: getDefaultParams(action)
+  };
+  wfCanvasNodes.push(node);
+  // sort by Y to keep order logical
+  wfCanvasNodes.sort((a,b)=>a.y-b.y);
+  refreshCanvas();
+}
+
+function getDefaultParams(action) {
+  switch (action) {
+    case 'web_search': return { query: '{user_message}' };
+    case 'ai_summary': return { prompt: '帮我总结上面的内容' };
+    case 'write_file': return { filename: 'output.txt', content: '{ai_output}' };
+    case 'notify':     return { message: '工作流执行完成' };
+    default: return {};
+  }
+}
+
+// ── 节点参数编辑浮层 ──
+function openNodeEditor(nodeId) {
+  const node = wfCanvasNodes.find(n=>n.id===nodeId);
+  if (!node) return;
+  wfEditTarget = nodeId;
+  const act = WF_ACTIONS.find(a=>a.value===node.action);
+  document.getElementById('wfNodeEditorTitle').textContent = '编辑: ' + (act?.label || node.action);
+  const body = document.getElementById('wfNodeEditorBody');
+  const params = node.params || getDefaultParams(node.action);
+  let html = '';
+  switch (node.action) {
+    case 'web_search':
+      html = `<div class="form-group"><label class="form-label">搜索关键词</label><input id="wfEdit_query" class="form-input" value="${escapeHtml(params.query||'')}" placeholder="支持 {user_message} 变量"></div>`;
+      break;
+    case 'ai_summary':
+      html = `<div class="form-group"><label class="form-label">分析提示词</label><input id="wfEdit_prompt" class="form-input" value="${escapeHtml(params.prompt||'')}" placeholder="支持 {search_result} 等变量"></div>`;
+      break;
+    case 'write_file':
+      html = `<div class="form-group"><label class="form-label">文件名</label><input id="wfEdit_filename" class="form-input" value="${escapeHtml(params.filename||'')}"></div>
+        <div class="form-group"><label class="form-label" style="margin-top:4px">文件内容</label><input id="wfEdit_content" class="form-input" value="${escapeHtml(params.content||'')}" placeholder="支持 {ai_output} 变量"></div>`;
+      break;
+    case 'notify':
+      html = `<div class="form-group"><label class="form-label">通知内容</label><input id="wfEdit_message" class="form-input" value="${escapeHtml(params.message||'')}"></div>`;
+      break;
+  }
+  body.innerHTML = html;
+  document.getElementById('wfNodeEditor').style.display = 'block';
+  document.getElementById('wfNodeOverlay').style.display = 'block';
+}
+
+function applyNodeEdit() {
+  if (!wfEditTarget) return;
+  const node = wfCanvasNodes.find(n=>n.id===wfEditTarget);
+  if (!node) return;
+  node.params = {};
+  switch (node.action) {
+    case 'web_search': node.params.query = document.getElementById('wfEdit_query')?.value || ''; break;
+    case 'ai_summary': node.params.prompt = document.getElementById('wfEdit_prompt')?.value || ''; break;
+    case 'write_file':
+      node.params.filename = document.getElementById('wfEdit_filename')?.value || '';
+      node.params.content = document.getElementById('wfEdit_content')?.value || '';
+      break;
+    case 'notify': node.params.message = document.getElementById('wfEdit_message')?.value || ''; break;
+  }
+  closeNodeEdit();
+  renderCanvas();
+}
+
+function closeNodeEdit() {
+  document.getElementById('wfNodeEditor').style.display = 'none';
+  document.getElementById('wfNodeOverlay').style.display = 'none';
+  wfEditTarget = null;
+}
+
+// ── 触发条件 UI ──
+function onCanvasTriggerChange() {
+  const t = document.getElementById('wfCanvasTriggerType').value;
+  const v = document.getElementById('wfCanvasTriggerVal');
+  const m = document.getElementById('wfCanvasTriggerMode');
+  if (t === 'keyword') {
+    v.placeholder = '关键词，逗号分隔'; v.value = '';
+    m.parentElement.style.display = '';
+  } else if (t === 'prefix') {
+    v.placeholder = '前缀字符，如 /search'; v.value = '';
+    m.parentElement.style.display = 'none';
+  } else {
+    v.placeholder = '正则表达式'; v.value = '';
+    m.parentElement.style.display = 'none';
+  }
+}
+
+// ── 构建 payload ──
+function buildCanvasPayload() {
+  const name = document.getElementById('wfCanvasName').value.trim();
+  const triggerType = document.getElementById('wfCanvasTriggerType').value;
+  const triggerVal = document.getElementById('wfCanvasTriggerVal').value.trim();
+  const triggerMode = document.getElementById('wfCanvasTriggerMode').value;
+  const enabled = document.getElementById('wfCanvasEnabled').checked;
+
+  let trigger = { type: triggerType };
+  if (triggerType === 'keyword') {
+    trigger.keywords = triggerVal.split(',').map(s=>s.trim()).filter(Boolean);
+    trigger.mode = triggerMode;
+  } else if (triggerType === 'prefix') {
+    trigger.prefix = triggerVal;
+  } else if (triggerType === 'regex') {
+    trigger.pattern = triggerVal;
+  }
+
+  const steps = wfCanvasNodes.map(n => ({ action: n.action, params: n.params || getDefaultParams(n.action) }));
+
+  return { name, trigger, steps, enabled };
+}
+
+async function saveCanvasWF() {
+  const payload = buildCanvasPayload();
+  if (!payload.name) { alert('请输入规则名称'); return; }
+  if (!payload.steps.length) { alert('请从左侧拖入至少一个动作节点'); return; }
+  const url = wfEditingId ? '/workflow/update' : '/workflow/create';
+  if (wfEditingId) payload.id = wfEditingId;
+  try {
+    const r = await fetch(url, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload) });
+    const d = await r.json();
+    if (d.ok) {
+      wfEditingId = null;
+      loadWorkflows();
+    } else {
+      alert('保存失败: ' + (d.error || '未知错误'));
+    }
+  } catch(e) { alert('网络错误: ' + e.message); }
+}
+
+// ── 新建 ──
+function showWFCreate() {
+  wfEditingId = null;
+  wfCanvasNodes = [];
+  wfNodeIdSeq = 0;
+  wfSelectedNode = null;
+  document.getElementById('wfCanvasName').value = '';
+  document.getElementById('wfCanvasTriggerType').value = 'keyword';
+  document.getElementById('wfCanvasTriggerVal').value = '';
+  document.getElementById('wfCanvasTriggerMode').value = 'any';
+  document.getElementById('wfCanvasEnabled').checked = true;
+  document.getElementById('wfCanvasTriggerMode').parentElement.style.display = '';
+  renderCanvas();
+}
+
+// ── 从列表编辑 ──
+function editWF(id) {
+  wfEditingId = id;
+  fetch('/workflow/list').then(r=>r.json()).then(d=>{
+    const wf = (d.workflows||[]).find(x=>x.id===id);
+    if (!wf) return;
+    document.getElementById('wfCanvasName').value = wf.name;
+    document.getElementById('wfCanvasTriggerType').value = wf.trigger.type || 'keyword';
+    if (wf.trigger.type === 'keyword') {
+      document.getElementById('wfCanvasTriggerVal').value = (wf.trigger.keywords||[]).join(', ');
+      document.getElementById('wfCanvasTriggerMode').value = wf.trigger.mode || 'any';
+      document.getElementById('wfCanvasTriggerMode').parentElement.style.display = '';
+    } else if (wf.trigger.type === 'prefix') {
+      document.getElementById('wfCanvasTriggerVal').value = wf.trigger.prefix || '';
+      document.getElementById('wfCanvasTriggerMode').parentElement.style.display = 'none';
+    } else if (wf.trigger.type === 'regex') {
+      document.getElementById('wfCanvasTriggerVal').value = wf.trigger.pattern || '';
+      document.getElementById('wfCanvasTriggerMode').parentElement.style.display = 'none';
+    }
+    document.getElementById('wfCanvasEnabled').checked = wf.enabled !== false;
+    // 构建节点
+    wfCanvasNodes = [];
+    wfNodeIdSeq = 0;
+    (wf.steps||[]).forEach(s => {
+      wfNodeIdSeq++;
+      const act = WF_ACTIONS.find(a=>a.value===s.action);
+      wfCanvasNodes.push({
+        id: 'node_'+wfNodeIdSeq,
+        action: s.action,
+        label: act ? act.label : s.action,
+        x: 80, y: 0,
+        params: s.params || getDefaultParams(s.action)
+      });
+    });
+    refreshCanvas();
+  });
+}
+
+// ── 规则列表 ──
+function formatTrigger(t) {
+  if (!t) return '未知';
+  if (t.type === 'keyword') return `关键词[${t.mode||'any'}]: ${(t.keywords||[]).join(', ')}`;
+  if (t.type === 'prefix') return `前缀: ${t.prefix}`;
+  if (t.type === 'regex') return `正则: ${t.pattern}`;
+  return t.type;
+}
+
+async function loadWorkflows() {
+  try {
+    const r = await fetch('/workflow/list');
+    const d = await r.json();
+    if (!d.ok) return;
+    const list = d.workflows || [];
+    const el = document.getElementById('wfList');
+    if (list.length === 0) {
+      el.innerHTML = '<div style="text-align:center;padding:20px;color:var(--text-muted);font-size:13px">暂无自动化规则，点击「新建」开始编排</div>';
+      return;
+    }
+    el.innerHTML = list.map(wf => {
+      const triggerDesc = formatTrigger(wf.trigger);
+      const stepsDesc = (wf.steps||[]).map(s => {
+        const a = WF_ACTIONS.find(x=>x.value===s.action);
+        return a ? a.label : s.action;
+      }).join(' → ');
+      const badge = wf.enabled ? '<span style="font-size:11px;color:#10b981">● 启用</span>' : '<span style="font-size:11px;color:var(--text-muted)">○ 停用</span>';
+      return `<div style="padding:12px;border-radius:var(--radius-sm);border:1px solid var(--rule);background:var(--ink-surface)">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+          <span style="font-weight:600;color:var(--text-paper)">${escapeHtml(wf.name)}</span>
+          <span>${badge}</span>
+        </div>
+        <div style="font-size:12px;color:var(--text-muted);margin-bottom:4px">触发: ${triggerDesc}</div>
+        <div style="font-size:12px;color:var(--text-muted);margin-bottom:8px">步骤: ${stepsDesc || '无'}</div>
+        <div style="display:flex;gap:6px">
+          <button class="btn btn-ghost btn-sm" onclick="editWF('${wf.id}')">加载到画布</button>
+          <button class="btn btn-ghost btn-sm" onclick="toggleWF('${wf.id}')">${wf.enabled?'停用':'启用'}</button>
+          <button class="btn btn-ghost btn-sm" style="color:#ef4444" onclick="deleteWF('${wf.id}')">删除</button>
+        </div>
+      </div>`;
+    }).join('');
+  } catch(e) { console.error('loadWorkflows', e); }
+}
+
+async function toggleWF(id) {
+  try {
+    const r = await fetch('/workflow/list');
+    const d = await r.json();
+    const wf = (d.workflows||[]).find(x=>x.id===id);
+    if (!wf) return;
+    await fetch('/workflow/update', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({id, enabled:!wf.enabled}) });
+    loadWorkflows();
+  } catch(e) { console.error(e); }
+}
+
+async function deleteWF(id) {
+  if (!confirm('确定删除此规则？')) return;
+  try {
+    await fetch('/workflow/delete', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({id}) });
+    loadWorkflows();
+  } catch(e) { console.error(e); }
+}
+
+// ── 快捷键：Del 删除选中节点 ──
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Delete' && wfSelectedNode && document.getElementById('tab-workflow').style.display !== 'none') {
+    wfCanvasNodes = wfCanvasNodes.filter(n => n.id !== wfSelectedNode);
+    wfSelectedNode = null;
+    refreshCanvas();
+  }
+});
+
+// 页面 / tab 切换加载
+const origNavigateTo = navigateTo;
+navigateTo = function(hash) {
+  origNavigateTo(hash);
+  if (hash === '#settings') {
+    const tab = document.querySelector('.panel-tab[aria-selected="true"]');
+    if (tab && tab.getAttribute('data-page') === 'workflow') { loadWorkflows(); }
+  }
+};
+document.addEventListener('click', function(e) {
+  const tab = e.target.closest('.panel-tab');
+  if (tab && tab.getAttribute('data-page') === 'workflow') { setTimeout(loadWorkflows, 100); }
+});
 
 // ========== 粒子云画布 ==========
 function initParticles() {

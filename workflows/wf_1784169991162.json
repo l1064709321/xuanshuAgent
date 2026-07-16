@@ -1,0 +1,24 @@
+{
+  "id": "wf_1784169991162",
+  "name": "天气类",
+  "enabled": true,
+  "trigger": {
+    "type": "keyword",
+    "keywords": [
+      "天气",
+      "温度",
+      "下雨"
+    ],
+    "mode": "any"
+  },
+  "steps": [
+    {
+      "action": "web_search",
+      "params": {
+        "query": "{user_message}"
+      }
+    }
+  ],
+  "created_at": "2026-07-16 10:46:31",
+  "updated_at": "2026-07-16 10:46:31"
+}

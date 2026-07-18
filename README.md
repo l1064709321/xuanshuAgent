@@ -200,9 +200,9 @@ git push github main:main
 bash xuanshu
 ```
 
-**Windows：**
-```cmd
-xuanshu.bat
+**Windows（PowerShell / CMD）：**
+```powershell
+.\xuanshu.bat
 ```
 
 访问 http://localhost:8901

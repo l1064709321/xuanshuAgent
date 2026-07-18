@@ -3,7 +3,11 @@
 - 临时目录隔离，执行后自动清理
 - seccomp 过滤危险系统调用（Linux）
 """
-import os, sys, tempfile, subprocess, resource, shutil, json
+import os, sys, tempfile, subprocess, shutil, json
+try:
+    import resource
+except ImportError:
+    resource = None  # Windows 上没有 resource 模块
 from pathlib import Path
 from typing import Optional, Dict
 

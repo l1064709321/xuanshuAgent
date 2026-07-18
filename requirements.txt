@@ -1,3 +1,5 @@
 flask>=3.0
 requests>=2.28
 wikipedia
+numpy
+scikit-learn

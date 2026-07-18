@@ -5,7 +5,6 @@
 [![SSE](https://img.shields.io/badge/协议-SSE-FF6B35)](#)
 [![REST](https://img.shields.io/badge/协议-REST-009688)](#)
 [![SQLite](https://img.shields.io/badge/存储-SQLite-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
-[![License](https://img.shields.io/badge/License-GPL%20v3%20%2B%20Apache%202.0-blue.svg)](LICENSE)
 
 > 父 Bot 意图路由 → 子 Agent 工具调用 → 思考链流式输出 → Skill 自学习
 
@@ -410,4 +409,4 @@ python -m decompile --tools                    # 查看可用工具
 
 ## 许可证
 
-GPL v3 + Apache 2.0
+ Apache 2.0

@@ -7,39 +7,50 @@
 [![SQLite](https://img.shields.io/badge/存储-SQLite-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://www.apache.org/licenses/LICENSE-2.0)
 
-> 父 Bot 意图路由 → 子 Agent 工具调用 → 思考链流式输出 → Skill 自学习
+## 系统概述
 
+玄姝是一个运行在本地的多 Agent 协作系统。
+一个请求进来之后，不是单一大模型直接回答——而是由**父 Bot** 分析意图，路由到最合适的**子 Agent**（搜索/代码/文件/电脑/应用），子 Agent 自主调用工具完成任务，整个过程通过 SSE 实时推送到前端展示。
+
+核心思路：不让一个模型干所有事，而是让「路由者」+「执行者」各司其职，复杂任务走协调者四阶段流水线。
+```
+ 父 Bot 意图路由 → 子 Agent 工具调用 → 思考链流式输出 → Skill 自学习
+```
 ---
 
-## 快速开始
+# 快速开始
 
-### 克隆仓库
+## 克隆仓库
 
-**Gitee（国内推荐）：**
+#### Gitee（国内推荐）：
 
 Linux / macOS / WSL：
 ```bash
 git clone https://gitee.com/l1064709321/xuanshuAgent.git
+pip install -r requirements.txt
 cd xuanshuAgent
 ```
 
 Windows（PowerShell）：
 ```powershell
 git clone https://gitee.com/l1064709321/xuanshuAgent.git
+pip install -r requirements.txt
 cd xuanshuAgent
 ```
 
-**GitHub：**
+### GitHub：
 
 Linux / macOS / WSL：
 ```bash
 git clone https://github.com/l1064709321/xuanshuAgent.git
+pip install -r requirements.txt
 cd xuanshuAgent
 ```
 
 Windows（PowerShell）：
 ```powershell
 git clone https://github.com/l1064709321/xuanshuAgent.git
+pip install -r requirements.txt
 cd xuanshuAgent
 ```
 
@@ -52,7 +63,8 @@ cd xuanshuAgent
 | 手动启动 | Linux / macOS / WSL | `source .venv/bin/activate && python frontend.py` |
 | 手动启动 | Windows | `.venv\Scripts\activate && python frontend.py` |
 
-访问 http://localhost:8901。一键脚本自动完成：检测 Python ≥ 3.8 → 创建 `.venv` → 安装依赖 → 启动服务。
+访问 http://localhost:8901
+一键脚本自动完成：检测 Python ≥ 3.8 → 创建 `.venv` → 安装依赖 → 启动服务。
 
 命令行模式将 `frontend.py` 换成 `main.py`。
 
@@ -70,12 +82,6 @@ sudo systemctl enable --now xuanshu
 - Linux / macOS / Windows / WSL
 
 ---
-
-## 系统概述
-
-玄姝是一个运行在本地的多 Agent 协作系统。一个请求进来之后，不是单一大模型直接回答——而是由**父 Bot** 分析意图，路由到最合适的**子 Agent**（搜索/代码/文件/电脑/应用），子 Agent 自主调用工具完成任务，整个过程通过 SSE 实时推送到前端展示。
-
-核心思路：不让一个模型干所有事，而是让「路由者」+「执行者」各司其职，复杂任务走协调者四阶段流水线。
 
 ### 工作流程
 

@@ -775,9 +775,9 @@ class ModelPool:
                 return None
         return self._clients[cache_key]
 
-    def call_llm(self, agent: str, messages: list, tools: list = None, model_override: str = "") -> dict:
+    def call_llm(self, agent: str, messages: list, tools: list = None, model_override: str = "", stop: list = None) -> dict:
         """单次调用，内部委托到 call_llm_with_fallback（不启用兜底）"""
-        return self.call_llm_with_fallback(agent, messages, tools, fallback_models=[], max_fallbacks=0, model_override=model_override)
+        return self.call_llm_with_fallback(agent, messages, tools, fallback_models=[], max_fallbacks=0, model_override=model_override, stop=stop)
 
     # ═══ 多模型兜底 ═══
 
@@ -798,7 +798,7 @@ class ModelPool:
     def call_llm_with_fallback(
         self, agent: str, messages: list, tools: list = None,
         fallback_models: list = None, max_fallbacks: int = 5,
-        model_override: str = "",
+        model_override: str = "", stop: list = None,
     ) -> dict:
         """多模型兜底调用：依次尝试主模型和备用模型，直至成功。
         
@@ -850,6 +850,8 @@ class ModelPool:
             params = {"model": model.model_id, "messages": messages[-20:], "max_tokens": 4096}
             if tools:
                 params["tools"] = tools
+            if stop:
+                params["stop"] = stop
             # NVIDIA MiniMax 必须走 streaming，否则超时或空返回
             if key.startswith("nv-minimax"):
                 params["stream"] = True

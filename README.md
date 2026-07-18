@@ -15,9 +15,11 @@
 ```bash
 # Gitee（国内推荐）
 git clone https://gitee.com/lord-of-the-star/xuan-shu-agent.git
+cd xuan-shu-agent
 
 # GitHub
 git clone https://github.com/l1064709321/xuanshuAgent.git
+cd xuanshuAgent
 ```
 
 ---

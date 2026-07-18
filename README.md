@@ -19,13 +19,13 @@
 
 Linux / macOS / WSL：
 ```bash
-git clone https://gitee.com/lord-of-the-star/xuanshuAgent.git
+git clone https://gitee.com/l1064709321/xuanshuAgent.git
 cd xuanshuAgent
 ```
 
 Windows（PowerShell）：
 ```powershell
-git clone https://gitee.com/lord-of-the-star/xuanshuAgent.git
+git clone https://gitee.com/l1064709321/xuanshuAgent.git
 cd xuanshuAgent
 ```
 

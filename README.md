@@ -10,6 +10,18 @@
 
 ---
 
+## 克隆仓库
+
+```bash
+# Gitee（国内推荐）
+git clone https://gitee.com/lord-of-the-star/xuan-shu-agent.git
+
+# GitHub
+git clone https://github.com/l1064709321/xuanshuAgent.git
+```
+
+---
+
 ## 这是什么
 
 玄姝是一个运行在本地的多 Agent 协作系统。一个请求进来之后，不是单一大模型直接回答——而是由**父 Bot** 分析意图，路由到最合适的**子 Agent**（搜索/代码/文件/电脑/应用），子 Agent 自主调用工具完成任务，整个过程通过 SSE 实时推送到前端展示。
@@ -166,18 +178,12 @@ export GIT_EXEC_PATH="$HOME/local/libexec/git-core"
 # 验证
 git --version
 ```
-
-Gitee 推送（token 已在 `.gitee_token`）：
+推送命令（先设置远端再 push）：
 ```bash
-GITEE_TOKEN=$(cat .gitee_token)
-git remote add gitee "https://lord-of-the-star:${GITEE_TOKEN}@gitee.com/lord-of-the-star/xuan-shu-agent.git"
+git remote add gitee https://gitee.com/lord-of-the-star/xuan-shu-agent.git
 git push gitee main:master
-```
 
-GitHub 推送（token 在 `.github_token`）：
-```bash
-GH_TOKEN=$(cat .github_token)
-git remote add github "https://l1064709321:${GH_TOKEN}@github.com/l1064709321/xuanshuAgent.git"
+git remote add github https://github.com/l1064709321/xuanshuAgent.git
 git push github main:main
 ```
 

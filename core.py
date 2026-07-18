@@ -2615,7 +2615,7 @@ Git 版本回滚：
 
     # ═══════════ 子Agent执行循环 ═══════════
 
-    def _llm_call(self, agent: str, messages: list, tools: list = None, extra_fallbacks: list = None) -> dict:
+    def _llm_call(self, agent: str, messages: list, tools: list = None, extra_fallbacks: list = None, stop: list = None) -> dict:
         """统一 LLM 调用入口：根据模型模态自动路由 + fallback_mode 兜底。
         多模态模型（图像/视频/TTS/STT/音乐）自动路由到专有 API 端点。"""
         ov = getattr(self, '_model_override', '') or ''
@@ -2673,8 +2673,8 @@ Git 版本回滚：
 
         # 文本模型：标准 chat completions
         if self.fallback_mode:
-            return self.pool.call_llm_with_fallback(agent, messages, tools, fallback_models=extra_fallbacks, model_override=ov)
-        return self.pool.call_llm(agent, messages, tools, model_override=ov)
+            return self.pool.call_llm_with_fallback(agent, messages, tools, fallback_models=extra_fallbacks, model_override=ov, stop=stop)
+        return self.pool.call_llm(agent, messages, tools, model_override=ov, stop=stop)
 
     def _build_child_msgs(self, child: ChildBot, user_input: str,
                           extra_context: str = "", image: str = None) -> list:
@@ -2782,13 +2782,35 @@ Git 版本回滚：
         return messages
 
     def _run_child(self, child: ChildBot, messages: list) -> tuple:
-        """子Agent工具调用循环 — v5: 思维链收集。返回 (reply, tool_rounds, thinking_log)"""
+        """子Agent工具调用循环 — v6: ReAct 模式 + stop 序列 + 预填充防废话。
+        每轮: 思考→行动→观察。stop=["观察:"] 阻止模型自编工具结果。
+        返回 (reply, tool_rounds, thinking_log)"""
         metrics = get_metrics()
         tools = child.tool_schemas()
-        thinking_log = []  # [(tool_name, thought_text, result_summary), ...]
+        thinking_log = []
+
+        # ── 注入 ReAct 思维链提示 ──
+        react_prompt = (
+            "\n\n## 思维链规则（ReAct 模式）\n"
+            "每一轮按以下格式输出：\n"
+            "1. **思考**：分析当前状态，决定要不要调工具、调哪个。用自然语言说出你的判断。\n"
+            "2. **行动**：如需调工具，输出 tool_call；如果信息已足够，直接给出最终回答。\n"
+            "3. 工具返回后，你会看到【观察】——基于观察决定下一步。\n\n"
+            "**关键禁令**：你绝对不能自己编造工具返回结果。不要写'观察:'开头的话，"
+            "那由系统自动注入。你只负责思考和行动。"
+        )
+        # 向最后一条 system 消息追加 ReAct 规则（如果存在 system 消息）
+        for i in range(len(messages) - 1, -1, -1):
+            if messages[i].get("role") == "system":
+                messages[i]["content"] += react_prompt
+                break
+        else:
+            messages.insert(0, {"role": "system", "content": react_prompt.lstrip()})
+
         for loop in range(4):
             t0 = time.time()
-            resp = self._llm_call(child.name, messages, tools)
+            # P0: stop=["观察:"] 阻止模型自编工具返回结果
+            resp = self._llm_call(child.name, messages, tools, stop=["观察:", "\n观察"])
             latency = time.time() - t0
 
             usage = resp.get("usage") or {}
@@ -2800,8 +2822,11 @@ Git 版本回滚：
             msg = resp["choices"][0]["message"]
             tcs = msg.get("tool_calls")
 
+            # P1: 若无 tool_calls，对最终回答做预填充清洗
             if not tcs:
                 reply = msg.get("content", "")
+                # 清洗掉模型可能意外生成的 "观察:" 开头
+                reply = self._strip_observation_prefix(reply)
                 if loop > 0:
                     self.log.sys(f"工具完成({loop}轮)")
                 return reply, loop, thinking_log
@@ -2829,33 +2854,45 @@ Git 版本回滚：
                 if "[工具调用错误]" in result:
                     errors.append(f"  {fn}: {result[:300]}")
 
+            # P0: 构建 "观察:" 前缀的结果摘要
             result_summary = "\n".join(
-                f"  {r['name']}: {r['result'][:200]}" for r in tool_results
+                f"  {r['name']} → {r['result'][:200]}" for r in tool_results
             )
             if errors:
-                error_block = (
-                    f"[工具调用错误反馈]\n"
-                    f"以下工具调用失败，请根据错误信息修正后重试。不要重复完全相同的错误调用：\n"
-                    + "\n".join(errors) +
-                    f"\n\n[工具执行摘要（含成功项）]\n{result_summary}\n\n"
-                    f"请分析失败原因，修正参数或换用其他工具，然后继续。"
+                observe_block = (
+                    f"【观察】\n以下工具返回结果：\n{result_summary}\n\n"
+                    f"⚠️ 部分工具调用失败：\n" + "\n".join(errors) + "\n\n"
+                    f"请思考失败原因，修正参数或换用其他工具，然后继续。不可重复完全相同的错误调用。"
                 )
-                messages.append({"role": "system", "content": error_block})
             elif loop >= 2:
-                # 第3轮起强制收束: 已有足够信息，必须给出最终回答
-                messages.append({"role": "system",
-                    "content": f"[强制结束]\n工具已返回结果: {result_summary}\n"
-                               f"你已完成 {loop+1} 轮工具探索，信息足够。请直接给出最终回答。"})
+                # 第3轮起强制收束，预填充防止废话
+                observe_block = (
+                    f"【观察】\n工具已返回结果：\n{result_summary}\n\n"
+                    f"已完成 {loop+1} 轮工具探索，信息足够。请直接给出最终回答，不要客套。"
+                )
+                # P1: 预填充——在最终回答前替模型起头，防"好的""以下是"
+                messages.append({"role": "assistant", "content": ""})
             else:
-                messages.append({"role": "system",
-                    "content": f"[工具反馈]\n{result_summary}\n"
-                               f"信息已足够则给出最终回答；确有遗漏才再调工具。"})
+                observe_block = (
+                    f"【观察】\n工具返回结果：\n{result_summary}\n\n"
+                    f"请判断：信息是否足够给出最终回答？足够则直接回答；不足则继续调工具。"
+                )
+            messages.append({"role": "system", "content": observe_block})
 
-        return "[子Agent] 工具调用轮数超限", 4
+        return "[子Agent] 工具调用轮数超限", 4, thinking_log
+
+    @staticmethod
+    def _strip_observation_prefix(text: str) -> str:
+        """清洗模型意外输出的 ReAct 观察前缀"""
+        import re
+        text = re.sub(r'^\s*(观察|观测|Observation)[:：]\s*', '', text)
+        # 拆分 "观察:\nxxx" 这种带换行的情况
+        text = re.sub(r'^\s*(观察|观测|Observation)[:：]\s*\n+', '', text)
+        return text.strip()
 
     # ═══════════ 自主任务闭环 (Plan→Execute→Observe→Replan) ═══════════
     def _autonomous_chat(self, user_input: str, image: str = None) -> str:
-        """自主多轮任务闭环：Agent 规划→执行→观察→重新规划，直到完成或卡住。
+        """自主多轮任务闭环 — v6: ReAct 模式。规划→执行→观察→重规划，直到完成或卡住。
         最多 5 次迭代，每次迭代 Agent 自主判断是否完成。"""
         metrics = get_metrics()
         child_name = self._route(user_input)
@@ -2863,12 +2900,18 @@ Git 版本回滚：
         self.log.banner(f"自主闭环: {child_name}")
 
         # 初始规划
-        plan_prompt = f"""你是一个自主任务执行器。收到任务后，先制定执行计划，然后逐步执行。
-每一步执行完工具后，观察结果，决定下一步。如果任务完成，回复 FINISHED: 你的总结。
+        plan_prompt = f"""你是一个自主任务执行器。收到任务后，按以下 ReAct 模式执行：
+
+每轮格式：
+  思考: 分析当前状态，决定下一步做什么。
+  行动: 调用工具执行。
+  （系统自动注入观察结果）
+
+完成后回复 FINISHED: 你的总结。不要自己编造观察结果。
 
 任务: {user_input}
 
-执行计划（用 - 列出步骤，然后开始执行第一步）:"""
+【思考】先制定执行计划（用 - 列出步骤），然后开始执行第一步:"""
         messages = self._build_child_msgs(child, plan_prompt)
 
         all_results = []
@@ -2887,11 +2930,11 @@ Git 版本回滚：
                 return final
 
             all_results.append(reply)
-            # 追加观察提示
+            # ReAct 观察提示
             observe_prompt = (
-                f"[观察]\n上一步结果:\n{reply[:500]}\n\n"
-                f"请判断：任务是否已完成？如果完成，回复 FINISHED: 你的总结。"
-                f"如果未完成，继续下一步操作。"
+                f"【观察】\n上一步结果:\n{reply[:500]}\n\n"
+                f"请判断：任务是否已完成？完成则回复 FINISHED: 总结；"
+                f"未完成则继续下一步操作。"
             )
             messages.append({"role": "system", "content": observe_prompt})
 

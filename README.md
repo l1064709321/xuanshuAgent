@@ -75,6 +75,7 @@
 | Agent | 职责 | 工具（部分） |
 |-------|------|-------------|
 | 搜索Agent | 联网搜索、百科、天气、网页抓取 | web_search, search_wikipedia, web_fetch, weather |
+| 浏览器Agent | 浏览器交互、页面抓取、反检测 | navigate, extract, click, type, scroll, screenshot, get_state, wait, save_state |
 | 代码Agent | 编程、调试、shell 执行、沙箱运行 | shell_run, sandbox_run, screen_capture, git_log, git_revert |
 | 文件Agent | 文件读写、反编译、项目结构分析 | read_file, write_file, list_dir, decompile, file_search, grep |
 | 电脑Agent | 系统信息、进程管理、资源监控 | sys_info, process_list, process_kill, disk_usage, memory_usage, cpu_info, network_info |
@@ -188,7 +189,7 @@ sudo systemctl enable --now xuanshu
 | DeepSeek | ![deepseek-v4-pro](https://img.shields.io/badge/旗舰_1M上下文-deepseek--v4--pro-4B8BBE?style=flat) ![deepseek-v4-flash](https://img.shields.io/badge/高性价比-deepseek--v4--flash-4B8BBE?style=flat) ![deepseek-v3](https://img.shields.io/badge/旧版-deepseek--v3-999?style=flat) ![deepseek-r1](https://img.shields.io/badge/旧版推理-deepseek--r1-999?style=flat) |
 | 阿里通义 | ![qwen3.7-max](https://img.shields.io/badge/最新旗舰-qwen3.7--max-FF6A00?style=flat) ![qwen3.7-plus](https://img.shields.io/badge/Plus版-qwen3.7--plus-FF6A00?style=flat) ![qwen2.5-72b](https://img.shields.io/badge/开源千亿-qwen2.5--72b-FF6A00?style=flat) ![qwen2.5-32b](https://img.shields.io/badge/高性价比-qwen2.5--32b-FF6A00?style=flat) |
 | 智谱 GLM | ![glm-5.2](https://img.shields.io/badge/MoE_744B_MIT开源-glm--5.2-1a6bc4?style=flat) ![glm-4.7](https://img.shields.io/badge/旗舰付费-glm--4.7-1a6bc4?style=flat) ![glm-4.7-flash](https://img.shields.io/badge/轻量-glm--4.7--flash-1a6bc4?style=flat) ![glm-4-air](https://img.shields.io/badge/轻量低成本-glm--4--air-1a6bc4?style=flat) |
-| 月之暗面 | ![moonshot-v1](https://img.shields.io/badge/200万字上下文-moonshot--v1-7B5EA7?style=flat) ![kimi-k2](https://img.shields.io/badge/增强推理-kimi--k2-7B5EA7?style=flat) |
+| 月之暗面 | ![kimi-k3](https://img.shields.io/badge/旗舰_1M上下文_2.8T-kimi--k3-7B5EA7?style=flat) ![kimi-k2.7-code](https://img.shields.io/badge/代码专用_256K-kimi--k2.7--code-7B5EA7?style=flat) ![kimi-k2.7-code-highspeed](https://img.shields.io/badge/代码高速-kimi--k2.7--code--高速-7B5EA7?style=flat) ![kimi-k2.6](https://img.shields.io/badge/通用多模态_256K-kimi--k2.6-7B5EA7?style=flat) ![kimi-k2.5](https://img.shields.io/badge/旧版_0826退役-kimi--k2.5-7B5EA7?style=flat) ![kimi-k2](https://img.shields.io/badge/已退役-kimi--k2-999?style=flat) |
 | 字节豆包 | ![doubao-pro](https://img.shields.io/badge/旗舰通用-doubao--pro-3377FF?style=flat) ![doubao-lite](https://img.shields.io/badge/轻量低成本-doubao--lite-3377FF?style=flat) |
 | 百川 | ![baichuan4](https://img.shields.io/badge/通用多模态-baichuan4-FF6B6B?style=flat) |
 | MiniMax | ![abab6.5](https://img.shields.io/badge/多模态语音旧-abab6.5-9B59B6?style=flat) ![minimax-m3](https://img.shields.io/badge/最新原生多模态-minimax--m3-9B59B6?style=flat) ![minimax-m2.7](https://img.shields.io/badge/自主迭代旗舰-minimax--m2.7-9B59B6?style=flat) ![minimax-m2.7-fast](https://img.shields.io/badge/高速版-minimax--m2.7--fast-9B59B6?style=flat) |
@@ -208,7 +209,7 @@ sudo systemctl enable --now xuanshu
 可通过以下平台接入更多模型（详见 `models.py`）：
 
 - **NVIDIA NIM** — MiniMax-M2.7、MiniMax-M3
-- **SiliconFlow** — Qwen3.7/GLM-5.2/DeepSeek-V4/Kimi-K2/MiniMax-M1 等 40+ 国产模型
+- **SiliconFlow** — Qwen3.7/GLM-5.2/DeepSeek-V4/Kimi-K3/Kimi-K2.5/MiniMax-M1 等 40+ 国产模型
 - **OpenRouter** — DeepSeek-V4/Gemini/Claude/Llama/Qwen3.7/Nemotron 等 30+ 海外模型
 - **Groq** — Llama-4 超快推理
 - **Together AI** — 开源模型托管
@@ -355,7 +356,7 @@ pip install flask requests httpx beautifulsoup4 lxml python-dotenv markdown
 xuanshuAgent/
 ├── core.py              父 Bot + 协调者 + 子 Agent + Skill 系统 (3216行)
 ├── frontend.py           Flask 后端 + REST API + SSE (726行)
-├── models.py             128+ 模型预设
+├── models.py             134+ 模型预设
 ├── memory.py             子 Agent 独立记忆 + 上下文持久化
 ├── web_search.py         联网搜索 (DuckDuckGo Lite)
 ├── monitor.py            性能监控

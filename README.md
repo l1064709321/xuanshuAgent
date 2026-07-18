@@ -15,15 +15,19 @@
 
 ### 克隆仓库
 
+**Linux / macOS / WSL：**
 ```bash
-# Gitee（国内推荐）
 git clone https://gitee.com/lord-of-the-star/xuan-shu-agent.git
 cd xuan-shu-agent
-
-# GitHub
-git clone https://github.com/l1064709321/xuanshuAgent.git
-cd xuanshuAgent
 ```
+
+**Windows（PowerShell）：**
+```powershell
+git clone https://gitee.com/lord-of-the-star/xuan-shu-agent.git
+cd xuan-shu-agent
+```
+
+GitHub 镜像：将地址换为 `https://github.com/l1064709321/xuanshuAgent.git`，目录名 `xuanshuAgent`。
 
 ### 启动
 

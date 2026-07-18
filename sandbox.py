@@ -16,7 +16,10 @@ _SANDBOX_BASE = os.path.join(_WS, ".sandbox")
 os.makedirs(_SANDBOX_BASE, exist_ok=True)
 
 # 项目级虚拟环境 —— agent 执行 Python 代码时统一走此 venv
-_VENV_PYTHON = os.path.join(_WS, ".venv", "bin", "python3")
+if sys.platform == "win32":
+    _VENV_PYTHON = os.path.join(_WS, ".venv", "Scripts", "python.exe")
+else:
+    _VENV_PYTHON = os.path.join(_WS, ".venv", "bin", "python3")
 
 
 class SandboxError(Exception):

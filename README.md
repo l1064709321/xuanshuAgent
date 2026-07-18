@@ -409,4 +409,4 @@ python -m decompile --tools                    # 查看可用工具
 
 ## 许可证
 
-GPL v3 + Apache 2.0
+ Apache 2.0

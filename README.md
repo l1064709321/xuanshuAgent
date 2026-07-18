@@ -5,33 +5,9 @@
 [![SSE](https://img.shields.io/badge/协议-SSE-FF6B35)](#)
 [![REST](https://img.shields.io/badge/协议-REST-009688)](#)
 [![SQLite](https://img.shields.io/badge/存储-SQLite-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
+[![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://www.apache.org/licenses/LICENSE-2.0)
 
 > 父 Bot 意图路由 → 子 Agent 工具调用 → 思考链流式输出 → Skill 自学习
-
----
-
-## 目录
-
-- [快速开始](#快速开始)
-  - [克隆仓库](#克隆仓库)
-  - [启动](#启动)
-  - [环境要求](#环境要求)
-- [系统概述](#系统概述)
-- [核心架构](#核心架构)
-  - [父 Bot](#父-bot)
-  - [子 Agent](#子-agent)
-  - [工具调用](#工具调用)
-  - [Skill 自学习](#skill-自学习)
-  - [记忆系统](#记忆系统)
-- [模型配置](#模型配置)
-- [运维](#运维)
-  - [Git 安装（无 sudo）](#git-安装无-sudo-环境)
-  - [推送到远程仓库](#推送到远程仓库)
-  - [常见问题](#常见问题)
-- [API 端点](#api-端点)
-- [项目结构](#项目结构)
-- [反编译](#反编译)
-- [许可证](#许可证)
 
 ---
 

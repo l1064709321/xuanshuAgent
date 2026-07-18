@@ -195,12 +195,19 @@ git push github main:main
 
 ### Web 界面（推荐）
 
+**Linux / macOS / WSL：**
 ```bash
 bash xuanshu
-# 访问 http://localhost:8901
 ```
 
-`xuanshu` 脚本自动完成：检测 Python ≥ 3.8 → 创建 `.venv` → pip install → 启动 Flask 服务。
+**Windows：**
+```cmd
+xuanshu.bat
+```
+
+访问 http://localhost:8901
+
+脚本自动完成：检测 Python ≥ 3.8 → 创建 `.venv` → pip install → 启动 Flask 服务。
 
 手动启动：
 ```bash
@@ -418,7 +425,8 @@ xuanshuAgent/
 ├── main.py               命令行入口
 ├── index.html            Web 前端
 ├── style.css             样式
-├── xuanshu               一键启动脚本
+├── xuanshu               一键启动脚本 (Linux/macOS)
+├── xuanshu.bat           一键启动脚本 (Windows)
 ├── xuanshu.service       systemd 服务
 ├── requirements.txt      依赖清单
 ├── .memdir/              共享记忆文件夹

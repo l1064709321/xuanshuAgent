@@ -140,6 +140,49 @@ _dispatch_tool_call()
 
 ---
 
+## Git 安装（无 sudo 环境）
+
+如果你和我一样跑在受限的服务器上，没有 sudo 权限，用这条命令装 git：
+
+```bash
+# 下载 TencentOS / CentOS 的 git RPM 包（替换为你的发行版对应版本）
+mkdir -p ~/git_rpm && cd ~/git_rpm
+yumdownloader --resolve git git-core perl-Git 2>/dev/null || \
+  curl -O https://mirrors.tencent.com/tencentos/4/AppStream/x86_64/os/Packages/git-2.43.7-3.tl4.x86_64.rpm \
+       -O https://mirrors.tencent.com/tencentos/4/AppStream/x86_64/os/Packages/git-core-2.43.7-3.tl4.x86_64.rpm \
+       -O https://mirrors.tencent.com/tencentos/4/AppStream/x86_64/os/Packages/perl-Git-2.43.7-3.tl4.noarch.rpm
+
+# 用 rpm2cpio 解包到用户目录
+mkdir -p ~/local/bin ~/local/libexec/git-core
+for f in *.rpm; do rpm2cpio "$f" | cpio -idmv 2>/dev/null; done
+mv usr/bin/* ~/local/bin/ 2>/dev/null
+mv usr/libexec/git-core/* ~/local/libexec/git-core/ 2>/dev/null
+rm -rf usr *.rpm
+
+# 加到 PATH（写入 ~/.bashrc 永久生效）
+export PATH="$HOME/local/bin:$PATH"
+export GIT_EXEC_PATH="$HOME/local/libexec/git-core"
+
+# 验证
+git --version
+```
+
+Gitee 推送（token 已在 `.gitee_token`）：
+```bash
+GITEE_TOKEN=$(cat .gitee_token)
+git remote add gitee "https://lord-of-the-star:${GITEE_TOKEN}@gitee.com/lord-of-the-star/xuan-shu-agent.git"
+git push gitee main:master
+```
+
+GitHub 推送（token 在 `.github_token`）：
+```bash
+GH_TOKEN=$(cat .github_token)
+git remote add github "https://l1064709321:${GH_TOKEN}@github.com/l1064709321/xuanshuAgent.git"
+git push github main:main
+```
+
+---
+
 ## 启动方式
 
 ### Web 界面（推荐）

@@ -38,6 +38,19 @@ BUILTIN_MODELS: Dict[str, ModelEntry] = {
         "https://api.openai.com/v1", "OpenAI", "多模态旗舰", ("4o",)),
     "gpt-4o-mini": ModelEntry("gpt-4o-mini", "GPT-4o-mini", "gpt-4o-mini",
         "https://api.openai.com/v1", "OpenAI", "轻量多模态", ("4omini", "mini")),
+    # ── OpenAI 图像 ──
+    "gpt-image-1": ModelEntry("gpt-image-1", "GPT-Image-1", "gpt-image-1",
+        "https://api.openai.com/v1", "OpenAI", "原生图像生成 (替代DALL-E)", ("gptimg", "image1", "dalle")),
+    "gpt-image-1-mini": ModelEntry("gpt-image-1-mini", "GPT-Image-1-Mini", "gpt-image-1-mini",
+        "https://api.openai.com/v1", "OpenAI", "轻量图像生成", ("gptimgm", "image1m")),
+    # ── OpenAI 语音 ──
+    "tts-1": ModelEntry("tts-1", "TTS-1", "tts-1",
+        "https://api.openai.com/v1", "OpenAI", "标准语音合成", ("tts",)),
+    "tts-1-hd": ModelEntry("tts-1-hd", "TTS-1-HD", "tts-1-hd",
+        "https://api.openai.com/v1", "OpenAI", "高清语音合成", ("ttshd",)),
+    "whisper-1": ModelEntry("whisper-1", "Whisper-1", "whisper-1",
+        "https://api.openai.com/v1", "OpenAI", "语音识别 STT", ("whisper", "stt")),
+
     # ── Anthropic ──
     "claude-opus-4.8": ModelEntry("claude-opus-4.8", "Claude Opus 4.8", "claude-opus-4-8",
         "https://api.anthropic.com/v1", "Anthropic", "旗舰高性能 1M上下文", ("opus", "opus48", "claude48")),
@@ -49,9 +62,45 @@ BUILTIN_MODELS: Dict[str, ModelEntry] = {
         "https://api.anthropic.com/v1", "Anthropic", "Mythos级 100万上下文", ("fable", "fable5", "mythos")),
     # ── Google ──
     "gemini-3.1-pro": ModelEntry("gemini-3.1-pro", "Gemini 3.1 Pro", "gemini-3.1-pro-preview",
-        "https://generativelanguage.googleapis.com/v1beta", "Google", "旗舰多模态", ("gemini31", "g31p", "gemini3")),
+        "https://generativelanguage.googleapis.com/v1beta/openai/", "Google", "旗舰多模态 预览", ("gemini31", "g31p", "gemini3")),
+    "gemini-3.5-flash": ModelEntry("gemini-3.5-flash", "Gemini 3.5 Flash", "gemini-3.5-flash",
+        "https://generativelanguage.googleapis.com/v1beta/openai/", "Google", "最智能 代理/编程 稳定版", ("g35f", "gemini35", "g3flash5")),
     "gemini-3-flash": ModelEntry("gemini-3-flash", "Gemini 3 Flash", "gemini-3-flash-preview",
-        "https://generativelanguage.googleapis.com/v1beta", "Google", "默认首选 速度快", ("g3f", "flash3", "gflash")),
+        "https://generativelanguage.googleapis.com/v1beta/openai/", "Google", "前沿级 低成本 预览", ("g3f", "flash3", "gflash")),
+    "gemini-3.1-flash-lite": ModelEntry("gemini-3.1-flash-lite", "Gemini 3.1 Flash-Lite", "gemini-3.1-flash-lite",
+        "https://generativelanguage.googleapis.com/v1beta/openai/", "Google", "轻量前沿 极致性价比 稳定版", ("g31fl", "flashlite", "glite")),
+    "gemini-2.5-pro": ModelEntry("gemini-2.5-pro", "Gemini 2.5 Pro", "gemini-2.5-pro",
+        "https://generativelanguage.googleapis.com/v1beta/openai/", "Google", "上一代旗舰 复杂推理 (2026/10退役)", ("g25p", "gemini25", "2.5pro")),
+    "gemini-2.5-flash": ModelEntry("gemini-2.5-flash", "Gemini 2.5 Flash", "gemini-2.5-flash",
+        "https://generativelanguage.googleapis.com/v1beta/openai/", "Google", "最佳性价比 低延迟 (2026/10退役)", ("g25f", "2.5flash")),
+    "gemini-2.5-flash-lite": ModelEntry("gemini-2.5-flash-lite", "Gemini 2.5 Flash-Lite", "gemini-2.5-flash-lite",
+        "https://generativelanguage.googleapis.com/v1beta/openai/", "Google", "最快最省 多模态 (2026/10退役)", ("g25fl", "flashlite25")),
+    # ── Google 图像 (Nano Banana / Imagen) ──
+    "gemini-3.1-flash-image": ModelEntry("gemini-3.1-flash-image", "Nano Banana 2", "gemini-3.1-flash-image",
+        "https://generativelanguage.googleapis.com/v1beta/openai/", "Google", "高速图像生成 稳定版", ("nb2", "nanobanana2", "gimg31")),
+    "gemini-3-pro-image": ModelEntry("gemini-3-pro-image", "Nano Banana Pro", "gemini-3-pro-image",
+        "https://generativelanguage.googleapis.com/v1beta/openai/", "Google", "专业4K图像 复杂排版 稳定版", ("nbpro", "gimg3pro")),
+    "gemini-2.5-flash-image": ModelEntry("gemini-2.5-flash-image", "Nano Banana (2.5)", "gemini-2.5-flash-image",
+        "https://generativelanguage.googleapis.com/v1beta/openai/", "Google", "原生图像生成 (2026/10退役)", ("nano", "nanobanana", "gimg")),
+    # ── Google 视频 (Veo / Omni) ──
+    "veo-3.1": ModelEntry("veo-3.1", "Veo 3.1", "veo-3.1-generate-001",
+        "https://generativelanguage.googleapis.com/v1beta/openai/", "Google", "电影级视频生成 原生音频", ("veo", "veo31")),
+    "veo-3.1-fast": ModelEntry("veo-3.1-fast", "Veo 3.1 Fast", "veo-3.1-fast-generate-001",
+        "https://generativelanguage.googleapis.com/v1beta/openai/", "Google", "高效低成本视频", ("veofast",)),
+    "gemini-omni-flash": ModelEntry("gemini-omni-flash", "Gemini Omni Flash", "gemini-omni-flash-preview",
+        "https://generativelanguage.googleapis.com/v1beta/openai/", "Google", "对话式视频生成 预览", ("omni", "omniflash")),
+    # ── Google 语音 (Live / TTS) ──
+    "gemini-3.1-flash-live": ModelEntry("gemini-3.1-flash-live", "Gemini 3.1 Flash Live", "gemini-3.1-flash-live-preview",
+        "https://generativelanguage.googleapis.com/v1beta/openai/", "Google", "实时语音对话 低延迟 预览", ("glive", "g31live")),
+    "gemini-3.1-flash-tts": ModelEntry("gemini-3.1-flash-tts", "Gemini 3.1 Flash TTS", "gemini-3.1-flash-tts-preview",
+        "https://generativelanguage.googleapis.com/v1beta/openai/", "Google", "低延迟语音合成 预览", ("gtts", "g31tts")),
+    "gemini-2.5-pro-tts": ModelEntry("gemini-2.5-pro-tts", "Gemini 2.5 Pro TTS", "gemini-2.5-pro-tts-preview",
+        "https://generativelanguage.googleapis.com/v1beta/openai/", "Google", "高保真语音 播客/有声书 (2026/10退役)", ("gprotts",)),
+    # ── Google 音乐 (Lyria) ──
+    "lyria-3-pro": ModelEntry("lyria-3-pro", "Lyria 3 Pro", "lyria-3-pro-preview",
+        "https://generativelanguage.googleapis.com/v1beta/openai/", "Google", "全曲音乐生成 预览", ("lyria", "lyria3")),
+    "lyria-3-clip": ModelEntry("lyria-3-clip", "Lyria 3 Clip", "lyria-3-clip-preview",
+        "https://generativelanguage.googleapis.com/v1beta/openai/", "Google", "短片段音乐/循环 预览", ("lyriaclip",)),
     # ── DeepSeek ──
     "deepseek-v4-pro": ModelEntry("deepseek-v4-pro", "DeepSeek-V4-Pro", "deepseek-v4-pro",
         "https://api.deepseek.com/v1", "DeepSeek", "旗舰 1.6T/49B 1M上下文", ("v4pro", "v4", "dsv4", "v4-pro")),
@@ -80,10 +129,18 @@ BUILTIN_MODELS: Dict[str, ModelEntry] = {
     "glm-4.7": ModelEntry("glm-4.7", "GLM-4.7", "glm-4.7",
         "https://open.bigmodel.cn/api/paas/v4/", "智谱", "旗舰付费 200B 203K上下文", ("glm47",)),
     # ── 月之暗面 ──
-    "moonshot-v1": ModelEntry("moonshot-v1", "Moonshot-v1", "moonshot-v1-8k",
-        "https://api.moonshot.cn/v1", "月之暗面", "200万字上下文", ("moonshot", "kimi1")),
+    "kimi-k3": ModelEntry("kimi-k3", "Kimi-K3", "kimi-k3",
+        "https://api.moonshot.cn/v1", "月之暗面", "旗舰 1M上下文 2.8T参数 深度推理", ("k3", "kimik3")),
+    "kimi-k2.7-code": ModelEntry("kimi-k2.7-code", "Kimi-K2.7-Code", "kimi-k2.7-code",
+        "https://api.moonshot.cn/v1", "月之暗面", "代码专用 256K 思考开启", ("k2.7-code", "k27c", "k27code")),
+    "kimi-k2.7-code-highspeed": ModelEntry("kimi-k2.7-code-highspeed", "Kimi-K2.7-Code-高速", "kimi-k2.7-code-highspeed",
+        "https://api.moonshot.cn/v1", "月之暗面", "代码专用 高速输出 思考开启", ("k2.7-code-hs", "k27chs")),
+    "kimi-k2.6": ModelEntry("kimi-k2.6", "Kimi-K2.6", "kimi-k2.6",
+        "https://api.moonshot.cn/v1", "月之暗面", "通用多模态 256K 思考/非思考", ("k2.6", "k26", "kimik2.6")),
+    "kimi-k2.5": ModelEntry("kimi-k2.5", "Kimi-K2.5", "kimi-k2.5",
+        "https://api.moonshot.cn/v1", "月之暗面", "视觉+文本 思考/非思考 [0826退役]", ("k2.5", "k25", "kimik2.5")),
     "kimi-k2": ModelEntry("kimi-k2", "Kimi-K2", "kimi-k2-0905-preview",
-        "https://api.moonshot.cn/v1", "月之暗面", "增强推理", ("k2", "kimik2")),
+        "https://api.moonshot.cn/v1", "月之暗面", "增强推理 [已退役]", ("k2", "kimik2")),
     # ── 字节豆包 ──
     "doubao-pro": ModelEntry("doubao-pro", "Doubao-Pro", "ep-20241201175000-xxxxx",
         "https://ark.cn-beijing.volces.com/api/v3/", "字节豆包", "旗舰通用", ("doubao", "dbpro")),
@@ -92,15 +149,15 @@ BUILTIN_MODELS: Dict[str, ModelEntry] = {
     # ── 百川 ──
     "baichuan4": ModelEntry("baichuan4", "Baichuan4", "Baichuan4",
         "https://api.baichuan-ai.com/v1", "百川", "通用多模态", ("bc4", "百川")),
-    # ── Minimax ──
+    # ── MiniMax ──
     "abab6.5": ModelEntry("abab6.5", "abab6.5", "abab6.5s-chat",
-        "https://api.minimax.chat/v1", "Minimax", "多模态语音(旧)", ("minimax", "abab")),
+        "https://api.minimax.chat/v1", "MiniMax", "多模态语音(旧)", ("minimax", "abab")),
     "minimax-m3": ModelEntry("minimax-m3", "MiniMax-M3", "MiniMax-M3",
-        "https://api.minimaxi.com/v1", "Minimax", "最新原生多模态 1M上下文", ("m3", "mm3")),
+        "https://api.minimaxi.com/v1", "MiniMax", "最新原生多模态 1M上下文", ("m3", "mm3")),
     "minimax-m2.7": ModelEntry("minimax-m2.7", "MiniMax-M2.7", "MiniMax-M2.7",
-        "https://api.minimaxi.com/v1", "Minimax", "自主迭代旗舰 自我进化", ("m2.7", "mm27", "minimax27")),
+        "https://api.minimaxi.com/v1", "MiniMax", "自主迭代旗舰 自我进化", ("m2.7", "mm27", "minimax27")),
     "minimax-m2.7-fast": ModelEntry("minimax-m2.7-fast", "MiniMax-M2.7-Fast", "MiniMax-M2.7-highspeed",
-        "https://api.minimaxi.com/v1", "Minimax", "高速版 效果不变", ("m27f", "mm27fast")),
+        "https://api.minimaxi.com/v1", "MiniMax", "高速版 效果不变", ("m27f", "mm27fast")),
     # ── 零一万物 ──
     "yi-large": ModelEntry("yi-large", "Yi-Large", "yi-large",
         "https://api.lingyiwanwu.com/v1", "零一万物", "千亿参数", ("yi", "零一")),
@@ -309,6 +366,69 @@ BUILTIN_MODELS: Dict[str, ModelEntry] = {
         "http://localhost:8080/v1", "本地", "LocalAI本地推理", ("lai",)),
     "textgen": ModelEntry("textgen", "TextGen 本地", "default",
         "http://localhost:5000/v1", "本地", "TextGen本地推理", ("tg", "ooba")),
+    # ════════════════════════════════════════════════════════════
+    # ▎多模态模型：图像/视频/语音/音乐 → 全方位 Agent
+    # ════════════════════════════════════════════════════════════
+    # ── OpenAI 视频 ──
+    "sora-2": ModelEntry("sora-2", "Sora 2", "sora-2",
+        "https://api.openai.com/v1", "OpenAI", "视频生成 文生/图生/编辑", ("sora", "sora2")),
+    # ── Black Forest Labs 图像 ──
+    "flux-2": ModelEntry("flux-2", "FLUX.2", "flux-2",
+        "https://api.bfl.ml/v1", "黑森林", "旗舰图像 角色一致性/IP", ("flux2", "flux", "bfl")),
+    "flux-2-pro": ModelEntry("flux-2-pro", "FLUX.2 Pro", "flux-2-pro",
+        "https://api.bfl.ml/v1", "黑森林", "专业版 最高精度", ("flux2pro", "fluxpro")),
+    "flux-2-max": ModelEntry("flux-2-max", "FLUX.2 Max", "flux-2-max",
+        "https://api.bfl.ml/v1", "黑森林", "极致版 超高清", ("flux2max", "fluxmax")),
+    "flux-2-klein": ModelEntry("flux-2-klein", "FLUX.2 Klein", "flux-2-klein",
+        "https://api.bfl.ml/v1", "黑森林", "轻量高速版", ("fluxklein",)),
+    # ── Ideogram 图像 ──
+    "ideogram-4": ModelEntry("ideogram-4", "Ideogram 4.0", "V_4_0",
+        "https://api.ideogram.ai/v1", "Ideogram", "最新图像 精准文字排版设计", ("ideogram", "ido4", "ideogram4")),
+    # ── Stability AI 图像+音频 ──
+    "stable-image-ultra": ModelEntry("stable-image-ultra", "Stable Image Ultra", "stable-image-ultra",
+        "https://api.stability.ai/v1", "Stability", "极致品质图像 SD3.5", ("siu", "stabilityultra")),
+    "stable-image-core": ModelEntry("stable-image-core", "Stable Image Core", "stable-image-core",
+        "https://api.stability.ai/v1", "Stability", "高速图像 SD3.5", ("sic", "stabilitycore")),
+    "stable-audio-3": ModelEntry("stable-audio-3", "Stable Audio 3.0", "stable-audio-3.0",
+        "https://api.stability.ai/v1", "Stability", "44.1kHz音乐生成 最长6分钟", ("sa3", "stableaudio")),
+    # ── Runway 视频 ──
+    "runway-gen4": ModelEntry("runway-gen4", "Runway Gen-4 Aleph", "gen4_aleph",
+        "https://api.runwayml.com/v1", "Runway", "视频生成/编辑 Aleph引擎", ("runway", "gen4", "aleph")),
+    # ── Luma 视频 ──
+    "luma-ray2": ModelEntry("luma-ray2", "Luma Ray 2", "ray-2",
+        "https://api.lumalabs.ai/dream-machine/v1", "Luma", "视频生成 文生/图生 多概念", ("luma", "ray2", "dm")),
+    "luma-ray2-flash": ModelEntry("luma-ray2-flash", "Luma Ray 2 Flash", "ray-flash-2",
+        "https://api.lumalabs.ai/dream-machine/v1", "Luma", "高速视频生成 低延迟", ("rayflash", "dmflash")),
+    # ── Kling (快手) 视频 ──
+    "kling-3": ModelEntry("kling-3", "Kling 3.0", "kling-v3-0",
+        "https://geekai.co/api/v1", "快手", "视频生成 影视级 原生音频", ("kling", "kling3", "kuaishou")),
+    # ── 即梦 (字节) 视频 ──
+    "jimeng-t2v-v30": ModelEntry("jimeng-t2v-v30", "即梦 文生视频3.0", "jimeng_t2v_v30",
+        "https://geekai.co/api/v1", "字节跳动", "即梦文生视频 复杂指令", ("jimeng", "jmt2v")),
+    "jimeng-i2v-v30": ModelEntry("jimeng-i2v-v30", "即梦 图生视频3.0", "jimeng_i2v_v30",
+        "https://geekai.co/api/v1", "字节跳动", "即梦图生视频", ("jmi2v",)),
+    # ── 字节 Seedance 视频 ──
+    "seedance-2": ModelEntry("seedance-2", "Seedance 2.0", "seedance-2.0",
+        "https://geekai.co/api/v1", "字节跳动", "CapCut同源 视频生成", ("seedance", "capcut", "sdance")),
+    # ── MiniMax 视频+语音+音乐 ──
+    "hailuo-2.3": ModelEntry("hailuo-2.3", "Hailuo 2.3", "hailuo-2.3",
+        "https://api.minimax.chat/v1", "MiniMax", "视频生成 情绪表情自然", ("hailuo", "hailuo23")),
+    "hailuo-2.3-fast": ModelEntry("hailuo-2.3-fast", "Hailuo 2.3 Fast", "hailuo-2.3-fast",
+        "https://api.minimax.chat/v1", "MiniMax", "高速视频生成", ("hailuofast",)),
+    "minimax-speech-2.6": ModelEntry("minimax-speech-2.6", "MiniMax Speech 2.6", "speech-2.6",
+        "https://api.minimax.chat/v1", "MiniMax", "语音合成 实时TTS LoRA", ("mmspeech", "mstts")),
+    "minimax-music-2.6": ModelEntry("minimax-music-2.6", "MiniMax Music 2.6", "music-2.6",
+        "https://api.minimax.chat/v1", "MiniMax", "音乐生成 翻唱/原创", ("mmmusic", "mmmus")),
+    # ── Pika 视频 ──
+    "pika-2.1": ModelEntry("pika-2.1", "Pika 2.1", "pika-2.1",
+        "https://api.pika.art/v1", "Pika", "创意视频生成 特效丰富", ("pika", "pika2")),
+    # ── ElevenLabs 语音 ──
+    "eleven-turbo-v2.5": ModelEntry("eleven-turbo-v2.5", "ElevenLabs Turbo v2.5", "eleven_turbo_v2_5",
+        "https://api.elevenlabs.io/v1", "ElevenLabs", "超低延迟TTS 32语言", ("eleven", "el", "11labs")),
+    "eleven-flash-v2.5": ModelEntry("eleven-flash-v2.5", "ElevenLabs Flash v2.5", "eleven_flash_v2_5",
+        "https://api.elevenlabs.io/v1", "ElevenLabs", "极速TTS 价格最低", ("elflash",)),
+    "eleven-multilingual-v2": ModelEntry("eleven-multilingual-v2", "ElevenLabs 多语言v2", "eleven_multilingual_v2",
+        "https://api.elevenlabs.io/v1", "ElevenLabs", "29语言 TTS 高情感", ("elmulti",)),
 }
 
 
@@ -419,6 +539,227 @@ class ModelPool:
             if q in k.lower() or q in v.name.lower():
                 return k
         return None
+
+    # ════════════════════════════════════════════════════════════
+    # ▎多模态智能路由 — 根据模型类型自动调用正确API端点
+    # ════════════════════════════════════════════════════════════
+
+    # 模型分类：依据 key 前缀 + description 关键词
+    _IMAGE_KEYS = {"gpt-image", "flux-", "ideogram-", "stable-image-", "sf-qwen-image",
+                   "gemini-3.1-flash-image", "gemini-3-pro-image", "gemini-2.5-flash-image"}
+    _VIDEO_KEYS = {"sora-", "veo-", "luma-", "kling-", "jimeng-", "hailuo-",
+                   "seedance-", "pika-", "runway-", "gemini-omni-", "sf-qwen3-omni"}
+    _TTS_KEYS   = {"tts-1", "eleven-", "minimax-speech-",
+                   "gemini-3.1-flash-tts", "gemini-2.5-pro-tts", "gemini-2.5-flash-tts"}
+    _STT_KEYS   = {"whisper-"}
+    _MUSIC_KEYS = {"lyria-", "minimax-music-", "stable-audio-"}
+    _LIVE_KEYS  = {"gemini-3.1-flash-live", "gemini-2.5-flash-live"}
+
+    _MODALITY_HINT = {
+        "图像": "image", "image": "image", "photo": "image", "画": "image",
+        "视频": "video", "video": "video", "clip": "video",
+        "语音合成": "tts", "tts": "tts", "speech": "tts", "语音": "tts",
+        "语音识别": "stt", "stt": "stt", "transcription": "stt",
+        "音乐": "music", "music": "music", "audio": "music",
+        "live": "live",
+    }
+
+    def classify_model(self, key: str) -> str:
+        """判定模型模态：text / image / video / tts / stt / music / live"""
+        model = self.all_models.get(key)
+        if not model:
+            return "text"
+        desc = model.description.lower()
+        # 精确 key 匹配
+        for prefix in self._IMAGE_KEYS:
+            if key.startswith(prefix):
+                return "image"
+        for prefix in self._VIDEO_KEYS:
+            if key.startswith(prefix):
+                return "video"
+        for prefix in self._TTS_KEYS:
+            if key.startswith(prefix):
+                return "tts"
+        for prefix in self._STT_KEYS:
+            if key.startswith(prefix):
+                return "stt"
+        for prefix in self._MUSIC_KEYS:
+            if key.startswith(prefix):
+                return "music"
+        for prefix in self._LIVE_KEYS:
+            if key.startswith(prefix):
+                return "live"
+        # description 关键词兜底
+        for kw, modality in self._MODALITY_HINT.items():
+            if kw in desc:
+                return modality
+        return "text"
+
+    # ── 图像生成 ──
+    def call_image(
+        self, agent: str = "", prompt: str = "",
+        size: str = "1024x1024", n: int = 1,
+        model_override: str = "", **kwargs
+    ) -> dict:
+        """图像生成调用 — 自动路由到 /v1/images/generations 或厂商原生端点"""
+        key = model_override if model_override and model_override in self.all_models else self.get_key(agent)
+        model = self.all_models[key]
+        client = self._get_client(model.base_url, key)
+        if client is None:
+            return {"error": f"无法连接 {model.provider}", "_model": model.name}
+        try:
+            if model.provider == "Google":
+                resp = client.chat.completions.create(
+                    model=model.model_id,
+                    messages=[{"role": "user", "content": prompt}],
+                    max_tokens=4096,
+                )
+                content = resp.choices[0].message.content or ""
+                return {"data": [{"url": content}], "_model": model.name}
+            else:
+                resp = client.images.generate(
+                    model=model.model_id, prompt=prompt,
+                    size=size, n=n, **kwargs
+                )
+                return {"data": resp.data, "_model": model.name}
+        except Exception as e:
+            return {"error": str(e)[:200], "_model": model.name}
+
+    # ── 语音合成 TTS ──
+    def call_tts(
+        self, agent: str = "", text: str = "",
+        voice: str = "alloy", speed: float = 1.0,
+        response_format: str = "mp3", model_override: str = "", **kwargs
+    ) -> dict:
+        """语音合成 — 自动路由到 /v1/audio/speech 或厂商原生端点"""
+        key = model_override if model_override and model_override in self.all_models else self.get_key(agent)
+        model = self.all_models[key]
+        client = self._get_client(model.base_url, key)
+        if client is None:
+            return {"error": f"无法连接 {model.provider}", "_model": model.name}
+        try:
+            if model.provider == "Google":
+                resp = client.chat.completions.create(
+                    model=model.model_id,
+                    messages=[{"role": "user", "content": f"Generate speech for: {text}"}],
+                    max_tokens=4096,
+                )
+                content = resp.choices[0].message.content or ""
+                return {"audio": content, "format": "base64", "_model": model.name}
+            else:
+                resp = client.audio.speech.create(
+                    model=model.model_id, input=text,
+                    voice=voice, speed=speed,
+                    response_format=response_format, **kwargs
+                )
+            import base64
+            return {"audio": base64.b64encode(resp.content).decode(), "format": response_format, "_model": model.name}
+        except Exception as e:
+            return {"error": str(e)[:200], "_model": model.name}
+
+    # ── 语音识别 STT ──
+    def call_stt(
+        self, agent: str = "", audio_file: str = "",
+        language: str = "zh", model_override: str = "", **kwargs
+    ) -> dict:
+        """语音识别 — 自动路由到 /v1/audio/transcriptions"""
+        key = model_override if model_override and model_override in self.all_models else self.get_key(agent)
+        model = self.all_models[key]
+        client = self._get_client(model.base_url, key)
+        if client is None:
+            return {"error": f"无法连接 {model.provider}", "_model": model.name}
+        try:
+            with open(audio_file, "rb") as f:
+                resp = client.audio.transcriptions.create(
+                    model=model.model_id, file=f,
+                    language=language, **kwargs
+                )
+            return {"text": resp.text, "_model": model.name}
+        except Exception as e:
+            return {"error": str(e)[:200], "_model": model.name}
+
+    # ── 视频生成 ──
+    def call_video(
+        self, agent: str = "", prompt: str = "",
+        seconds: int = 8, resolution: str = "720p",
+        model_override: str = "", **kwargs
+    ) -> dict:
+        """视频生成 — 路由到 OpenAI Sora / 厂商原生端点"""
+        key = model_override if model_override and model_override in self.all_models else self.get_key(agent)
+        model = self.all_models[key]
+        client = self._get_client(model.base_url, key)
+        if client is None:
+            return {"error": f"无法连接 {model.provider}", "_model": model.name}
+        try:
+            if model.provider == "OpenAI":
+                resp = client.videos.generate(
+                    model=model.model_id, prompt=prompt,
+                    seconds=seconds, **kwargs
+                )
+                return {"video_id": resp.id, "status": resp.status, "_model": model.name}
+            else:
+                # Google Veo / 其他厂商：降级为 chat completions
+                resp = client.chat.completions.create(
+                    model=model.model_id,
+                    messages=[{"role": "user", "content": f"Generate video: {prompt}. Duration: {seconds}s. Resolution: {resolution}."}],
+                    max_tokens=4096,
+                )
+                return {"result": resp.choices[0].message.content, "_model": model.name}
+        except Exception as e:
+            return {"error": str(e)[:200], "_model": model.name}
+
+    # ── 音乐生成 ──
+    def call_music(
+        self, agent: str = "", prompt: str = "",
+        duration_seconds: int = 30, model_override: str = "", **kwargs
+    ) -> dict:
+        """音乐生成 — 路由到 Lyria / Stable Audio / MiniMax Music"""
+        key = model_override if model_override and model_override in self.all_models else self.get_key(agent)
+        model = self.all_models[key]
+        client = self._get_client(model.base_url, key)
+        if client is None:
+            return {"error": f"无法连接 {model.provider}", "_model": model.name}
+        try:
+            resp = client.chat.completions.create(
+                model=model.model_id,
+                messages=[{"role": "user", "content": f"Generate music: {prompt}. Duration: {duration_seconds}s."}],
+                max_tokens=4096,
+            )
+            return {"result": resp.choices[0].message.content, "_model": model.name}
+        except Exception as e:
+            return {"error": str(e)[:200], "_model": model.name}
+
+    # ── 智能路由入口 ──
+    def call_multimodal(
+        self, agent: str = "", *, prompt: str = "", text: str = "",
+        audio_file: str = "", model_override: str = "", **kwargs
+    ) -> dict:
+        """多模态统一入口：自动判定模型类型，路由到正确的专有端点。
+
+        入参按模态分流：
+          prompt  → 图像/视频/音乐生成
+          text    → TTS 语音合成
+          audio_file → STT 语音识别
+        """
+        key = model_override if model_override and model_override in self.all_models else self.get_key(agent)
+        modality = self.classify_model(key)
+
+        if modality == "image":
+            return self.call_image(agent, prompt=prompt or text, model_override=key, **kwargs)
+        elif modality == "video":
+            return self.call_video(agent, prompt=prompt or text, model_override=key, **kwargs)
+        elif modality == "tts":
+            return self.call_tts(agent, text=text or prompt, model_override=key, **kwargs)
+        elif modality == "stt":
+            return self.call_stt(agent, audio_file=audio_file, model_override=key, **kwargs)
+        elif modality == "music":
+            return self.call_music(agent, prompt=prompt or text, model_override=key, **kwargs)
+        elif modality == "live":
+            msgs = [{"role": "user", "content": text or prompt}]
+            return self.call_llm(agent, msgs, model_override=key)
+        else:
+            msgs = [{"role": "user", "content": text or prompt}]
+            return self.call_llm(agent, msgs, model_override=key)
 
     # ---- API调用 ----
     def _get_client(self, base_url: str, model_key: str = "") -> Optional[OpenAI]:

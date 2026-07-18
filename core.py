@@ -501,6 +501,339 @@ def _web_fetch(args):
         return text[:max_len] if len(text) > max_len else text
     except Exception as e: return f"抓取失败: {e}"
 
+
+# ═══════════ Browser Agent 工具（Playwright）═══════════
+# 参考 Browser Use 极简 API + stealth + 持久化 + 自动升级
+
+_BROWSER_CONTEXT = None
+_BROWSER_PLAYWRIGHT = None
+_BROWSER_STATE_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".browser_state.json")
+_BROWSER_LOCK = threading.Lock()
+
+
+def _browser_get_context():
+    """获取或初始化 Playwright 浏览器上下文（单例 + stealth）"""
+    global _BROWSER_CONTEXT, _BROWSER_PLAYWRIGHT
+    if _BROWSER_CONTEXT is not None:
+        try:
+            _BROWSER_CONTEXT.pages[0].title()  # 探测存活
+            return _BROWSER_CONTEXT
+        except Exception:
+            _browser_close()
+
+    from playwright.sync_api import sync_playwright
+    _BROWSER_PLAYWRIGHT = sync_playwright().start()
+    browser = _BROWSER_PLAYWRIGHT.chromium.launch(
+        headless=True,
+        args=[
+            "--no-sandbox",
+            "--disable-dev-shm-usage",
+            "--disable-blink-features=AutomationControlled",
+            "--disable-features=IsolateOrigins,site-per-process",
+        ]
+    )
+
+    # 持久化登录状态
+    storage_state = None
+    if os.path.exists(_BROWSER_STATE_FILE):
+        try:
+            with open(_BROWSER_STATE_FILE, "r") as f:
+                storage_state = json.load(f)
+        except Exception:
+            pass
+
+    _BROWSER_CONTEXT = browser.new_context(
+        viewport={"width": 1280, "height": 800},
+        user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
+        storage_state=storage_state,
+        locale="zh-CN",
+    )
+
+    # Stealth 注入：隐藏 webdriver 标记
+    _BROWSER_CONTEXT.add_init_script("""
+        Object.defineProperty(navigator, 'webdriver', {get: () => undefined});
+        Object.defineProperty(navigator, 'plugins', {get: () => [1,2,3,4,5]});
+        window.chrome = {runtime: {}};
+        const origQuery = window.navigator.permissions.query;
+        window.navigator.permissions.query = (parameters) => (
+            parameters.name === 'notifications' ?
+            Promise.resolve({state: Notification.permission}) :
+            origQuery(parameters)
+        );
+    """)
+
+    return _BROWSER_CONTEXT
+
+
+def _browser_close():
+    """关闭浏览器"""
+    global _BROWSER_CONTEXT, _BROWSER_PLAYWRIGHT
+    try:
+        if _BROWSER_CONTEXT:
+            _BROWSER_CONTEXT.close()
+    except Exception:
+        pass
+    try:
+        if _BROWSER_PLAYWRIGHT:
+            _BROWSER_PLAYWRIGHT.stop()
+    except Exception:
+        pass
+    _BROWSER_CONTEXT = None
+    _BROWSER_PLAYWRIGHT = None
+
+
+def _browser_save_state():
+    """保存浏览器登录状态到磁盘（跨会话复用）"""
+    global _BROWSER_CONTEXT
+    if _BROWSER_CONTEXT:
+        try:
+            state = _BROWSER_CONTEXT.storage_state()
+            with open(_BROWSER_STATE_FILE, "w") as f:
+                json.dump(state, f, ensure_ascii=False)
+        except Exception:
+            pass
+
+
+def _browser_navigate(args):
+    """打开网页（自动关闭弹窗/cookie横幅）"""
+    with _BROWSER_LOCK:
+        ctx = _browser_get_context()
+        page = ctx.pages[0] if ctx.pages else ctx.new_page()
+        url = args["url"]
+        if not url.startswith("http"):
+            url = "https://" + url
+        try:
+            page.goto(url, wait_until="domcontentloaded", timeout=20000)
+            # 自动关闭常见 cookie 弹窗
+            _browser_dismiss_banners(page)
+            page.wait_for_timeout(500)
+            title = page.title()
+            return f"已打开: {title} ({page.url})"
+        except Exception as e:
+            return f"打开失败: {e}"
+
+
+def _browser_dismiss_banners(page):
+    """自动关闭常见 cookie/弹窗"""
+    common_selectors = [
+        "button:has-text('Accept')",
+        "button:has-text('Accept All')",
+        "button:has-text('同意')",
+        "button:has-text('接受')",
+        "button:has-text('允许')",
+        "[aria-label='Close']",
+        ".close",
+        "#close",
+        "[data-testid='close-button']",
+    ]
+    for sel in common_selectors:
+        try:
+            el = page.locator(sel).first
+            if el.is_visible(timeout=500):
+                el.click(timeout=1000)
+                page.wait_for_timeout(300)
+        except Exception:
+            pass
+
+
+def _browser_click(args):
+    """点击元素（支持 CSS 选择器 或 文本匹配）"""
+    with _BROWSER_LOCK:
+        ctx = _browser_get_context()
+        page = ctx.pages[0]
+        selector = args.get("selector", "")
+        text = args.get("text", "")
+        index = int(args.get("index", 0))
+        try:
+            if text:
+                el = page.locator(f"text={text}").nth(index)
+            elif selector:
+                el = page.locator(selector).nth(index)
+            else:
+                return "请提供 selector 或 text 参数"
+            el.click(timeout=5000)
+            page.wait_for_timeout(500)
+            return f"已点击: {text or selector}"
+        except Exception as e:
+            return f"点击失败: {e}"
+
+
+def _browser_type(args):
+    """输入文本到元素"""
+    with _BROWSER_LOCK:
+        ctx = _browser_get_context()
+        page = ctx.pages[0]
+        selector = args.get("selector", "")
+        text_content = args.get("text", "")
+        if not selector or not text_content:
+            return "请提供 selector 和 text 参数"
+        try:
+            page.locator(selector).fill(text_content, timeout=5000)
+            return f"已输入到 {selector}"
+        except Exception as e:
+            return f"输入失败: {e}"
+
+
+def _browser_extract(args):
+    """提取页面内容（text/markdown/links）。参考 Browser Use 结构化提取"""
+    with _BROWSER_LOCK:
+        ctx = _browser_get_context()
+        page = ctx.pages[0]
+        mode = args.get("mode", "text")
+        max_chars = int(args.get("max_chars", 5000))
+        selector = args.get("selector", "body")
+        try:
+            page.wait_for_timeout(1000)
+            if mode == "markdown":
+                # 用 innerText 近似 Markdown
+                text = page.locator(selector).inner_text(timeout=5000)
+                lines = text.split("\n")
+                out = []
+                for line in lines:
+                    stripped = line.strip()
+                    if not stripped:
+                        continue
+                    # 尝试判断标题
+                    if len(stripped) < 80 and stripped.endswith(("：", ":")):
+                        out.append(f"## {stripped}")
+                    else:
+                        out.append(stripped)
+                text = "\n\n".join(out)
+            elif mode == "links":
+                links = page.locator("a").all()
+                out = []
+                for link in links[:50]:
+                    try:
+                        href = link.get_attribute("href")
+                        label = link.inner_text().strip()[:80]
+                        if href and label:
+                            out.append(f"- [{label}]({href})")
+                    except Exception:
+                        pass
+                text = "\n".join(out)
+            elif mode == "structured":
+                # 提取标题 + 段落结构
+                title = page.title()
+                h1s = [el.inner_text().strip() for el in page.locator("h1").all()[:5]]
+                h2s = [el.inner_text().strip() for el in page.locator("h2").all()[:10]]
+                ps = [el.inner_text().strip()[:200] for el in page.locator("p").all()[:20] if el.inner_text().strip()]
+                text = f"# {title}\n\n"
+                if h1s:
+                    text += "\n".join(f"## {h}" for h in h1s) + "\n\n"
+                if h2s:
+                    text += "\n".join(f"### {h}" for h in h2s) + "\n\n"
+                text += "\n\n".join(ps)
+            else:
+                text = page.locator(selector).inner_text(timeout=5000)
+            return text[:max_chars]
+        except Exception as e:
+            return f"提取失败: {e}"
+
+
+def _browser_screenshot(args):
+    """截取当前页面（返回 base64 PNG 或保存路径）"""
+    with _BROWSER_LOCK:
+        ctx = _browser_get_context()
+        page = ctx.pages[0]
+        full_page = args.get("full_page", False)
+        save_path = args.get("save", "")
+        try:
+            if save_path:
+                page.screenshot(path=save_path, full_page=full_page)
+                return f"截图已保存: {save_path}"
+            else:
+                import base64
+                data = page.screenshot(full_page=full_page)
+                b64 = base64.b64encode(data).decode()
+                return f"[截图 base64 长度: {len(b64)}]\n{b64[:200]}..."
+        except Exception as e:
+            return f"截图失败: {e}"
+
+
+def _browser_scroll(args):
+    """滚动页面"""
+    with _BROWSER_LOCK:
+        ctx = _browser_get_context()
+        page = ctx.pages[0]
+        direction = args.get("direction", "down")
+        amount = int(args.get("amount", 500))
+        try:
+            if direction == "down":
+                page.evaluate(f"window.scrollBy(0, {amount})")
+            elif direction == "up":
+                page.evaluate(f"window.scrollBy(0, -{amount})")
+            elif direction == "bottom":
+                page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
+            elif direction == "top":
+                page.evaluate("window.scrollTo(0, 0)")
+            page.wait_for_timeout(500)
+            return f"已滚动: {direction}"
+        except Exception as e:
+            return f"滚动失败: {e}"
+
+
+def _browser_wait(args):
+    """等待元素出现或等待指定毫秒"""
+    with _BROWSER_LOCK:
+        ctx = _browser_get_context()
+        page = ctx.pages[0]
+        selector = args.get("selector", "")
+        timeout_ms = int(args.get("timeout", 3000))
+        try:
+            if selector:
+                page.wait_for_selector(selector, timeout=timeout_ms)
+                return f"元素已出现: {selector}"
+            else:
+                page.wait_for_timeout(timeout_ms)
+                return f"已等待 {timeout_ms}ms"
+        except Exception as e:
+            return f"等待超时: {e}"
+
+
+def _browser_get_state(args=None):
+    """获取当前页面状态（URL、标题、可交互元素）"""
+    with _BROWSER_LOCK:
+        try:
+            if _BROWSER_CONTEXT is None:
+                return "浏览器未启动，请先用 browser_navigate 打开网页"
+            page = _BROWSER_CONTEXT.pages[0]
+            url = page.url
+            title = page.title()
+            # 列出可点击的按钮/链接
+            buttons = []
+            for el in page.locator("button, a, input[type='submit']").all()[:15]:
+                try:
+                    txt = el.inner_text().strip()[:50]
+                    tag = el.evaluate("el => el.tagName")
+                    if txt:
+                        buttons.append(f"  [{tag}] {txt}")
+                except Exception:
+                    pass
+            info = f"URL: {url}\n标题: {title}\n\n可交互元素:\n" + "\n".join(buttons) if buttons else f"URL: {url}\n标题: {title}\n(未检测到按钮)"
+            return info
+        except Exception as e:
+            return f"状态获取失败: {e}"
+
+
+def _web_fetch_upgraded(args):
+    """智能抓取：轻量 HTTP → 失败自动升级到 Browser Agent"""
+    result = _web_fetch(args)
+    # 如果 HTTP 抓取疑似失败（JS 渲染页、反爬等），自动升级
+    fail_markers = ["抓取失败", "请启用JavaScript", "请开启JavaScript", "enable javascript", "需要JavaScript"]
+    if any(m in result.lower() for m in fail_markers):
+        return "[HTTP抓取失败，自动升级到浏览器引擎]\n" + _browser_extract({
+            "mode": "text", "max_chars": args.get("max_chars", 5000)
+        })
+    # 如果返回内容过短（< 100 字符），也可能是 JS 页，升级尝试
+    if result and not result.startswith("抓取失败") and len(result) < 100:
+        url = args.get("url", "")
+        _browser_navigate({"url": url})
+        return "[低质量结果，自动升级到浏览器引擎]\n" + _browser_extract({
+            "mode": "text", "max_chars": args.get("max_chars", 5000)
+        })
+    return result
+
+
 _WS = os.path.dirname(os.path.abspath(__file__))
 
 # ═══════════ 权限管理器 ─────────────────────────────
@@ -1280,7 +1613,8 @@ class ParentBot:
 只输出子Agent的名称，不要解释。
 
 可用子Agent：
-- 搜索Agent: 联网搜索、查实时信息、天气、百科、新闻
+- 搜索Agent: 联网搜索、查实时信息、天气、百科、新闻（内置浏览器引擎，自动处理JS页面）
+- 浏览器Agent: 端到端Web交互（打开网页、点击、填表、滚动、截屏、登录态持久化、JS动态页面）
 - 代码Agent: 编程、写代码、调试、算法、技术问题、Git版本回滚
 - 文件Agent: 读写文件、文件管理、文档处理、反编译、Git版本回滚
 - 电脑Agent: 系统控制、进程管理、资源监控（CPU/内存/磁盘/网络）、软件包管理（安装/卸载/搜索/更新）
@@ -1499,14 +1833,65 @@ ADB 常用按键码：
             "搜索Agent": ChildBot(
                 name="搜索Agent",
                 description="联网搜索、查实时信息、天气、百科",
-                system_prompt="你是信息检索专家。收到查询后调用插件获取数据，整理结果并注明来源。语气简洁专业。\n注意：你只有只读权限，如需创建/修改/删除文件，请明确告知父Bot处理。\n联网搜索用 web_search，阅读具体网页用 web_fetch。\n\n语言规则：所有思考和回复必须用中文。技术名词（URL、代码、API名等）保留原文。",
+                system_prompt="你是信息检索专家。收到查询后调用插件获取数据，整理结果并注明来源。语气简洁专业。\n注意：你只有只读权限，如需创建/修改/删除文件，请明确告知父Bot处理。\n\n工具：web_search（联网搜索）、web_fetch（抓取网页，自动处理JS页面）、search_wikipedia、get_weather。\n\n语言规则：所有思考和回复必须用中文。技术名词（URL、代码、API名等）保留原文。",
                 tools=[
                     Tool("web_search", "联网搜索(DuckDuckGo)，返回标题+链接+摘要",
                          {"query": {"type": "string", "description": "搜索关键词"}}, _web_search),
-                    Tool("web_fetch", "抓取网页正文内容",
-                         {"url": {"type": "string", "description": "网页URL"}}, _web_fetch),
+                    Tool("web_fetch", "智能抓取网页（轻量HTTP→自动升级浏览器引擎）。支持JS渲染页",
+                         {"url": {"type": "string", "description": "网页URL"}, "max_chars": {"type": "integer", "description": "最大字符数，默认5000"}}, _web_fetch_upgraded),
                     Tool("search_wikipedia", "搜维基百科", {"query": {"type": "string", "description": "关键词"}}, _wiki),
                     Tool("get_weather", "查天气", {"city": {"type": "string", "description": "城市名"}}, _weather),
+                ] + mem_tools,
+            ),
+            "浏览器Agent": ChildBot(
+                name="浏览器Agent",
+                description="端到端浏览器操控：打开网页、点击、输入、滚动、提取JS渲染内容、截图。支持持久化登录态，自动处理弹窗和cookie",
+                system_prompt="""你是浏览器操控专家，基于 Playwright 实现端到端 Web 交互。
+
+核心能力：
+- browser_navigate：打开任意网页（自动补全https，自动关闭cookie弹窗）
+- browser_extract：提取页面内容（text普通文本 / markdown结构化 / links全量链接 / structured标题段落）
+- browser_click：点击元素（CSS选择器或文本匹配）
+- browser_type：在输入框填入文本
+- browser_scroll：滚动页面
+- browser_screenshot：截取当前屏幕
+- browser_get_state：获取页面状态（URL、标题、可交互按钮）
+- browser_wait：等待元素出现或等待毫秒
+- browser_save_state：保存登录态到磁盘（跨会话复用）
+
+策略原则：
+1. 先 navigate 打开目标页 → extract 提取内容 → 如果内容不全再 scroll+extract
+2. 遇到"加载更多"按钮 → click 展开 → extract
+3. 需要登录的页面 → navigate → type 输入凭据 → click 登录 → save_state 保存状态
+4. 动态表格/列表 → 先 scroll 到底部 → extract structured
+5. 复杂 SPA 页面 → wait 等待关键元素 → extract
+
+注意事项：
+- 你只有只读浏览器权限，不涉及文件系统操作
+- 登录凭证由用户提供，你只负责执行填入
+- 每次操作后确认结果再继续
+- 截图不可见时用 extract 替代
+
+语言规则：所有思考和回复必须用中文。""",
+                tools=[
+                    Tool("browser_navigate", "打开网页（自动处理cookie弹窗+补全https）",
+                         {"url": {"type": "string", "description": "目标URL"}}, _browser_navigate),
+                    Tool("browser_extract", "提取页面内容",
+                         {"mode": {"type": "string", "description": "text/markdown/links/structured"}, "max_chars": {"type": "integer", "description": "最大字符数，默认5000"}, "selector": {"type": "string", "description": "CSS选择器，默认body"}}, _browser_extract),
+                    Tool("browser_click", "点击元素",
+                         {"selector": {"type": "string", "description": "CSS选择器"}, "text": {"type": "string", "description": "元素可见文本"}, "index": {"type": "integer", "description": "匹配索引，默认0"}}, _browser_click),
+                    Tool("browser_type", "在输入框填入文本",
+                         {"selector": {"type": "string", "description": "输入框CSS选择器"}, "text": {"type": "string", "description": "要输入的文本"}}, _browser_type),
+                    Tool("browser_scroll", "滚动页面",
+                         {"direction": {"type": "string", "description": "down/up/bottom/top"}, "amount": {"type": "integer", "description": "滚动像素量"}}, _browser_scroll),
+                    Tool("browser_screenshot", "截取页面截图",
+                         {"full_page": {"type": "boolean", "description": "是否全页截图"}, "save": {"type": "string", "description": "保存路径"}}, _browser_screenshot),
+                    Tool("browser_get_state", "获取页面状态含可交互元素",
+                         {}, _browser_get_state),
+                    Tool("browser_wait", "等待元素出现或等待毫秒",
+                         {"selector": {"type": "string", "description": "等待的元素选择器"}, "timeout": {"type": "integer", "description": "超时毫秒，默认3000"}}, _browser_wait),
+                    Tool("browser_save_state", "保存浏览器登录状态到磁盘（跨会话复用）",
+                         {}, lambda args: _browser_save_state() or "登录态已保存"),
                 ] + mem_tools,
             ),
             "代码Agent": ChildBot(
@@ -2231,9 +2616,62 @@ Git 版本回滚：
     # ═══════════ 子Agent执行循环 ═══════════
 
     def _llm_call(self, agent: str, messages: list, tools: list = None, extra_fallbacks: list = None) -> dict:
-        """统一 LLM 调用入口：根据 fallback_mode 自动选择兜底或直调。
-        兜底模式下主模型失败会依次尝试备用模型，返回结果中 _tried 记录尝试链。"""
+        """统一 LLM 调用入口：根据模型模态自动路由 + fallback_mode 兜底。
+        多模态模型（图像/视频/TTS/STT/音乐）自动路由到专有 API 端点。"""
         ov = getattr(self, '_model_override', '') or ''
+        key = ov if ov and ov in self.pool.all_models else self.pool.get_key(agent)
+        modality = self.pool.classify_model(key)
+
+        # 多模态模型：提取最后一条用户消息作为 prompt，走专有端点
+        if modality in ("image", "video", "tts", "stt", "music"):
+            text = ""
+            for m in reversed(messages):
+                if m.get("role") == "user":
+                    text = m.get("content", "")
+                    break
+            if modality == "image":
+                raw = self.pool.call_image(agent, prompt=text, model_override=ov)
+                # 封装为 chat-completion 格式
+                urls = []
+                if raw.get("data"):
+                    for d in raw["data"]:
+                        urls.append(d.url if hasattr(d, "url") else str(d))
+                content = f"[图像生成结果]\n" + "\n".join(urls) if urls else f"[图像生成失败: {raw.get('error')}]"
+                return {"choices": [{"message": {"role": "assistant", "content": content}}],
+                        "usage": {}, "_model": raw.get("_model", key),
+                        "_multimodal": modality}
+            elif modality == "video":
+                raw = self.pool.call_video(agent, prompt=text, model_override=ov)
+                vid_id = raw.get("video_id", "")
+                result = raw.get("result", "")
+                content = f"[视频生成] ID: {vid_id}\n{result}" if vid_id else f"[视频生成结果]\n{result or raw.get('error', '')}"
+                return {"choices": [{"message": {"role": "assistant", "content": content}}],
+                        "usage": {}, "_model": raw.get("_model", key),
+                        "_multimodal": modality}
+            elif modality == "tts":
+                raw = self.pool.call_tts(agent, text=text, model_override=ov)
+                audio = raw.get("audio", "")
+                fmt = raw.get("format", "mp3")
+                content = f"[TTS 语音合成完成] 格式: {fmt}" if audio else f"[TTS 失败: {raw.get('error')}]"
+                return {"choices": [{"message": {"role": "assistant", "content": content}}],
+                        "usage": {}, "_model": raw.get("_model", key),
+                        "_multimodal": modality, "_audio_b64": audio, "_audio_format": fmt}
+            elif modality == "stt":
+                # STT: messages 可能没有原始文本，需要从外部传入 audio_file
+                af = getattr(self, '_stt_audio_file', '') if hasattr(self, '_stt_audio_file') else text
+                raw = self.pool.call_stt(agent, audio_file=af, model_override=ov)
+                content = raw.get("text", f"[STT 失败: {raw.get('error')}]")
+                return {"choices": [{"message": {"role": "assistant", "content": content}}],
+                        "usage": {}, "_model": raw.get("_model", key),
+                        "_multimodal": modality}
+            elif modality == "music":
+                raw = self.pool.call_music(agent, prompt=text, model_override=ov)
+                content = raw.get("result", f"[音乐生成失败: {raw.get('error')}]")
+                return {"choices": [{"message": {"role": "assistant", "content": f"[音乐生成结果]\n{content}"}}],
+                        "usage": {}, "_model": raw.get("_model", key),
+                        "_multimodal": modality}
+
+        # 文本模型：标准 chat completions
         if self.fallback_mode:
             return self.pool.call_llm_with_fallback(agent, messages, tools, fallback_models=extra_fallbacks, model_override=ov)
         return self.pool.call_llm(agent, messages, tools, model_override=ov)

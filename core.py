@@ -22,6 +22,7 @@ from screen_reader import capture, to_base64
 from sandbox import run_sandboxed
 from auto_sandbox import auto_sandbox
 from monitor import get_metrics
+from embeddings import SkillEmbedder
 
 # ── 共享记忆文件夹（文件级持久化）──
 _MEMDIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".memdir")
@@ -1689,6 +1690,8 @@ Spec（用中文）："""
         self._user_profile: str = ""
         # Memory 脏标记：disk 比缓存新时置 True
         self._memory_dirty: bool = False
+        # P5: Skill 向量检索缓存 — skill_dir路径 -> SkillEmbedder实例
+        self._skill_embedders: dict = {}
         self._init_children()
         self._load_context()  # 从磁盘恢复上下文 + 加载 MEMORY.md + USER.md
 
@@ -2779,7 +2782,32 @@ Git 版本回滚：
                 {"type": "image_url", "image_url": {"url": image}}
             ]
         messages.append({"role": "user", "content": content})
+
+        # P3: 思维链注入 — 复杂分析型任务自动追加 CoT 指令
+        if self._is_cot_task(user_input):
+            messages.append({"role": "system",
+                "content": "[思维链指令]\n这是一个需要深度推理的任务。"
+                           "请先拆解问题，逐步推导，每一步说明你的依据，最后再给出结论。"
+                           "不要跳过推理过程直接给答案。"})
+
         return messages
+
+    @staticmethod
+    def _is_cot_task(user_input: str) -> bool:
+        """判断是否需要注入思维链指令"""
+        # 强分析信号：这些词单独出现即无条件触发（不限长度）
+        cot_strong = {"为什么", "分析", "对比", "比较", "评估", "推理"}
+        cot_signals = [
+            "分析", "对比", "比较", "总结", "推理", "判断", "评估",
+            "为什么", "原因", "利弊", "优劣", "方案", "建议", "优劣",
+            "报告", "综述", "展望", "趋势", "解读", "深层", "机理",
+        ]
+        ql = user_input.lower()
+        signal_count = sum(1 for s in cot_signals if s in ql)
+        # 命中强分析信号：单信号无条件触发
+        if any(s in ql for s in cot_strong):
+            return True
+        return signal_count >= 2 or (signal_count >= 1 and len(user_input) > 30)
 
     def _run_child(self, child: ChildBot, messages: list) -> tuple:
         """子Agent工具调用循环 — v6: ReAct 模式 + stop 序列 + 预填充防废话。
@@ -2854,7 +2882,7 @@ Git 版本回滚：
                 if "[工具调用错误]" in result:
                     errors.append(f"  {fn}: {result[:300]}")
 
-            # P0: 构建 "观察:" 前缀的结果摘要
+            # P0+P4: ReAct 观察区块 + 反幻觉约束
             result_summary = "\n".join(
                 f"  {r['name']} → {r['result'][:200]}" for r in tool_results
             )
@@ -2868,14 +2896,16 @@ Git 版本回滚：
                 # 第3轮起强制收束，预填充防止废话
                 observe_block = (
                     f"【观察】\n工具已返回结果：\n{result_summary}\n\n"
-                    f"已完成 {loop+1} 轮工具探索，信息足够。请直接给出最终回答，不要客套。"
+                    f"已完成 {loop+1} 轮工具探索，信息足够。请直接给出最终回答，不要客套。\n"
+                    f"⚠️ 幻觉禁令：回答中必须引用上述工具返回的具体数据。若某条结论无工具结果支撑，不要凭空编造。"
                 )
                 # P1: 预填充——在最终回答前替模型起头，防"好的""以下是"
                 messages.append({"role": "assistant", "content": ""})
             else:
                 observe_block = (
                     f"【观察】\n工具返回结果：\n{result_summary}\n\n"
-                    f"请判断：信息是否足够给出最终回答？足够则直接回答；不足则继续调工具。"
+                    f"请判断：信息是否足够给出最终回答？足够则直接回答；不足则继续调工具。\n"
+                    f"⚠️ 幻觉禁令：只能基于上述工具返回的实际数据作答，不得编造不存在的信息。"
                 )
             messages.append({"role": "system", "content": observe_block})
 
@@ -3317,30 +3347,22 @@ DAG（只输出节点列表）:"""
 
     def _inject_skills(self, child: ChildBot, user_input: str) -> str:
         """在 _build_child_msgs 前调用: 搜索相关 Skill 注入系统消息。
-        关键词匹配 + 全文搜索，返回要注入的 Skill 文本。"""
+        P5: TF-IDF 向量语义检索，替代原关键词匹配，显著提升中文语义召回精度。"""
         skill_dir = child.memdir / "skills"
         if not skill_dir.exists():
             return ""
 
-        matched = []
-        for sf in sorted(skill_dir.glob("*.md")):
-            content = sf.read_text(encoding="utf-8")
-            # 关键词匹配: user_input 和 skill 文件名/标题交叉命中
-            fname_lower = sf.stem.lower().replace("-", " ")
-            inp_lower = user_input.lower()
-            if any(w in inp_lower for w in fname_lower.split()):
-                matched.append(content)
-            elif len(content[:200].split()) > 5:  # 备选: 标题行模糊匹配
-                title = content.split("\n")[0].lower()
-                if any(w in inp_lower for w in title.split() if len(w) > 2):
-                    matched.append(content)
+        skill_dir_str = str(skill_dir)
+        if skill_dir_str not in self._skill_embedders:
+            self._skill_embedders[skill_dir_str] = SkillEmbedder(skill_dir_str)
+        embedder = self._skill_embedders[skill_dir_str]
 
+        matched = embedder.search(user_input, top_k=2, min_score=0.05)
         if not matched:
             return ""
 
-        # 最多注入 2 个 Skill
-        joined = "\n---\n".join(matched[:2])
-        self.log.memory(f"{child.name}", f"Skill命中 {len(matched[:2])} 条")
+        joined = "\n---\n".join(matched)
+        self.log.memory(f"{child.name}", f"Skill命中(向量) {len(matched)} 条")
         return f"\n[相关技能经验 - 来自历史学习]\n{joined}"
 
     # ═══════════ 记忆 & 上下文管理 ═══════════

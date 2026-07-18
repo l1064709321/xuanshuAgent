@@ -24,7 +24,7 @@ cd xuanshuAgent
 **Windows（PowerShell）：**
 ```powershell
 git clone https://gitee.com/lord-of-the-star/xuanshuAagent.git
-cd xuan-shu-agent
+cd xuanshuAgent
 ```
 
 GitHub 镜像：将地址换为 `https://github.com/l1064709321/xuanshuAgent.git`，目录名 `xuanshuAgent`。

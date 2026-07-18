@@ -180,7 +180,7 @@ export GIT_EXEC_PATH="$HOME/local/libexec/git-core"
 # 验证
 git --version
 ```
-推送命令（先设置远端再 push）：
+推送命令（在项目目录内执行）：
 ```bash
 git remote add gitee https://gitee.com/lord-of-the-star/xuan-shu-agent.git
 git push gitee main:master

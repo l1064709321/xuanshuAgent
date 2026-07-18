@@ -228,12 +228,19 @@ python frontend.py
 
 ### 命令行
 
+Linux / macOS / WSL：
 ```bash
 source .venv/bin/activate
 python main.py
 ```
 
-### systemd 服务
+Windows：
+```powershell
+.venv\Scripts\activate
+python main.py
+```
+
+### systemd 服务（仅 Linux）
 
 ```bash
 sudo cp xuanshu.service /etc/systemd/system/
@@ -467,7 +474,7 @@ python -m decompile --tools                    # 查看可用工具
 ## 环境要求
 
 - Python 3.8+
-- Linux（macOS / WSL 可用）
+- Linux / macOS / Windows / WSL
 
 ---
 

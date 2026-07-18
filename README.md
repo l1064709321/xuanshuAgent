@@ -195,7 +195,12 @@ git push github main:main
 
 ### Web 界面（推荐）
 
-**Linux / macOS / WSL：**
+**Linux / WSL：**
+```bash
+bash xuanshu
+```
+
+**macOS：**
 ```bash
 bash xuanshu
 ```
@@ -209,9 +214,15 @@ bash xuanshu
 
 脚本自动完成：检测 Python ≥ 3.8 → 创建 `.venv` → pip install → 启动 Flask 服务。
 
-手动启动：
+手动启动（Linux / macOS / WSL）：
 ```bash
 source .venv/bin/activate
+python frontend.py
+```
+
+手动启动（Windows）：
+```powershell
+.venv\Scripts\activate
 python frontend.py
 ```
 

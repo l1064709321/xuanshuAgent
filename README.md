@@ -193,52 +193,23 @@ git push github main:main
 
 ## 启动方式
 
-### Web 界面（推荐）
+### 一键启动
 
-**Linux / WSL：**
-```bash
-bash xuanshu
-```
+| 系统 | 命令 |
+|------|------|
+| Linux / macOS / WSL | `bash xuanshu` |
+| Windows | `.\xuanshu.bat` |
 
-**macOS：**
-```bash
-bash xuanshu
-```
+访问 http://localhost:8901。脚本自动：检测 Python ≥ 3.8 → 创建 `.venv` → 安装依赖 → 启动服务。
 
-**Windows（PowerShell / CMD）：**
-```powershell
-.\xuanshu.bat
-```
+### 手动启动
 
-访问 http://localhost:8901
+| 系统 | 命令 |
+|------|------|
+| Linux / macOS / WSL | `source .venv/bin/activate && python frontend.py` |
+| Windows | `.venv\Scripts\activate && python frontend.py` |
 
-脚本自动完成：检测 Python ≥ 3.8 → 创建 `.venv` → pip install → 启动 Flask 服务。
-
-手动启动（Linux / macOS / WSL）：
-```bash
-source .venv/bin/activate
-python frontend.py
-```
-
-手动启动（Windows）：
-```powershell
-.venv\Scripts\activate
-python frontend.py
-```
-
-### 命令行
-
-Linux / macOS / WSL：
-```bash
-source .venv/bin/activate
-python main.py
-```
-
-Windows：
-```powershell
-.venv\Scripts\activate
-python main.py
-```
+命令行模式将 `frontend.py` 换成 `main.py` 即可。
 
 ### systemd 服务（仅 Linux）
 

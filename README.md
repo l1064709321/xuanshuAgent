@@ -15,19 +15,33 @@
 
 ### 克隆仓库
 
-**Linux / macOS / WSL：**
+**Gitee（国内推荐）：**
+
+Linux / macOS / WSL：
 ```bash
 git clone https://gitee.com/lord-of-the-star/xuan-shu-agent.git
 cd xuan-shu-agent
 ```
 
-**Windows（PowerShell）：**
+Windows（PowerShell）：
 ```powershell
 git clone https://gitee.com/lord-of-the-star/xuan-shu-agent.git
 cd xuan-shu-agent
 ```
 
-GitHub 镜像：将地址换为 `https://github.com/l1064709321/xuanshuAgent.git`，目录名 `xuanshuAgent`。
+**GitHub：**
+
+Linux / macOS / WSL：
+```bash
+git clone https://github.com/l1064709321/xuan-shu-agent.git
+cd xuan-shu-agent
+```
+
+Windows（PowerShell）：
+```powershell
+git clone https://github.com/l1064709321/xuan-shu-agent.git
+cd xuan-shu-agent
+```
 
 ### 启动
 
@@ -224,18 +238,6 @@ rm -rf usr *.rpm
 export PATH="$HOME/local/bin:$PATH"
 export GIT_EXEC_PATH="$HOME/local/libexec/git-core"
 git --version
-```
-
-### 推送到远程仓库
-
-在项目目录内执行：
-
-```bash
-git remote add gitee https://gitee.com/lord-of-the-star/xuan-shu-agent.git
-git push gitee main:master
-
-git remote add github https://github.com/l1064709321/xuanshuAgent.git
-git push github main:main
 ```
 
 ### 常见问题

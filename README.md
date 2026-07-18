@@ -25,7 +25,7 @@ cd xuanshuAgent
 
 Windows（PowerShell）：
 ```powershell
-git clone https://gitee.com/lord-of-the-star/xuanshuAagent.git
+git clone https://gitee.com/lord-of-the-star/xuanshuAgent.git
 cd xuanshuAgent
 ```
 
@@ -33,14 +33,14 @@ cd xuanshuAgent
 
 Linux / macOS / WSL：
 ```bash
-git clone https://github.com/l1064709321/xuan-shu-agent.git
-cd xuan-shu-agent
+git clone https://github.com/l1064709321/xuanshuAgent.git
+cd xuanshuAgent
 ```
 
 Windows（PowerShell）：
 ```powershell
-git clone https://github.com/l1064709321/xuan-shu-agent.git
-cd xuan-shu-agent
+git clone https://github.com/l1064709321/xuanshuAgent.git
+cd xuanshuAgent
 ```
 
 ### 启动

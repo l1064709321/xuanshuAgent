@@ -3,3 +3,4 @@ requests>=2.28
 wikipedia
 numpy
 scikit-learn
+alibabacloud_dysmsapi20170525

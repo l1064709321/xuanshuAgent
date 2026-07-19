@@ -4,6 +4,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from flask import Flask, request, jsonify, send_file
 from core import ParentBot
 from models import ModelPool
+from auth import send_sms, generate_code, store_code, verify_code, check_sms_rate, user_register, user_login, get_user_from_request
 
 app = Flask(__name__, static_folder=".", static_url_path="")
 
@@ -39,6 +40,55 @@ def cors(resp):
 
 pool = ModelPool(default_key="local")
 bot = ParentBot(pool=pool, verbose=False, coordinator_mode=True)
+
+# ── 账号系统 ──
+@app.route("/auth/send-code", methods=["POST"])
+def auth_send_code():
+    data = request.get_json() or {}
+    phone = (data.get("phone") or "").strip()
+    if not phone or not phone.isdigit() or len(phone) != 11:
+        return jsonify({"ok": False, "error": "请输入正确的11位手机号"})
+    wait = check_sms_rate(phone)
+    if wait > 0:
+        return jsonify({"ok": False, "error": f"发送太频繁，请{wait}秒后再试"})
+    code = generate_code()
+    store_code(phone, code)
+    result = send_sms(phone, code)
+    if result.get("mock"):
+        return jsonify({"ok": True, "message": f"验证码已发送（模拟模式）", "mock": True, "code": code})
+    if result.get("ok"):
+        return jsonify({"ok": True, "message": "验证码已发送"})
+    return jsonify({"ok": False, "error": result.get("error", "发送失败")})
+
+@app.route("/auth/register", methods=["POST"])
+def auth_register():
+    data = request.get_json() or {}
+    phone = (data.get("phone") or "").strip()
+    password = (data.get("password") or "").strip()
+    code = (data.get("code") or "").strip()
+    if not phone or len(phone) != 11:
+        return jsonify({"ok": False, "error": "请输入正确的手机号"})
+    if len(password) < 6:
+        return jsonify({"ok": False, "error": "密码至少6位"})
+    if len(code) != 6:
+        return jsonify({"ok": False, "error": "请输入6位验证码"})
+    return jsonify(user_register(phone, password, code))
+
+@app.route("/auth/login", methods=["POST"])
+def auth_login():
+    data = request.get_json() or {}
+    phone = (data.get("phone") or "").strip()
+    password = (data.get("password") or "").strip()
+    if not phone or not password:
+        return jsonify({"ok": False, "error": "手机号和密码不能为空"})
+    return jsonify(user_login(phone, password))
+
+@app.route("/auth/me", methods=["GET"])
+def auth_me():
+    user = get_user_from_request()
+    if not user:
+        return jsonify({"ok": False, "error": "未登录"})
+    return jsonify({"ok": True, "user": {"id": user["uid"], "phone": user["phone"]}})
 
 @app.route("/")
 def index():

@@ -11,6 +11,50 @@
 <body>
 <a href="#msg-input" class="skip-link">跳到输入框</a>
 
+<!-- 登录/注册弹窗 -->
+<div class="auth-overlay" id="authOverlay">
+  <div class="auth-container">
+    <div class="auth-header">
+      <div class="auth-logo">玄姝</div>
+      <div class="auth-tabs">
+        <button class="auth-tab active" onclick="switchAuthTab('login')">登录</button>
+        <button class="auth-tab" onclick="switchAuthTab('register')">注册</button>
+      </div>
+    </div>
+    <div class="auth-form" id="authFormLogin">
+      <div class="form-group">
+        <label class="form-label">手机号</label>
+        <input id="loginPhone" type="tel" class="form-input auth-input" placeholder="输入手机号" maxlength="11" autocomplete="tel">
+      </div>
+      <div class="form-group">
+        <label class="form-label">密码</label>
+        <input id="loginPassword" type="password" class="form-input auth-input" placeholder="输入密码" autocomplete="current-password">
+      </div>
+      <div class="auth-error" id="loginError"></div>
+      <button class="btn btn-primary auth-btn" onclick="doLogin()">登录</button>
+    </div>
+    <div class="auth-form" id="authFormRegister" style="display:none">
+      <div class="form-group">
+        <label class="form-label">手机号</label>
+        <input id="regPhone" type="tel" class="form-input auth-input" placeholder="输入手机号" maxlength="11" autocomplete="tel">
+      </div>
+      <div class="form-group">
+        <label class="form-label">验证码</label>
+        <div class="auth-code-row">
+          <input id="regCode" type="text" class="form-input auth-input auth-code-input" placeholder="6位验证码" maxlength="6" autocomplete="one-time-code">
+          <button class="btn btn-ghost auth-code-btn" id="sendCodeBtn" onclick="doSendCode()">获取验证码</button>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">设置密码</label>
+        <input id="regPassword" type="password" class="form-input auth-input" placeholder="至少6位" minlength="6" autocomplete="new-password">
+      </div>
+      <div class="auth-error" id="regError"></div>
+      <button class="btn btn-primary auth-btn" onclick="doRegister()">注册</button>
+    </div>
+  </div>
+</div>
+
 <!-- 权限弹窗 -->
 <div class="permission-overlay" id="permOverlay">
   <div class="permission-dialog">
@@ -471,6 +515,112 @@ let currentSessionId = 'sess_' + Date.now();
 const conv = document.getElementById('conv');
 const inp = document.getElementById('msg-input');
 let pendingImage = null;
+let authToken = localStorage.getItem('xuanshu_token') || '';
+
+// ========== 账号系统 ==========
+function showAuth() {
+  document.getElementById('authOverlay').style.display = 'flex';
+  document.querySelector('.app').style.display = 'none';
+}
+function hideAuth() {
+  document.getElementById('authOverlay').style.display = 'none';
+  document.querySelector('.app').style.display = 'flex';
+}
+
+async function checkAuth() {
+  if (!authToken) { showAuth(); return; }
+  try {
+    const r = await fetch(API + '/auth/me', { headers: { 'Authorization': 'Bearer ' + authToken } });
+    const j = await r.json();
+    if (j.ok) {
+      hideAuth();
+      document.getElementById('toolbarAvatar').textContent = (j.user.phone || '').slice(-2) || '玄';
+      return;
+    }
+  } catch(e) {}
+  localStorage.removeItem('xuanshu_token');
+  authToken = '';
+  showAuth();
+}
+
+function switchAuthTab(tab) {
+  document.querySelectorAll('.auth-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.auth-form').forEach(f => f.style.display = 'none');
+  event.target.classList.add('active');
+  document.getElementById(tab === 'login' ? 'authFormLogin' : 'authFormRegister').style.display = '';
+  document.getElementById('loginError').textContent = '';
+  document.getElementById('regError').textContent = '';
+}
+
+async function doSendCode() {
+  const phone = document.getElementById('regPhone').value.trim();
+  const btn = document.getElementById('sendCodeBtn');
+  const err = document.getElementById('regError');
+  if (!/^\d{11}$/.test(phone)) { err.textContent = '请输入正确的手机号'; return; }
+  btn.disabled = true;
+  try {
+    const r = await fetch(API + '/auth/send-code', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({phone}) });
+    const j = await r.json();
+    if (j.ok) {
+      if (j.mock && j.code) { err.style.color = 'var(--accent)'; err.textContent = '（模拟）验证码: ' + j.code; }
+      else { err.style.color = 'var(--accent)'; err.textContent = '验证码已发送，5分钟内有效'; }
+      let cd = 60;
+      btn.textContent = cd + 's';
+      const t = setInterval(() => { cd--; btn.textContent = cd + 's'; if(cd<=0){clearInterval(t);btn.textContent='获取验证码';btn.disabled=false;} }, 1000);
+    } else {
+      err.style.color = 'var(--cinnabar)';
+      err.textContent = j.error;
+      btn.disabled = false;
+    }
+  } catch(e) { err.textContent = '网络错误'; btn.disabled = false; }
+}
+
+async function doRegister() {
+  const phone = document.getElementById('regPhone').value.trim();
+  const code = document.getElementById('regCode').value.trim();
+  const password = document.getElementById('regPassword').value;
+  const err = document.getElementById('regError');
+  err.style.color = 'var(--cinnabar)';
+  if (!/^\d{11}$/.test(phone)) { err.textContent = '请输入正确的手机号'; return; }
+  if (code.length !== 6) { err.textContent = '请输入6位验证码'; return; }
+  if (password.length < 6) { err.textContent = '密码至少6位'; return; }
+  const r = await fetch(API + '/auth/register', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({phone, code, password}) });
+  const j = await r.json();
+  if (j.ok) {
+    authToken = j.token;
+    localStorage.setItem('xuanshu_token', authToken);
+    hideAuth();
+    document.getElementById('toolbarAvatar').textContent = phone.slice(-2);
+  } else {
+    err.textContent = j.error;
+  }
+}
+
+async function doLogin() {
+  const phone = document.getElementById('loginPhone').value.trim();
+  const password = document.getElementById('loginPassword').value;
+  const err = document.getElementById('loginError');
+  err.style.color = 'var(--cinnabar)';
+  if (!phone || !password) { err.textContent = '请输入手机号和密码'; return; }
+  const r = await fetch(API + '/auth/login', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({phone, password}) });
+  const j = await r.json();
+  if (j.ok) {
+    authToken = j.token;
+    localStorage.setItem('xuanshu_token', authToken);
+    hideAuth();
+    document.getElementById('toolbarAvatar').textContent = phone.slice(-2);
+  } else {
+    err.textContent = j.error;
+  }
+}
+
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Enter' && document.getElementById('authOverlay').style.display === 'flex') {
+    const loginForm = document.getElementById('authFormLogin');
+    if (loginForm.style.display !== 'none') { doLogin(); }
+    else { doRegister(); }
+  }
+});
 
 inp.addEventListener('paste', async (e) => {
   const items = e.clipboardData?.items;
@@ -1722,6 +1872,7 @@ function showDownloadPermInfo() {
 }
 
 window.addEventListener('DOMContentLoaded', function() {
+  checkAuth();
   const toolbarEl = document.getElementById('toolbarAvatar');
   if (toolbarEl) toolbarEl.onclick = () => navigateTo('#profile');
   setTimeout(loadWorkspaceFiles, 300);

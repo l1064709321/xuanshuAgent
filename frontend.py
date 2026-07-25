@@ -1,12 +1,21 @@
-"""玄姝多Agent API — Flask 后端 + 前端托管，单端口 8901"""
-import os, sys, json, mimetypes, base64, subprocess
+"""玄姝多Agent API — Flask 后端 + 前端托管，单端口"""
+import os, sys, json, mimetypes, base64, subprocess, signal, time, collections
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from flask import Flask, request, jsonify, send_file
 from core import ParentBot
 from models import ModelPool
-from auth import send_sms, generate_code, store_code, verify_code, check_sms_rate, user_register, user_login, get_user_from_request
+from auth import send_sms, generate_code, store_code, verify_code, check_sms_rate, set_sms_rate, user_register, user_login, get_user_from_request
+from config import config
+import structured_logger as slog
 
 app = Flask(__name__, static_folder=".", static_url_path="")
+
+# ── 全局异常捕获（输出 traceback）──
+import traceback as _tb
+@app.errorhandler(Exception)
+def _global_error_handler(e):
+    _tb.print_exc()
+    return jsonify({"error": str(e), "traceback": _tb.format_exc()}), 500
 
 # ── 记忆文件夹路径 ──
 _MEMDIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".memdir")
@@ -15,30 +24,69 @@ _ALLOWED_BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 _WORKSPACE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "workspace_files")
 os.makedirs(_WORKSPACE_DIR, exist_ok=True)
 
-# ── 请求日志（调试用）──
-import logging
-import sys
-logger = logging.getLogger()
-logger.setLevel(logging.INFO)
-fh = logging.FileHandler(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'req.log'))
-fh.setFormatter(logging.Formatter('%(asctime)s %(message)s'))
-ch = logging.StreamHandler(sys.stderr)
-ch.setFormatter(logging.Formatter('%(asctime)s %(message)s'))
-logger.handlers = [fh, ch]
+# ── 限流器 ──
+class RateLimiter:
+    def __init__(self, per_minute, burst):
+        self.rate = per_minute / 60.0
+        self.burst = burst
+        self.tokens = collections.defaultdict(lambda: burst)
+        self.last = collections.defaultdict(float)
+
+    def allow(self, key: str) -> bool:
+        now = time.time()
+        elapsed = now - self.last[key]
+        self.tokens[key] = min(self.burst, self.tokens[key] + elapsed * self.rate)
+        self.last[key] = now
+        if self.tokens[key] >= 1:
+            self.tokens[key] -= 1
+            return True
+        return False
+
+_rl = RateLimiter(config.RL_CHAT_PER_MIN, config.RL_CHAT_BURST)
+
+# ── 请求级结构化日志（含 trace_id）──
 @app.before_request
-def log_request():
-    if request.path.startswith('/model-key') or request.path.startswith('/set-key') or request.path == '/chat':
-        data = request.get_json(silent=True) or {}
-        logging.info(f"{request.method} {request.path} data={data}")
+def _before_request():
+    slog.set_trace_id()
+    request._start_ms = time.time()
+    slog.request_start(request.method, request.path,
+                       client_ip=request.headers.get("X-Forwarded-For", request.remote_addr or "-"))
 
 @app.after_request
-def cors(resp):
+def _after_request(resp):
+    elapsed = (time.time() - getattr(request, "_start_ms", time.time())) * 1000
+    slog.request_end(resp.status_code, elapsed)
     resp.headers["Access-Control-Allow-Origin"] = "*"
     resp.headers["Access-Control-Allow-Headers"] = "Content-Type"
     resp.headers["Access-Control-Allow-Methods"] = "GET,POST,OPTIONS,DELETE"
     return resp
 
-pool = ModelPool(default_key="local")
+# ── 优雅停机 ──
+_shutdown_flag = False
+
+def _handle_shutdown(signum, frame):
+    global _shutdown_flag
+    slog.warn("shutdown_signal", signal=signum)
+    _shutdown_flag = True
+
+signal.signal(signal.SIGTERM, _handle_shutdown)
+signal.signal(signal.SIGINT, _handle_shutdown)
+
+pool = ModelPool(default_key="_custom_agnes")
+
+# 启动时自动注册 Agnes 模型
+pool.add_custom(
+    name="Agnes",
+    model_id="agnes-2.0-flash",
+    base_url="https://apihub.agnes-ai.com/v1",
+    provider="自定义",
+)
+pool.set_model_key(
+    "_custom_agnes",
+    "REDACTED",
+)
+pool.set_default("_custom_agnes")
+
 bot = ParentBot(pool=pool, verbose=False, coordinator_mode=True)
 
 # ── 账号系统 ──
@@ -53,6 +101,7 @@ def auth_send_code():
         return jsonify({"ok": False, "error": f"发送太频繁，请{wait}秒后再试"})
     code = generate_code()
     store_code(phone, code)
+    set_sms_rate(phone)
     result = send_sms(phone, code)
     if result.get("mock"):
         return jsonify({"ok": True, "message": f"验证码已发送（模拟模式）", "mock": True, "code": code})
@@ -119,7 +168,10 @@ def add_model():
 
 @app.route("/models/<key>", methods=["DELETE"])
 def del_model(key):
-    pool.remove_custom(key)
+    try:
+        pool.remove_custom(key)
+    except ValueError as e:
+        return jsonify({"ok": False, "error": str(e)}), 400
     return jsonify({"ok": True})
 
 # ── 每模型独立 API Key ──
@@ -132,6 +184,14 @@ def set_model_key():
     api_key = data.get("key", "").strip()
     if not model_key:
         return jsonify({"ok": False, "error": "模型标识不能为空"})
+    # 支持通过模型名称（非 key）查找自定义模型
+    resolved = model_key
+    if model_key not in pool.all_models:
+        for k, v in pool.all_models.items():
+            if v.name == model_key or v.model_id == model_key:
+                resolved = k
+                break
+    model_key = resolved
     # 禁止为本地模拟模型配置 Key
     entry = pool.all_models.get(model_key)
     if entry and not entry.base_url:
@@ -225,10 +285,15 @@ def set_key():
 def chat():
     if request.method == "OPTIONS":
         return jsonify({})
+    client_key = request.headers.get("X-Forwarded-For", request.remote_addr or "unknown")
+    if not _rl.allow(client_key):
+        slog.warn("rate_limited", client_ip=client_key, path="/chat")
+        return jsonify({"reply": "请求太频繁，请稍后再试", "rate_limited": True}), 429
     data = request.get_json()
     msg = data.get("msg", "")
     image = data.get("image", None)
     model = data.get("model", None)
+    new_session = data.get("new_session", False)
 
     if msg.startswith("/"):
         parts = msg.split(maxsplit=1)
@@ -240,8 +305,13 @@ def chat():
             return jsonify({"reply": result["reply"], "thinking": result.get("thinking", []), "cmd": True, "model": _model()})
         return jsonify({"reply": _cmd(action, arg), "cmd": True, "model": _model()})
 
-    agent_name = bot._route(msg)
-    result = bot.chat(msg, image, model=model)
+    target = data.get("target_agent", None)
+    if target and target in bot.children:
+        agent_name = target
+        bot.chat(f"/agent {target}")  # 无缝切换上下文
+    else:
+        agent_name = bot._route(msg)
+    result = bot.chat(msg, image, model=model, new_session=new_session)
     return jsonify({
         "reply": result["reply"],
         "thinking": result.get("thinking", []),
@@ -254,6 +324,10 @@ def chat():
 @app.route("/chat/stream", methods=["POST"])
 def chat_stream():
     from flask import Response, stream_with_context
+    client_key = request.headers.get("X-Forwarded-For", request.remote_addr or "unknown")
+    if not _rl.allow(client_key):
+        slog.warn("rate_limited", client_ip=client_key, path="/chat/stream")
+        return Response("data: [错误] 请求太频繁\n\n", status=429, mimetype="text/event-stream")
     data = request.get_json()
     msg = data.get("msg", "")
     image = data.get("image", None)
@@ -290,7 +364,83 @@ def toggle_coordinator():
     bot.coordinator_mode = enabled
     return jsonify({"ok": True, "coordinator_mode": enabled})
 
-# ── 上下文恢复 ──
+# ── 生产环境 API ──
+@app.route("/trace", methods=["GET"])
+def list_traces():
+    """全链路追踪回放：列出最近 20 个 trace"""
+    from production import trace_store
+    traces = trace_store.list_recent(20)
+    return jsonify({"ok": True, "traces": traces})
+
+@app.route("/trace/<trace_id>", methods=["GET"])
+def get_trace(trace_id):
+    """获取某个 trace 的完整 span 详情"""
+    from production import trace_store
+    spans = trace_store.get_trace(trace_id)
+    return jsonify({"ok": True, "trace_id": trace_id, "spans": spans})
+
+@app.route("/eval", methods=["GET"])
+def eval_summary():
+    """评测框架总览"""
+    from production import eval_suite
+    return jsonify({"ok": True, "summary": eval_suite.summary()})
+
+@app.route("/eval/run", methods=["POST"])
+def run_eval():
+    """运行评测：传入 query + expected_patterns"""
+    from production import eval_suite
+    data = request.get_json()
+    query = data.get("query", "")
+    expected = data.get("expected_patterns", [])
+    if not query:
+        return jsonify({"ok": False, "error": "缺少 query"})
+    # 添加临时 case
+    case_id = f"eval_run_{int(time.time())}"
+    eval_suite.add_case(query, expected)
+    # 实际执行
+    result = bot.chat(query)
+    reply = result.get("reply", "") if isinstance(result, dict) else str(result)
+    eval_result = eval_suite.evaluate(reply, case_id)
+    return jsonify({"ok": True, "case_id": case_id, **eval_result})
+
+@app.route("/checkpoints", methods=["GET"])
+def list_checkpoints():
+    """列出当前 session 所有 checkpoint"""
+    from production import checkpoint_mgr
+    sid = getattr(bot, "_session_id", "default")
+    return jsonify({"ok": True, "session_id": sid,
+                    "checkpoints": checkpoint_mgr.list_checkpoints(sid)})
+
+@app.route("/checkpoints/restore", methods=["POST"])
+def restore_checkpoint():
+    """恢复到指定 checkpoint"""
+    from production import checkpoint_mgr
+    data = request.get_json()
+    ckpt_id = data.get("checkpoint_id", "")
+    if not ckpt_id:
+        return jsonify({"ok": False, "error": "缺少 checkpoint_id"})
+    sid = getattr(bot, "_session_id", "default")
+    state = checkpoint_mgr.restore(sid, ckpt_id)
+    if not state:
+        return jsonify({"ok": False, "error": "checkpoint 不存在"})
+    # 恢复 shared_msgs
+    bot.shared_msgs = state.get("shared_msgs", [])
+    bot._context_summary = state.get("context_summary", "")
+    bot._agent_contexts = state.get("agent_contexts", {})
+    return jsonify({"ok": True, "restored": True,
+                    "rounds": len(bot.shared_msgs) // 2})
+
+@app.route("/token-budget", methods=["GET"])
+def token_budget():
+    """Token 预算查询"""
+    from production import session_mgr
+    sid = getattr(bot, "_session_id", "default")
+    budget = getattr(bot, "_token_budget", None)
+    if not budget:
+        return jsonify({"ok": False, "error": "Token budget 未初始化"})
+    return jsonify({"ok": True, "used": budget.remaining(), "limit": budget.daily_limit,
+                    "remaining": budget.remaining()})
+
 @app.route("/context", methods=["GET"])
 def get_context():
     """返回持久化的对话上下文，前端关闭页面后重新打开时恢复"""
@@ -925,6 +1075,21 @@ def workflow_metrics_reset():
     return jsonify({"ok": True, "message": "指标已重置"})
 
 
+# ── 健康检查 ──
+@app.route("/health", methods=["GET"])
+def health():
+    """生产环境健康检查：自愈状态 + 延迟 P50/P95 + 错误率 + 基础状态"""
+    from production import watchdog, health_monitor
+    wh = watchdog.get_health()
+    stats = health_monitor.get_stats()
+    return jsonify({
+        "status": "degraded" if stats["is_degraded"] else "ok",
+        "model": pool.default_key,
+        "agents": len(bot.children),
+        **stats,
+        "watchdog": wh,
+    })
+
 if __name__ == "__main__":
-    print("玄姝多Agent API → http://0.0.0.0:8901")
-    app.run(host="0.0.0.0", port=8901, debug=False)
+    print(f"玄姝多Agent API → http://{config.HOST}:{config.PORT}")
+    app.run(host=config.HOST, port=config.PORT, debug=config.DEBUG)

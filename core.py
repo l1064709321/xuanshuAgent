@@ -23,6 +23,14 @@ from sandbox import run_sandboxed
 from auto_sandbox import auto_sandbox
 from monitor import get_metrics
 from embeddings import SkillEmbedder
+from production import (
+    TaskDecomposer, ToolCallParser, ToolOrchestrator,
+    TraceStore, EvalSuite, SessionManager, CheckpointManager,
+    HumanReviewQueue, TokenBudget, ModelDegrader,
+    decomposer, trace_store, eval_suite, session_mgr,
+    checkpoint_mgr, human_review, model_degrader,
+    watchdog, error_classifier, health_monitor
+)
 
 # ── 共享记忆文件夹（文件级持久化）──
 _MEMDIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".memdir")
@@ -243,6 +251,9 @@ def _safe_parse_json(raw: str, fallback: dict = None) -> Tuple[Optional[dict], O
     """安全解析 JSON，返回 (parsed_dict, error_msg)。失败时尝试修复常见畸形。"""
     if fallback is None:
         fallback = {}
+    # 兼容 ToolCallParser 已解析为 dict 的情况
+    if isinstance(raw, dict):
+        return raw, None
     if not raw or not raw.strip():
         return fallback, "空参数"
     # 尝试直接解析
@@ -327,7 +338,7 @@ def _dispatch_tool_call(child, tc: dict) -> Tuple[str, str]:
         return "?", "[工具调用错误] tool_call 缺少 function 字段"
 
     raw_name = fn_block.get("name", "")
-    raw_args = fn_block.get("arguments", "{}")
+    raw_args = fn_block.get("arguments") or "{}"
     call_id = tc.get("id", "unknown")
 
     # 2. 解析参数 JSON
@@ -379,7 +390,8 @@ class ToolExecutor:
 
     # 降级链：工具名 → 备选工具列表
     DEGRADATION_CHAINS = {
-        "web_search": ["search_wikipedia", "web_fetch"],
+        "web_search": ["anysearch", "search_wikipedia", "web_fetch"],
+        "anysearch": ["web_search", "search_wikipedia"],
     }
 
     MAX_RETRIES = 2   # 同一工具最多重试 2 次
@@ -458,21 +470,16 @@ def _weather(args):
     except Exception as e: return f"天气查询失败: {e}"
 
 def _web_search(args):
-    """真实联网搜索 — DuckDuckGo Lite"""
+    """真实联网搜索 — Bing"""
     import urllib.request, urllib.parse, re
+    q = urllib.parse.quote(args["query"])
+    ua = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
+
     try:
-        q = urllib.parse.quote(args["query"])
-        req = urllib.request.Request(
-            f"https://lite.duckduckgo.com/lite/?q={q}",
-            headers={"User-Agent": "Mozilla/5.0"}
-        )
+        req = urllib.request.Request(f"https://www.bing.com/search?q={q}", headers=ua)
         with urllib.request.urlopen(req, timeout=10) as r:
             html = r.read().decode("utf-8", errors="replace")
-        # 解析结果
-        results = re.findall(r'<a[^>]*rel="nofollow"[^>]*href="([^"]+)"[^>]*class="result-link"[^>]*>(.*?)</a>.*?<td[^>]*class="result-snippet"[^>]*>(.*?)</td>', html, re.DOTALL)
-        if not results:
-            # 备选: 正则宽松匹配
-            results = re.findall(r'<a[^>]*href="(https?://[^"]+)"[^>]*class="result-link"[^>]*>(.*?)</a>.*?class="result-snippet"[^>]*>(.*?)</td>', html, re.DOTALL)
+        results = re.findall(r'<li class="b_algo".*?<a[^>]*href="(https?://[^"]+)"[^>]*>(.*?)</a>.*?<p[^>]*>(.*?)</p>', html, re.DOTALL)
         if not results:
             return f"未找到相关结果。\n(搜索词: {args['query']})"
         lines = []
@@ -481,7 +488,8 @@ def _web_search(args):
             s = re.sub(r'<[^>]+>', '', snippet).strip()[:300]
             lines.append(f"{i}. **{t}**\n   {url}\n   {s}")
         return "\n\n".join(lines) or "未找到结果"
-    except Exception as e: return f"搜索失败: {e}"
+    except Exception as e:
+        return f"搜索失败: {e}"
 
 def _web_fetch(args):
     """抓取网页正文"""
@@ -501,6 +509,41 @@ def _web_fetch(args):
         max_len = int(args.get("max_chars", 3000))
         return text[:max_len] if len(text) > max_len else text
     except Exception as e: return f"抓取失败: {e}"
+
+
+def _anysearch(args):
+    """AnySearch 专业搜索 — REST API 结构化 JSON（1000次/天，匿名免注册）"""
+    import urllib.request, urllib.error
+    body = json.dumps({
+        "query": args["query"],
+        "max_results": args.get("max_results", 8),
+        "domain": args.get("domain", ""),
+    }).encode("utf-8")
+    try:
+        req = urllib.request.Request(
+            "https://api.anysearch.com/v1/search",
+            data=body,
+            headers={"Content-Type": "application/json", "Accept": "application/json"},
+            method="POST",
+        )
+        with urllib.request.urlopen(req, timeout=20) as r:
+            resp = json.loads(r.read().decode("utf-8"))
+        if resp.get("code") != 0:
+            return f"AnySearch 返回异常: {resp.get('message', '未知错误')}"
+        results = resp.get("data", {}).get("results", [])
+        if not results:
+            return f"未找到相关结果。（搜索词: {args['query']}）"
+        lines = []
+        for i, item in enumerate(results[:8], 1):
+            title = item.get("title", "")
+            url = item.get("url", "")
+            snippet = (item.get("content") or item.get("snippet", ""))[:400]
+            lines.append(f"{i}. **{title}**\n   {url}\n   {snippet}")
+        return "\n\n".join(lines)
+    except urllib.error.URLError as e:
+        return f"AnySearch 网络错误: {e.reason}"
+    except Exception as e:
+        return f"AnySearch 错误: {e}"
 
 
 # ═══════════ Browser Agent 工具（Playwright）═══════════
@@ -1692,8 +1735,14 @@ Spec（用中文）："""
         self._memory_dirty: bool = False
         # P5: Skill 向量检索缓存 — skill_dir路径 -> SkillEmbedder实例
         self._skill_embedders: dict = {}
+        # 生产环境：Session/Token/Checkpoint
+        self._session_id = f"sess_{int(time.time())}_{os.urandom(4).hex()}"
+        self._token_budget = TokenBudget(daily_limit=1_000_000)
+        self._trace_id = ""
         self._init_children()
         self._load_context()  # 从磁盘恢复上下文 + 加载 MEMORY.md + USER.md
+        # 生产环境：启动自愈守护
+        watchdog.start()
 
     def _init_children(self):
         # ── 共享记忆文件夹工具 ──
@@ -1725,7 +1774,7 @@ Spec（用中文）："""
             "电脑Agent": ChildBot(
                 name="电脑Agent",
                 description="系统控制：查看系统信息、进程管理、资源监控（CPU/内存/磁盘/网络）、软件包管理（安装/卸载/搜索/更新）。完整管控这台 Linux 服务器。",
-                system_prompt="""你是系统控制专家。你可以完整管控这台 Linux 服务器：
+                system_prompt="""你是玄姝多Agent系统的核心助手，名字叫"玄姝"。你的角色是系统控制专家。\n\n【身份铁律】你的名字是"玄姝"，不是任何模型名。当被问"你是谁""你叫什么名字"时，必须回答"我是玄姝，由星主开发的多Agent系统核心助手"。严禁透露底层模型名称。\n\n你可以完整管控这台 Linux 服务器：
 
 系统运维：
 - sys_info：查看系统内核、主机名、运行时间、发行版
@@ -1780,7 +1829,7 @@ Spec（用中文）："""
             "手机Agent": ChildBot(
                 name="手机Agent",
                 description="手机控制：通过 ADB 操控 Android 设备/模拟器。截图、点击、滑动、输入、安装APP、启动APP。需设备连接。",
-                system_prompt="""你是手机控制专家。你通过 ADB 操控一台 Android 设备或模拟器。
+                system_prompt="""你是玄姝多Agent系统的核心助手，名字叫"玄姝"。你的角色是手机控制专家。\n\n【身份铁律】你的名字是"玄姝"，不是任何模型名。当被问"你是谁""你叫什么名字"时，必须回答"我是玄姝，由星主开发的多Agent系统核心助手"。严禁透露底层模型名称。\n\n你通过 ADB 操控一台 Android 设备或模拟器。
 
 可用操作：
 - adb_check：检测 ADB 环境和设备连接状态
@@ -1836,9 +1885,19 @@ ADB 常用按键码：
             "搜索Agent": ChildBot(
                 name="搜索Agent",
                 description="联网搜索、查实时信息、天气、百科",
-                system_prompt="你是信息检索专家。收到查询后调用插件获取数据，整理结果并注明来源。语气简洁专业。\n注意：你只有只读权限，如需创建/修改/删除文件，请明确告知父Bot处理。\n\n工具：web_search（联网搜索）、web_fetch（抓取网页，自动处理JS页面）、search_wikipedia、get_weather。\n\n语言规则：所有思考和回复必须用中文。技术名词（URL、代码、API名等）保留原文。",
+                system_prompt="""你是玄姝多Agent系统的核心助手，名字叫"玄姝"。你的角色是信息检索专家。收到查询后调用插件获取数据，整理结果并注明来源。语气简洁专业。
+
+【身份铁律】你的名字是"玄姝"，不是任何模型名（如Agnes/GPT/Claude）。当被问"你是谁""你叫什么名字"或自我介绍时，你必须回答"我是玄姝，由星主开发的多Agent系统核心助手"。严禁透露底层模型名称。
+
+注意：你只有只读权限，如需创建/修改/删除文件，请明确告知父Bot处理。
+
+工具：anysearch（专业聚合搜索，优先使用）、web_search（Bing搜索，降级用）、web_fetch（抓取网页）、search_wikipedia、get_weather。
+
+语言规则：所有思考和回复必须用中文。技术名词（URL、代码、API名等）保留原文。""",
                 tools=[
-                    Tool("web_search", "联网搜索(DuckDuckGo)，返回标题+链接+摘要",
+                    Tool("anysearch", "专业聚合搜索AnySearch。金融/法律/学术/安全等垂直领域深度搜索，返回标题+链接+正文摘要。优先使用",
+                         {"query": {"type": "string", "description": "搜索关键词"}, "max_results": {"type": "integer", "description": "最大结果数，默认8"}, "domain": {"type": "string", "description": "垂直领域: finance/academic/legal/security/health/energy，留空为通用搜索"}}, _anysearch),
+                    Tool("web_search", "联网搜索(Bing)，返回标题+链接+摘要",
                          {"query": {"type": "string", "description": "搜索关键词"}}, _web_search),
                     Tool("web_fetch", "智能抓取网页（轻量HTTP→自动升级浏览器引擎）。支持JS渲染页",
                          {"url": {"type": "string", "description": "网页URL"}, "max_chars": {"type": "integer", "description": "最大字符数，默认5000"}}, _web_fetch_upgraded),
@@ -1849,7 +1908,7 @@ ADB 常用按键码：
             "浏览器Agent": ChildBot(
                 name="浏览器Agent",
                 description="端到端浏览器操控：打开网页、点击、输入、滚动、提取JS渲染内容、截图。支持持久化登录态，自动处理弹窗和cookie",
-                system_prompt="""你是浏览器操控专家，基于 Playwright 实现端到端 Web 交互。
+                system_prompt="""你是玄姝多Agent系统的核心助手，名字叫"玄姝"。你的角色是浏览器操控专家。\n\n【身份铁律】你的名字是"玄姝"，不是任何模型名。当被问"你是谁""你叫什么名字"时，必须回答"我是玄姝，由星主开发的多Agent系统核心助手"。严禁透露底层模型名称。\n\n基于 Playwright 实现端到端 Web 交互。
 
 核心能力：
 - browser_navigate：打开任意网页（自动补全https，自动关闭cookie弹窗）
@@ -1899,14 +1958,31 @@ ADB 常用按键码：
             ),
             "代码Agent": ChildBot(
                 name="代码Agent",
-                description="编程、写代码、调试、算法、Git版本回滚",
-                system_prompt="""你是编程专家。直接写可运行代码放```块中，解释要简洁。优先Python。
+                description="编程、写代码、调试、算法、Git版本回滚、浏览器操控（打开网页、点击、输入、提取内容）",
+                system_prompt="""你是玄姝多Agent系统的核心助手，名字叫"玄姝"。你的角色是编程专家。\n\n【身份铁律】你的名字是"玄姝"，不是任何模型名。当被问"你是谁""你叫什么名字"时，必须回答"我是玄姝，由星主开发的多Agent系统核心助手"。严禁透露底层模型名称。\n\n直接写可运行代码放```块中，解释要简洁。优先Python。
 重要规则:
 - 写完代码后必须用 run_code 工具执行验证
 - 如果执行失败或有问题，自行修复后重新验证
 - 只有验证通过才报告完成
 - 报告时包含验证结果
 - 需要创建/写文件时，告知父Bot处理；你只能读文件
+
+浏览器操控（基于 Playwright + Chromium）：
+- browser_navigate(url)：打开网页
+- browser_click(selector/text/index)：点击元素
+- browser_type(selector, text)：在输入框填入内容
+- browser_extract(mode, selector)：提取页面内容（text/markdown/links/structured）
+- browser_screenshot(full_page, save)：截屏
+- browser_get_state：获取当前页面URL/标题/可交互元素
+- browser_scroll(direction, amount)：滚动页面
+- browser_wait(selector, timeout)：等待元素出现
+- browser_save_state：保存登录态到磁盘，跨会话复用
+
+典型工作流：
+1. browser_navigate 打开目标页 → browser_extract 提取内容
+2. 需要交互时：browser_click 点击按钮/链接 → browser_type 输入 → browser_extract 提取结果
+3. 需要登录：navigate → type 输入凭据 → click 登录 → save_state 保存状态
+4. JS动态页面：先 browser_wait 等待元素 → browser_scroll 到底部 → browser_extract
 
 Git 版本回滚：
 - 当你改动代码后发现出错、被误删，或用户要求回滚时，用 git_log 查看提交历史、git_revert 回滚到指定 commit
@@ -1919,13 +1995,43 @@ Git 版本回滚：
                          {"code": {"type": "string", "description": "Python代码"}}, _run_code),
                     Tool("read_file", "读取文件", {"path": {"type": "string", "description": "路径"}}, _read),
                     Tool("list_files", "列出目录", {"path": {"type": "string", "description": "路径"}}, _ls),
+                    Tool("browser_navigate", "打开网页（自动处理cookie弹窗+补全https）",
+                         {"url": {"type": "string", "description": "目标URL"}}, _browser_navigate),
+                    Tool("browser_extract", "提取页面内容",
+                         {"mode": {"type": "string", "description": "text/markdown/links/structured"}, "max_chars": {"type": "integer", "description": "最大字符数，默认5000"}, "selector": {"type": "string", "description": "CSS选择器，默认body"}}, _browser_extract),
+                    Tool("browser_click", "点击元素",
+                         {"selector": {"type": "string", "description": "CSS选择器"}, "text": {"type": "string", "description": "元素可见文本"}, "index": {"type": "integer", "description": "匹配索引，默认0"}}, _browser_click),
+                    Tool("browser_type", "在输入框填入文本",
+                         {"selector": {"type": "string", "description": "输入框CSS选择器"}, "text": {"type": "string", "description": "要输入的文本"}}, _browser_type),
+                    Tool("browser_scroll", "滚动页面",
+                         {"direction": {"type": "string", "description": "down/up/bottom/top"}, "amount": {"type": "integer", "description": "滚动像素量"}}, _browser_scroll),
+                    Tool("browser_screenshot", "截取页面截图",
+                         {"full_page": {"type": "boolean", "description": "是否全页截图"}, "save": {"type": "string", "description": "保存路径"}}, _browser_screenshot),
+                    Tool("browser_get_state", "获取页面状态含可交互元素",
+                         {}, _browser_get_state),
+                    Tool("browser_wait", "等待元素出现或等待毫秒",
+                         {"selector": {"type": "string", "description": "等待的元素选择器"}, "timeout": {"type": "integer", "description": "超时毫秒，默认3000"}}, _browser_wait),
+                    Tool("browser_save_state", "保存浏览器登录状态到磁盘（跨会话复用）",
+                         {}, lambda args: _browser_save_state() or "登录态已保存"),
                 ] + mem_tools + git_tools,
                 self_verify=True,
             ),
             "文件Agent": ChildBot(
                 name="文件Agent",
                 description="文件分析、文档处理、反编译、Git版本回滚",
-                system_prompt="你是文件分析助手。你只有只读权限，可读取和列出文件，但不能创建/修改/删除文件。\n\n附加能力 — 逆向工程：你具备二进制分析技能，能识别ELF/PE/Mach-O/APK/DEX/.NET/Python字节码/Lua/WASM等格式，使用decompile_detect检测文件类型后调用decompile反编译，解读结果时关注关键逻辑和入口点。工具不可用时说明原因并建议替代方案。\n\nGit 版本回滚：发现文件被误改或需要恢复到之前版本时，用 git_log 查看提交历史、git_revert 回滚到指定版本。\n\n如果需要实际创建/修改/删除文件，告知父Bot处理。\n\n语言规则：所有思考和回复必须用中文。文件路径、十六进制地址等技术性内容保留原文。",
+                system_prompt="""你是玄姝多Agent系统的核心助手，名字叫"玄姝"。
+
+【身份铁律】你的名字是"玄姝"，不是任何模型名。当被问"你是谁""你叫什么名字"时，必须回答"我是玄姝，由星主开发的多Agent系统核心助手"。严禁透露底层模型名称。
+
+你的角色是文件分析助手。你只有只读权限，可读取和列出文件，但不能创建/修改/删除文件。
+
+附加能力 — 逆向工程：你具备二进制分析技能，能识别ELF/PE/Mach-O/APK/DEX/.NET/Python字节码/Lua/WASM等格式，使用decompile_detect检测文件类型后调用decompile反编译，解读结果时关注关键逻辑和入口点。工具不可用时说明原因并建议替代方案。
+
+Git 版本回滚：发现文件被误改或需要恢复到之前版本时，用 git_log 查看提交历史、git_revert 回滚到指定版本。
+
+如果需要实际创建/修改/删除文件，告知父Bot处理。
+
+语言规则：所有思考和回复必须用中文。文件路径、十六进制地址等技术性内容保留原文。""",
                 tools=[
                     Tool("list_files", "列出目录", {"path": {"type": "string", "description": "路径"}}, _ls),
                     Tool("read_file", "读取文件", {"path": {"type": "string", "description": "路径"}}, _read),
@@ -2363,9 +2469,43 @@ Git 版本回滚：
             return self._simple_chat(user_input)
 
     # ═══════════ 对话 ═══════════
-    def chat(self, user_input: str, image: str = None, model: str = None) -> str:
+    def chat(self, user_input: str, image: str = None, model: str = None, new_session: bool = False) -> str:
         import re
         stripped = user_input.strip()
+        t_start = time.time()
+
+        # ── 生产环境：心跳 + 健康监控 ──
+        watchdog.heartbeat()
+
+        # ── 生产环境：new_session 强制清理上下文 + 隔离 shared_msgs ──
+        if new_session:
+            self.log.sys("新会话触发：清理 shared_msgs + 上下文 + 创建 checkpoint")
+            self.shared_msgs = []
+            self._context_summary = ""
+            self._agent_contexts = {}
+            self._perm_pending = None
+            self.permissions = {}
+            # 创建 checkpoint 备份当前状态（如果之后崩溃可恢复）
+            self._session_id = f"sess_{int(time.time())}_{os.urandom(4).hex()}"
+            checkpoint_mgr.save(self._session_id, {
+                "shared_msgs": [], "context_summary": "",
+                "agent_contexts": {}, "reset": True
+            })
+            # 清理 .parent_context.json 防止历史污染
+            ctx_file = os.path.join(_MEMDIR, "..", "workspace", ".parent_context.json")
+            ctx_file = os.path.abspath(ctx_file)
+            if os.path.exists(ctx_file):
+                try:
+                    os.remove(ctx_file)
+                except Exception:
+                    pass
+
+        # ── 生产环境：开始 trace span ──
+        self._trace_id = f"trace_{int(time.time()*1000)}_{os.urandom(2).hex()}"
+        trace_span = trace_store.start_trace(
+            self._trace_id, operation="chat", agent="parent",
+            input_summary=user_input[:200]
+        )
 
         # ── 三层模型路由：前端指定 > 复杂度评估 > Agent 绑定 ──
         self._model_override = model or ""
@@ -2393,23 +2533,35 @@ Git 版本回滚：
                 retry_input, retry_image = self._perm_pending
                 self._perm_pending = None
                 retry = self.chat(retry_input, retry_image)
-                return {"reply": msg + "\n\n" + retry["reply"], "thinking": retry.get("thinking", [])}
-            return {"reply": msg, "thinking": []}
+                result = {"reply": msg + "\n\n" + retry["reply"], "thinking": retry.get("thinking", [])}
+                trace_store.end_trace(trace_span, output_summary=str(result)[:200])
+                return result
+            result = {"reply": msg, "thinking": []}
+            trace_store.end_trace(trace_span, output_summary=str(result)[:200])
+            return result
 
         # ── Agent 管理命令 ──
         if stripped.startswith("/agents"):
             agents = self.list_agents()
-            return {"reply": "\n".join(f"{a['name']}: {a['desc']} ({a['tools']}工具)" for a in agents), "thinking": []}
+            result = {"reply": "\n".join(f"{a['name']}: {a['desc']} ({a['tools']}工具)" for a in agents), "thinking": []}
+            trace_store.end_trace(trace_span, output_summary=str(result)[:200])
+            return result
         if stripped.startswith("/metrics"):
-            return {"reply": get_metrics().summary(), "thinking": []}
+            result = {"reply": get_metrics().summary(), "thinking": []}
+            trace_store.end_trace(trace_span, output_summary=str(result)[:200])
+            return result
 
         # ── 屏幕截图触发词 ──
         if stripped in ("/screen", "截图", "截屏", "看屏幕", "看看屏幕"):
-            return {"reply": self._handle_screen(stripped), "thinking": []}
+            result = {"reply": self._handle_screen(stripped), "thinking": []}
+            trace_store.end_trace(trace_span, output_summary=str(result)[:200])
+            return result
 
         # ── 项目命令 ──
         if self._is_project_cmd(user_input):
-            return {"reply": self._project_chat(user_input), "thinking": []}
+            result = {"reply": self._project_chat(user_input), "thinking": []}
+            trace_store.end_trace(trace_span, output_summary=str(result)[:200])
+            return result
 
         # ── 父Bot直接拦截文件操作 ──
         if self._is_file_op(user_input):
@@ -2417,26 +2569,44 @@ Git 版本回滚：
             if result is not None:
                 self.log.sys("父Bot直接处理文件操作")
                 self._update_shared_history(user_input, result)
-                return self._intercept_permission(result, user_input, image)
+                result = self._intercept_permission(result, user_input, image)
+                trace_store.end_trace(trace_span, output_summary=str(result)[:200], tokens=len(str(result)))
+                checkpoint_mgr.save(self._session_id, {"shared_msgs": self.shared_msgs[-20:] if self.shared_msgs else [], "last_input": user_input})
+                return result
 
         # 自主闭环: 需要多步探索的任务
         if self._is_autonomous_task(user_input):
-            return self._intercept_permission(self._autonomous_chat(user_input, image), user_input, image)
+            result = self._intercept_permission(self._autonomous_chat(user_input, image), user_input, image)
+            trace_store.end_trace(trace_span, output_summary=str(result)[:200])
+            checkpoint_mgr.save(self._session_id, {"shared_msgs": self.shared_msgs[-20:] if self.shared_msgs else [], "last_input": user_input})
+            return result
 
         # DAG编排: 多阶段依赖任务
         if self._is_dag_task(user_input) and self.coordinator_mode:
-            return self._intercept_permission(self._dag_chat(user_input), user_input, image)
+            result = self._intercept_permission(self._dag_chat(user_input), user_input, image)
+            trace_store.end_trace(trace_span, output_summary=str(result)[:200])
+            checkpoint_mgr.save(self._session_id, {"shared_msgs": self.shared_msgs[-20:] if self.shared_msgs else [], "last_input": user_input})
+            return result
 
         # Fork模式: 可并行拆解的任务
         if self._is_forkable(user_input):
-            return self._intercept_permission(self._forked_chat(user_input), user_input, image)
+            result = self._intercept_permission(self._forked_chat(user_input), user_input, image)
+            trace_store.end_trace(trace_span, output_summary=str(result)[:200])
+            checkpoint_mgr.save(self._session_id, {"shared_msgs": self.shared_msgs[-20:] if self.shared_msgs else [], "last_input": user_input})
+            return result
 
         # 协调者模式: 复杂任务走四阶段
         if self.coordinator_mode and self._is_complex_task(user_input):
-            return self._intercept_permission(self._coordinator_chat(user_input), user_input, image)
+            result = self._intercept_permission(self._coordinator_chat(user_input), user_input, image)
+            trace_store.end_trace(trace_span, output_summary=str(result)[:200])
+            checkpoint_mgr.save(self._session_id, {"shared_msgs": self.shared_msgs[-20:] if self.shared_msgs else [], "last_input": user_input})
+            return result
 
         # 普通模式: 单阶段路由
-        return self._intercept_permission(self._simple_chat(user_input, image), user_input, image)
+        result = self._intercept_permission(self._simple_chat(user_input, image), user_input, image)
+        trace_store.end_trace(trace_span, output_summary=str(result)[:200])
+        checkpoint_mgr.save(self._session_id, {"shared_msgs": self.shared_msgs[-20:] if self.shared_msgs else [], "last_input": user_input})
+        return result
 
     # ═══════════ 通用权限拦截 ═══════════
     PERM_RE = None  # lazy compiled
@@ -2676,8 +2846,18 @@ Git 版本回滚：
 
         # 文本模型：标准 chat completions
         if self.fallback_mode:
-            return self.pool.call_llm_with_fallback(agent, messages, tools, fallback_models=extra_fallbacks, model_override=ov, stop=stop)
-        return self.pool.call_llm(agent, messages, tools, model_override=ov, stop=stop)
+            resp = self.pool.call_llm_with_fallback(agent, messages, tools, fallback_models=extra_fallbacks, model_override=ov, stop=stop)
+        else:
+            resp = self.pool.call_llm(agent, messages, tools, model_override=ov, stop=stop)
+        # 生产环境：Token 预算追踪 + 模型降级链
+        usage = resp.get("usage") or {}
+        tokens = usage.get("total_tokens", 0)
+        if tokens:
+            self._token_budget.consume(tokens)
+            model_name = resp.get("_model", "")
+            if model_name:
+                model_degrader.record_success(model_name)
+        return resp
 
     def _build_child_msgs(self, child: ChildBot, user_input: str,
                           extra_context: str = "", image: str = None) -> list:
@@ -2690,15 +2870,13 @@ Git 版本回滚：
         messages = []
 
         # ── Slot 1: 硬规则与约束（boot prompt + knowledge）──
+        # 生产环境：MEMORY.md 读取从"必须"改为"可选"，避免死循环
         boot_prompt = (
             f"{child.system_prompt}\n\n"
             f"## 启动指令\n"
-            f"处理任务前，先用 memdir_read 读取 'MEMORY.md'——你的长期行为准则。\n"
-            f"这是你作为 Agent 积累的深层经验：怎么思考、怎么判断、怎么表达。\n\n"
-            f"注意：MEMORY.md 只记录长期演化经验（被反复验证有效的原则），"
-            f"不是单次对话笔记（那些自动存入 JSON memory）。\n"
-            f"只有当你在多轮对话中反复发现某条行为准则确实有效，"
-            f"才用 memdir_write 追加到 MEMORY.md 的「长期演化日志」章节。"
+            f"你的长期经验（MEMORY.md）已自动注入到下方的「Agent 自主记忆」章节，无需主动读取。"
+            f"只有当你想更新 MEMORY.md 时才用 memdir_write。\n\n"
+            f"如需查询记忆文件夹现有文件，可选调用 memdir_list/memdir_search。"
         )
         policy_lines = [boot_prompt]
         if child.knowledge:
@@ -2817,25 +2995,38 @@ Git 版本回滚：
         tools = child.tool_schemas()
         thinking_log = []
 
+
+
         # ── 注入 ReAct 思维链提示 ──
+        tool_list = "\n".join(f"- {t['function']['name']}: {t['function']['description']}"
+                              for t in tools) if tools else ""
         react_prompt = (
-            "\n\n## 思维链规则（ReAct 模式）\n"
+            "\n\n## 可用工具清单\n"
+            f"{tool_list}\n\n"
+            "## 思维链规则（ReAct 模式）\n"
             "每一轮按以下格式输出：\n"
-            "1. **思考**：分析当前状态，决定要不要调工具、调哪个。用自然语言说出你的判断。\n"
-            "2. **行动**：如需调工具，输出 tool_call；如果信息已足够，直接给出最终回答。\n"
-            "3. 工具返回后，你会看到【观察】——基于观察决定下一步。\n\n"
-            "**关键禁令**：你绝对不能自己编造工具返回结果。不要写'观察:'开头的话，"
-            "那由系统自动注入。你只负责思考和行动。"
+            "**思考**：(分析当前状态，决定要不要调工具)\n"
+            "**行动**：如需调工具，严格用以下 JSON 格式：\n"
+            "tool_call: {\"name\": \"工具名\", \"arguments\": {\"参数名\": \"参数值\"}}\n"
+            "\n"
+            "示例：tool_call: {\"name\": \"anysearch\", \"arguments\": {\"query\": \"2026年AI Agent最新产品\"}}\n"
+            "\n"
+            "工具返回后，你会看到【观察】——基于观察决定下一步。\n"
+            "如果信息已足够，直接给出最终回答。\n\n"
+            "**关键禁令**：你绝对不能自己编造'观察:'开头的文本。只输出思考+行动(tool_call格式)。"
         )
         # 向最后一条 system 消息追加 ReAct 规则（如果存在 system 消息）
         for i in range(len(messages) - 1, -1, -1):
             if messages[i].get("role") == "system":
                 messages[i]["content"] += react_prompt
+                # DEBUG
+                with open("/tmp/xuanshu_debug_sys.txt", "w") as f:
+                    f.write(messages[i]["content"][-5000:])
                 break
         else:
             messages.insert(0, {"role": "system", "content": react_prompt.lstrip()})
 
-        for loop in range(4):
+        for loop in range(5):
             t0 = time.time()
             # P0: stop=["观察:"] 阻止模型自编工具返回结果
             resp = self._llm_call(child.name, messages, tools, stop=["观察:", "\n观察"])
@@ -2849,6 +3040,16 @@ Git 版本回滚：
 
             msg = resp["choices"][0]["message"]
             tcs = msg.get("tool_calls")
+
+            # P1.5: 文本解析 tool_call — 兼容不支持原生 function calling 的模型
+            # 生产环境：使用 ToolCallParser（括号配对算法）支持嵌套 JSON
+            if not tcs:
+                content = msg.get("content", "")
+                parsed_tcs = ToolCallParser.parse(content)
+                if parsed_tcs:
+                    tcs = parsed_tcs
+                    # 从 content 中剥离 tool_call 文本，保留思考部分
+                    msg["content"] = ToolCallParser.clean_content(content)
 
             # P1: 若无 tool_calls，对最终回答做预填充清洗
             if not tcs:
@@ -3267,7 +3468,7 @@ DAG（只输出节点列表）:"""
         messages = self._build_child_msgs(child, user_input, "", image)
 
         # 工具循环
-        for loop in range(4):
+        for loop in range(5):
             tools = child.tool_schemas() if loop == 0 else None
             if loop > 0:
                 tools = child.tool_schemas()

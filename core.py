@@ -2997,6 +2997,9 @@ Git 版本回滚：发现文件被误改或需要恢复到之前版本时，用 
 
 
 
+        # ── miss重试计数器 ──
+        child._miss_retries = 0
+
         # ── 注入 ReAct 思维链提示 ──
         tool_list = "\n".join(f"- {t['function']['name']}: {t['function']['description']}"
                               for t in tools) if tools else ""
@@ -3019,9 +3022,6 @@ Git 版本回滚：发现文件被误改或需要恢复到之前版本时，用 
         for i in range(len(messages) - 1, -1, -1):
             if messages[i].get("role") == "system":
                 messages[i]["content"] += react_prompt
-                # DEBUG
-                with open("/tmp/xuanshu_debug_sys.txt", "w") as f:
-                    f.write(messages[i]["content"][-5000:])
                 break
         else:
             messages.insert(0, {"role": "system", "content": react_prompt.lstrip()})
@@ -3056,6 +3056,19 @@ Git 版本回滚：发现文件被误改或需要恢复到之前版本时，用 
                 reply = msg.get("content", "")
                 # 清洗掉模型可能意外生成的 "观察:" 开头
                 reply = self._strip_observation_prefix(reply)
+                # miss重试：若回复无实质内容且尚有重试额度，注入强制指令重新推理
+                has_intent = (reply and len(reply.strip()) > 30
+                              and not reply.strip().startswith("好的")
+                              and not reply.strip().startswith("以下是")
+                              and not reply.strip().startswith("明白"))
+                if not has_intent and child._miss_retries < 1:
+                    child._miss_retries += 1
+                    self.log.sys(f"空回复重试({child._miss_retries}/1)")
+                    messages.append({
+                        "role": "system",
+                        "content": "[强制指令] 上一轮未输出有效内容。你必须调用工具获取信息，或给出具体分析结论。禁止只说'好的''明白'等空话。"
+                    })
+                    continue
                 if loop > 0:
                     self.log.sys(f"工具完成({loop}轮)")
                 return reply, loop, thinking_log

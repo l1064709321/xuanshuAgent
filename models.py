@@ -502,7 +502,12 @@ class ModelPool:
         return entry
 
     def remove_custom(self, key: str):
+        # 至少保留一个自定义模型，防止删空后无法恢复添加
+        if len(self._custom) <= 1:
+            raise ValueError("至少保留一个自定义模型，请先添加新的再删除")
         self._custom.pop(key, None)
+        if self.default_key == key:
+            self.default_key = next(iter(self._custom))
 
     # ---- Agent绑定 ----
     def bind(self, agent: str, key: str):
@@ -850,6 +855,7 @@ class ModelPool:
             params = {"model": model.model_id, "messages": messages[-20:], "max_tokens": 4096}
             if tools:
                 params["tools"] = tools
+                params["tool_choice"] = "auto"
             if stop:
                 params["stop"] = stop
             # NVIDIA MiniMax 必须走 streaming，否则超时或空返回

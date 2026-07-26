@@ -27,8 +27,7 @@ cd xuanshu-agent
 pip install -r requirements.txt
 ```
 
-> 备用镜像：GitHub: `https://github.com/l1064709321/xuanshuAgent.git`
-> Gitee（推荐直接下载 ZIP，免登录）：[main.zip](https://gitee.com/l1064709321/xuanshuAgent/repository/archive/main.zip)
+> 备用：GitHub `https://github.com/l1064709321/xuanshuAgent.git`
 
 ### 启动
 

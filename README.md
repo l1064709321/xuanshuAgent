@@ -11,11 +11,11 @@
 
 ### 克隆仓库
 
-**Gitee（国内推荐）：**
+**华为云（国内推荐）：**
 
 Linux / macOS / WSL：
 ```bash
-git clone https://gitee.com/l1064709321/xuanshuAgent.git
+git@codehub.devcloud.cn-north-4.huaweicloud.com:8965d3a4483445cca386477c8d9dd196/xuanshu-agent.git
 cd xuanshuAgent
 pip install -r requirements.txt
 ```

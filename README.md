@@ -11,37 +11,23 @@
 
 ### 克隆仓库
 
-**Gitee（国内推荐）：**
+**华为云 CodeHub（国内推荐）：**
 
 Linux / macOS / WSL：
 ```bash
-git clone https://gitee.com/l1064709321/xuanshuAgent.git
-cd xuanshuAgent
+git clone https://codehub.devcloud.cn-north-4.huaweicloud.com/8965d3a4483445cca386477c8d9dd196/xuanshu-agent.git
+cd xuanshu-agent
 pip install -r requirements.txt
 ```
 
 Windows（PowerShell）：
 ```powershell
-git clone https://gitee.com/l1064709321/xuanshuAgent.git
-cd xuanshuAgent
+git clone https://codehub.devcloud.cn-north-4.huaweicloud.com/8965d3a4483445cca386477c8d9dd196/xuanshu-agent.git
+cd xuanshu-agent
 pip install -r requirements.txt
 ```
 
-**GitHub：**
-
-Linux / macOS / WSL：
-```bash
-git clone https://github.com/l1064709321/xuanshuAgent.git
-cd xuanshuAgent
-pip install -r requirements.txt
-```
-
-Windows（PowerShell）：
-```powershell
-git clone https://github.com/l1064709321/xuanshuAgent.git
-cd xuanshuAgent
-pip install -r requirements.txt
-```
+> 备用镜像：GitHub: `https://github.com/l1064709321/xuanshuAgent.git` | Gitee: `https://gitee.com/l1064709321/xuanshuAgent.git`
 
 ### 启动
 

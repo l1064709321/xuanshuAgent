@@ -99,28 +99,34 @@ def score_domain(url: str) -> int:
 
 
 def search_web(query: str, max_results: int = 10) -> list:
-    """DuckDuckGo Lite 搜索，返回 [{url, title, snippet, score}]"""
+    """Bing 搜索（沙箱 DuckDuckGo 不可达），返回 [{url, title, snippet, score}]"""
     try:
         q = urllib.parse.quote(query)
         req = urllib.request.Request(
-            f"https://lite.duckduckgo.com/lite/?q={q}",
-            headers={"User-Agent": "Mozilla/5.0"}
+            f"https://www.bing.com/search?q={q}",
+            headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
         )
-        with urllib.request.urlopen(req, timeout=10) as r:
+        with urllib.request.urlopen(req, timeout=15) as r:
             html = r.read().decode("utf-8", errors="replace")
 
-        # 解析结果
-        results = re.findall(
-            r'<a[^>]*href="(https?://[^"]+)"[^>]*class="result-link"[^>]*>(.*?)</a>'
-            r'.*?class="result-snippet"[^>]*>(.*?)</td>',
-            html, re.DOTALL
-        )
+        # Bing 解析: b_algo 区块
+        blocks = re.findall(r'<li class="b_algo"[^>]*>(.*?)</li>', html, re.DOTALL)
+        if not blocks:
+            blocks = re.findall(r'<ol[^>]*id="b_results"[^>]*>(.*?)</ol>', html, re.DOTALL)
+
         out = []
-        for url, title, snippet in results:
-            t = re.sub(r'<[^>]+>', '', title).strip()
-            s = re.sub(r'<[^>]+>', '', snippet).strip()[:400]
-            score = score_domain(url)
-            out.append({"url": url, "title": t, "snippet": s, "score": score})
+        for block in blocks[:max_results]:
+            url_m = re.search(r'<a[^>]*href="(https?://[^"]+)"', block)
+            title_m = re.search(r'<h2[^>]*>(.*?)</h2>', block, re.DOTALL)
+            snippet_m = re.search(r'(?:class="b_caption"[^>]*>|<p[^>]*>)(.*?)(?:</p>|</div>)', block, re.DOTALL)
+            
+            url = url_m.group(1) if url_m else ""
+            title = re.sub(r'<[^>]+>', '', title_m.group(1)).strip() if title_m else ""
+            snippet = re.sub(r'<[^>]+>', '', snippet_m.group(1)).strip()[:400] if snippet_m else ""
+            
+            if url and title:
+                score = score_domain(url)
+                out.append({"url": url, "title": title, "snippet": snippet, "score": score})
 
         # 按信誉分排序
         out.sort(key=lambda x: -x["score"])

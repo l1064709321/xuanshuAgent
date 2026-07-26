@@ -1156,11 +1156,13 @@ async function addCustomModel() {
 
 async function delModel(key) {
   try {
-    await fetch(API + '/models/' + key, { method: 'DELETE' });
+    const r = await fetch(API + '/models/' + key, { method: 'DELETE' });
+    const d = await r.json();
+    if (!d.ok) { showToast(d.error || '删除失败'); return; }
     if (currentModel === key) currentModel = 'local';
     await loadModels();
     showToast('已删除');
-  } catch(e) {}
+  } catch(e) { showToast('删除失败: ' + (e.message||'网络错误')); }
 }
 
 loadModels();

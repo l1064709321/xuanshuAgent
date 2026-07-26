@@ -26,18 +26,22 @@ echo        玄姝 Agent 启动中...
 echo ======================================
 
 :: 虚拟环境
-if not exist ".venv" (
+if not exist ".venv\Scripts\python.exe" (
     echo [玄姝] 创建虚拟环境...
     !PYTHON! -m venv .venv
+    if not exist ".venv\Scripts\python.exe" (
+        echo [玄姝] 错误: 虚拟环境创建失败
+        pause
+        exit /b 1
+    )
 )
-call .venv\Scripts\activate.bat
 
 :: 安装依赖
 echo [玄姝] 检查依赖...
-pip install -r requirements.txt -q
+.venv\Scripts\python.exe -m pip install -r requirements.txt -q
 
 :: 启动
 echo [玄姝] 启动服务 (端口 8901)...
-python frontend.py
+.venv\Scripts\python.exe frontend.py
 
 endlocal

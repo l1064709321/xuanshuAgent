@@ -306,12 +306,8 @@ def chat():
         return jsonify({"reply": _cmd(action, arg), "cmd": True, "model": _model()})
 
     target = data.get("target_agent", None)
-    if target and target in bot.children:
-        agent_name = target
-        bot.chat(f"/agent {target}")  # 无缝切换上下文
-    else:
-        agent_name = bot._route(msg)
-    result = bot.chat(msg, image, model=model, new_session=new_session)
+    agent_name = target if (target and target in bot.children) else bot._route(msg)
+    result = bot.chat(msg, image, model=model, new_session=new_session, target_agent=target)
     return jsonify({
         "reply": result["reply"],
         "thinking": result.get("thinking", []),

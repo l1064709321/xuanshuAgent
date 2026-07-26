@@ -3,7 +3,19 @@ import os, sqlite3, hashlib, time, random, hmac, json, base64, threading
 from datetime import datetime, timedelta
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-DB_PATH = os.path.join(BASE_DIR, ".xuanshu_users.db")
+# 网络文件系统不支持 SQLite WAL，用 /tmp 兜底
+import hashlib as _hashlib
+import time as _time
+_ws_hash = _hashlib.md5(BASE_DIR.encode()).hexdigest()[:12]
+_TMP_DB = f"/tmp/.xuanshu_users_{_ws_hash}_{int(_time.time())}.db"
+try:
+    _test = sqlite3.connect(_TMP_DB)
+    _test.execute("CREATE TABLE IF NOT EXISTS _init_test (x)")
+    _test.execute("DROP TABLE _init_test")
+    _test.close()
+    DB_PATH = _TMP_DB
+except Exception:
+    DB_PATH = os.path.join(BASE_DIR, ".xuanshu_users.db")
 
 # ── 阿里云短信配置 ──
 ALIBABA_ACCESS_KEY = os.environ.get("ALIBABA_ACCESS_KEY", "")
@@ -18,7 +30,10 @@ _lock = threading.Lock()
 
 def _conn():
     c = sqlite3.connect(DB_PATH)
-    c.execute("PRAGMA journal_mode=WAL")
+    try:
+        c.execute("PRAGMA journal_mode=WAL")
+    except Exception:
+        c.execute("PRAGMA journal_mode=DELETE")
     return c
 
 def init_db():
@@ -34,6 +49,7 @@ def init_db():
         """)
         c.execute("""
             CREATE TABLE IF NOT EXISTS sms_codes (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
                 phone TEXT NOT NULL,
                 code TEXT NOT NULL,
                 expires_at TEXT NOT NULL,
@@ -123,9 +139,9 @@ def user_register(phone: str, password: str, sms_code: str) -> dict:
     pw_hash = hash_password(password)
     try:
         with _lock, _conn() as c:
-            c.execute("INSERT INTO users (phone, password_hash) VALUES (?, ?)",
-                      (phone, pw_hash))
-            user_id = c.lastrowid
+            cur = c.execute("INSERT INTO users (phone, password_hash) VALUES (?, ?)",
+                            (phone, pw_hash))
+            user_id = cur.lastrowid
             c.commit()
         token = _make_token(user_id, phone)
         return {"ok": True, "user_id": user_id, "phone": phone, "token": token}
@@ -206,3 +222,7 @@ def check_sms_rate(phone: str) -> int:
     if elapsed < 60:
         return int(60 - elapsed)
     return 0
+
+def set_sms_rate(phone: str):
+    """标记该手机已发送验证码，启动 60 秒冷却"""
+    _sms_cooldown[phone] = time.time()

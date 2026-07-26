@@ -15,14 +15,14 @@
 
 Linux / macOS / WSL：
 ```bash
-git clone https://codehub.devcloud.cn-north-4.huaweicloud.com/8965d3a4483445cca386477c8d9dd196/xuanshu-agent.git
+git clone https://private-token:REDACTED@codehub.devcloud.cn-north-4.huaweicloud.com/8965d3a4483445cca386477c8d9dd196/xuanshu-agent.git
 cd xuanshu-agent
 pip install -r requirements.txt
 ```
 
 Windows（PowerShell）：
 ```powershell
-git clone https://codehub.devcloud.cn-north-4.huaweicloud.com/8965d3a4483445cca386477c8d9dd196/xuanshu-agent.git
+git clone https://private-token:REDACTED@codehub.devcloud.cn-north-4.huaweicloud.com/8965d3a4483445cca386477c8d9dd196/xuanshu-agent.git
 cd xuanshu-agent
 pip install -r requirements.txt
 ```

@@ -140,6 +140,7 @@ body::after {
               border-right 200ms var(--ease-out);
   overflow: hidden; white-space: nowrap;
   z-index: 20;
+}
 /* ═══ 登录/注册 ═══ */
 .auth-overlay {
   display: flex; align-items: center; justify-content: center;
@@ -170,3 +171,25 @@ body::after {
 .auth-code-btn { white-space: nowrap; font-size: 13px; padding: 0 12px; min-width: 100px; }
 .auth-btn { width: 100%; padding: 12px; font-size: 15px; }
 .auth-error { font-size: 13px; color: var(--cinnabar); min-height: 20px; }
+
+/* ── Toast ── */
+.toast {
+  position: fixed;
+  bottom: 80px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0,0,0,0.82);
+  color: #fff;
+  padding: 10px 24px;
+  border-radius: 8px;
+  font-size: 13px;
+  z-index: 9999;
+  pointer-events: none;
+  animation: toastIn 0.25s ease-out, toastOut 0.25s 2.25s ease-in forwards;
+  white-space: nowrap;
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(0,240,255,0.15);
+  box-shadow: 0 0 20px rgba(0,240,255,0.1);
+}
+@keyframes toastIn { from { opacity:0; transform: translateX(-50%) translateY(10px); } }
+@keyframes toastOut { to { opacity:0; transform: translateX(-50%) translateY(-10px); } }

@@ -5,6 +5,7 @@
 [![SSE](https://img.shields.io/badge/协议-SSE-FF6B35)](#)
 [![REST](https://img.shields.io/badge/协议-REST-009688)](#)
 [![SQLite](https://img.shields.io/badge/存储-SQLite-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
+[![Docker](https://img.shields.io/badge/Docker-✓-2496ED?logo=docker&logoColor=white)](https://www.docker.com/)
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://www.apache.org/licenses/LICENSE-2.0)
 
 ## 快速开始

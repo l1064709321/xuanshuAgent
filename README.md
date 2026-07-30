@@ -9,19 +9,55 @@
 
 ## 快速开始
 
+### 一键启动（推荐）
+
 ```bash
 git clone https://gitee.com/lord-of-the-star/xuan-shu-agent.git xuanshuAgent
 cd xuanshuAgent
 bash xuanshu
 ```
 
-一键脚本自动完成：检测 Docker → 未安装则自动装 → 构建镜像（全量依赖）→ 启动服务。
+脚本自动检测并安装 Docker → 构建镜像（全量依赖）→ 启动服务。访问 http://localhost:8901。
 
-访问 http://localhost:8901。镜像内置 Python 3.10 + flask / requests / numpy / scikit-learn / wikipedia / SMS SDK，不碰 pip，不挑 ARM/amd64。
+### 手动安装
+
+**Gitee（国内推荐）：**
+
+```bash
+git clone https://gitee.com/lord-of-the-star/xuan-shu-agent.git xuanshuAgent
+cd xuanshuAgent
+pip install -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple
+python frontend.py
+```
+
+**GitHub：**
+
+```bash
+git clone https://github.com/l1064709321/xuanshuAgent.git
+cd xuanshuAgent
+pip install -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple
+python frontend.py
+```
+
+**华为云：**
+
+```bash
+git clone https://codehub.devcloud.cn-north-4.huaweicloud.com/8965d3a4483445cca386477c8d9dd196/xuanshu-agent.git xuanshuAgent
+cd xuanshuAgent
+pip install -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple
+python frontend.py
+```
+
+### Docker
+
+```bash
+docker build -t xuanshu-agent .
+docker run -d -p 8901:8901 xuanshu-agent
+```
 
 ### 环境要求
 
-- Docker（脚本会自动安装）
+- Python 3.8+ 或 Docker
 
 ---
 

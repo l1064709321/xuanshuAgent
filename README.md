@@ -9,6 +9,20 @@
 
 ## 快速开始
 
+### Docker（推荐，零依赖）
+
+```bash
+docker run -d -p 8901:8901 ghcr.io/l1064709321/xuanshu-agent:latest
+```
+
+构建的是 amd64 + arm64 双架构镜像，Aidlux/树莓派等 ARM 设备也能直接跑，无需装任何 Python 包。
+
+```bash
+# 或 docker-compose
+wget https://raw.githubusercontent.com/l1064709321/xuanshuAgent/main/docker-compose.yml
+docker compose up -d
+```
+
 ### 克隆仓库
 
 **华为云（国内推荐）：**

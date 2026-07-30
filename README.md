@@ -9,79 +9,19 @@
 
 ## 快速开始
 
-### Docker（推荐，零依赖）
-
 ```bash
-docker run -d -p 8901:8901 ghcr.io/l1064709321/xuanshu-agent:latest
-```
-
-构建的是 amd64 + arm64 双架构镜像，Aidlux/树莓派等 ARM 设备也能直接跑，无需装任何 Python 包。
-
-```bash
-# 或 docker-compose
-wget https://raw.githubusercontent.com/l1064709321/xuanshuAgent/main/docker-compose.yml
-docker compose up -d
-```
-
-### 克隆仓库
-
-**华为云（国内推荐）：**
-
-Linux / macOS / WSL：
-```bash
-git@codehub.devcloud.cn-north-4.huaweicloud.com:8965d3a4483445cca386477c8d9dd196/xuanshu-agent.git
+git clone https://gitee.com/lord-of-the-star/xuan-shu-agent.git xuanshuAgent
 cd xuanshuAgent
-pip install -r requirements.txt
+bash xuanshu
 ```
 
-Windows（PowerShell）：
-```powershell
-git@codehub.devcloud.cn-north-4.huaweicloud.com:8965d3a4483445cca386477c8d9dd196/xuanshu-agent.git
-cd xuanshuAgent
-pip install -r requirements.txt
-```
+一键脚本自动完成：检测 Docker → 未安装则自动装 → 构建镜像（全量依赖）→ 启动服务。
 
-**GitHub：**
-
-Linux / macOS / WSL：
-```bash
-git clone https://github.com/l1064709321/xuanshuAgent.git
-cd xuanshuAgent
-pip install -r requirements.txt
-```
-
-Windows（PowerShell）：
-```powershell
-git clone https://github.com/l1064709321/xuanshuAgent.git
-cd xuanshuAgent
-pip install -r requirements.txt
-```
-
-### 启动
-
-| 方式 | 系统 | 命令 |
-|------|------|------|
-| 一键启动 | Linux / macOS / WSL | `bash xuanshu` |
-| 一键启动 | Windows | `.\xuanshu.bat` |
-| 手动启动 | Linux / macOS / WSL | `source .venv/bin/activate && python frontend.py` |
-| 手动启动 | Windows | `.venv\Scripts\python.exe frontend.py` |
-
-访问 http://localhost:8901。一键脚本自动完成：检测 Python ≥ 3.8 → 创建 `.venv` → 安装依赖 → 启动服务。
-
-命令行模式将 `frontend.py` 换成 `main.py`。
-
-#### systemd 服务（仅 Linux）
-
-```bash
-sudo cp xuanshu.service /etc/systemd/system/
-sudo systemctl daemon-reload
-sudo systemctl enable --now xuanshu
-```
+访问 http://localhost:8901。镜像内置 Python 3.10 + flask / requests / numpy / scikit-learn / wikipedia / SMS SDK，不碰 pip，不挑 ARM/amd64。
 
 ### 环境要求
 
-- Python 3.8+
-- Linux / macOS / Windows / WSL
+- Docker（脚本会自动安装）
 
 ---
 

@@ -1,11 +1,33 @@
 #!/bin/bash
-# 玄姝 Agent — 一键启动脚本
+# 玄姝 Agent — 一键启动脚本（Docker 优先，pip 降级）
 set -e
 
 PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$PROJECT_DIR"
 MIRROR="https://pypi.tuna.tsinghua.edu.cn/simple"
 
+echo "╔══════════════════════════════════════╗"
+echo "║       玄姝 Agent 启动中...          ║"
+echo "╚══════════════════════════════════════╝"
+
+# === Docker 模式（全量依赖，零配置） ===
+if command -v docker &>/dev/null; then
+    echo "[玄姝] Docker 模式 — 即将启动..."
+    # 有 Docker Compose 优先用 compose
+    if command -v docker-compose &>/dev/null; then
+        docker-compose up -d
+    elif docker compose version &>/dev/null 2>&1; then
+        docker compose up -d
+    else
+        docker build -t xuanshu-agent .
+        docker run -d -p 8901:8901 --name xuanshu xuanshu-agent
+    fi
+    echo "[玄姝] 服务已启动 (端口 8901)"
+    echo "[玄姝] 日志: docker logs -f xuanshu"
+    exit 0
+fi
+
+# === pip 模式（降级） ===
 # 检查 Python
 PYTHON=""
 for py in python3 python3.14 python3.13 python3.12 python3.11 python3.10 python3.9 python3.8; do
@@ -14,12 +36,8 @@ for py in python3 python3.14 python3.13 python3.12 python3.11 python3.10 python3
     fi
 done
 if [ -z "$PYTHON" ]; then
-    echo "[玄姝] 错误: 未找到 Python 3.8+，请先安装"; exit 1
+    echo "[玄姝] 错误: 未找到 Python 3.8+ 且无 Docker。请安装 Docker 或 Python。"; exit 1
 fi
-
-echo "╔══════════════════════════════════════╗"
-echo "║       玄姝 Agent 启动中...          ║"
-echo "╚══════════════════════════════════════╝"
 
 # 虚拟环境
 if [ ! -d ".venv" ]; then
@@ -36,7 +54,7 @@ echo "[玄姝] 检查依赖..."
 if ! pip install -r requirements.txt -q -i "$MIRROR" 2>/dev/null; then
     echo "[玄姝] 全量依赖安装失败，降级到核心依赖..."
     pip install flask requests alibabacloud_dysmsapi20170525 -i "$MIRROR"
-    echo "[玄姝] 核心依赖已就绪（numpy/scikit-learn/wikipedia 未安装，向量检索功能将降级）"
+    echo "[玄姝] 核心依赖已就绪（numpy/scikit-learn/wikipedia 未安装，建议装 Docker 获得全量依赖）"
 fi
 
 # 启动

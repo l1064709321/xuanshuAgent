@@ -15,17 +15,16 @@ echo "╚═══════════════════════�
 if ! command -v docker &>/dev/null; then
     log "未检测到 Docker，正在自动安装..."
     if command -v apt &>/dev/null; then
-        curl -fsSL https://get.docker.com | sh
+        # 优先走系统源（Aidlux/Ubuntu/Debian 直装，避开 get.docker.com 被墙）
+        sudo apt update && sudo apt install -y docker.io || {
+            log "系统源安装失败，尝试官方脚本..."
+            curl -fsSL https://get.docker.com | sh
+        }
     elif command -v yum &>/dev/null; then
         sudo yum install -y docker && sudo systemctl start docker
     else
         log "无法识别包管理器，请手动安装 Docker: https://docs.docker.com/engine/install/"
         exit 1
-    fi
-    # 启动 dockerd
-    if ! pgrep dockerd &>/dev/null; then
-        sudo dockerd &>/dev/null &
-        sleep 3
     fi
     log "Docker 安装完成"
 fi

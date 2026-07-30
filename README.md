@@ -275,6 +275,21 @@ pip install flask requests alibabacloud_dysmsapi20170525 -i https://pypi.tuna.ts
 bash xuanshu
 ```
 
+#### Aidlux Docker 安装被墙
+
+一键脚本通过 `get.docker.com` 安装 Docker 时，Aidlux 等国内 ARM 设备可能因网络阻断失败（`Connection reset by peer`）。先手动安装 Docker，再跑脚本：
+
+```bash
+# Aidlux 直接用系统源装 Docker
+sudo apt update && sudo apt install -y docker.io
+
+# 启动 docker 服务
+sudo dockerd &
+
+# 然后执行一键启动
+bash xuanshu
+```
+
 
 ---
 

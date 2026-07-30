@@ -1,0 +1,8 @@
+# 玄姝 Agent — 无需拉源码，compose 拉起
+version: "3.8"
+services:
+  xuanshu:
+    image: l1064709321/xuanshu-agent:latest
+    ports:
+      - "8901:8901"
+    restart: unless-stopped

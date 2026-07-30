@@ -250,7 +250,7 @@ wget --no-check-certificate https://github.com/l1064709321/xuanshuAgent/archive/
 unzip main.zip && mv xuanshuAgent-main xuanshuAgent
 ```
 
-#### pip install 权限错误
+#### pip install 权限 / 编译错误
 
 ```bash
 # 方案 A：修复权限后全量安装
@@ -258,13 +258,25 @@ rm -rf .venv/lib/python3.*/site-packages/wikipedia*
 chmod -R u+w .venv
 source .venv/bin/activate
 pip install --upgrade pip setuptools wheel
-pip install -r requirements.txt
+pip install -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple
 
-# 方案 B：跳过非必需包快速启动（wikipedia 非核心依赖）
-rm -rf .venv && python3 -m venv .venv && source .venv/bin/activate
-pip install --upgrade pip setuptools wheel
-pip install flask requests httpx beautifulsoup4 lxml python-dotenv markdown
+# 方案 B：仅安装核心依赖（跳过 numpy/scikit-learn/wikipedia）
+# 注册、登录、SMS、对话功能完整可用，仅向量检索降级
+pip install flask requests alibabacloud_dysmsapi20170525 -i https://pypi.tuna.tsinghua.edu.cn/simple
 ```
+
+#### Aidlux / ARM 设备 backports.zoneinfo 编译失败
+
+`scikit-learn` 在 ARM Python 3.8 上拉取 `backports.zoneinfo` 编译时权限报错。已改为可选依赖：
+numpy、scikit-learn、wikipedia 未安装时自动降级，不影响注册/登录/SMS。
+
+```bash
+# Aidlux 专用快速启动（镜像源 + 核心依赖）
+git pull
+pip install flask requests alibabacloud_dysmsapi20170525 -i https://pypi.tuna.tsinghua.edu.cn/simple
+bash xuanshu
+```
+
 
 ---
 

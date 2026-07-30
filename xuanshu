@@ -4,6 +4,7 @@ set -e
 
 PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$PROJECT_DIR"
+MIRROR="https://pypi.tuna.tsinghua.edu.cn/simple"
 
 # 检查 Python
 PYTHON=""
@@ -27,9 +28,16 @@ if [ ! -d ".venv" ]; then
 fi
 source .venv/bin/activate
 
-# 安装依赖
+# 升级 pip
+pip install --upgrade pip -q -i "$MIRROR" 2>/dev/null || true
+
+# 安装依赖（镜像源 + 降级策略）
 echo "[玄姝] 检查依赖..."
-pip install -r requirements.txt -q
+if ! pip install -r requirements.txt -q -i "$MIRROR" 2>/dev/null; then
+    echo "[玄姝] 全量依赖安装失败，降级到核心依赖..."
+    pip install flask requests alibabacloud_dysmsapi20170525 -i "$MIRROR"
+    echo "[玄姝] 核心依赖已就绪（numpy/scikit-learn/wikipedia 未安装，向量检索功能将降级）"
+fi
 
 # 启动
 echo "[玄姝] 启动服务 (端口 8901)..."

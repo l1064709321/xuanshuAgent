@@ -1,6 +1,8 @@
 #!/bin/bash
-# 玄姝 Agent — 一键启动脚本（Docker 模式）
+# 玄姝 Agent — 一键启动（Docker 全量依赖）
 set -e
+
+log() { echo "[玄姝] $*"; }
 
 PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$PROJECT_DIR"
@@ -9,32 +11,37 @@ echo "╔═══════════════════════�
 echo "║       玄姝 Agent 启动中...          ║"
 echo "╚══════════════════════════════════════╝"
 
-# === 检测 Docker ===
+# === 1. 检测并自动安装 Docker ===
 if ! command -v docker &>/dev/null; then
-    echo "[玄姝] 未检测到 Docker，请先安装："
-    echo ""
-    echo "  # Debian / Ubuntu / Aidlux"
-    echo "  curl -fsSL https://get.docker.com | sh"
-    echo ""
-    echo "  # CentOS / TencentOS"
-    echo "  sudo yum install -y docker && sudo systemctl start docker"
-    echo ""
-    echo "  # 安装后把当前用户加入 docker 组（免 sudo）"
-    echo "  sudo usermod -aG docker \$USER && newgrp docker"
-    echo ""
-    echo "  装好后重新执行: bash xuanshu"
-    exit 1
+    log "未检测到 Docker，正在自动安装..."
+    if command -v apt &>/dev/null; then
+        curl -fsSL https://get.docker.com | sh
+    elif command -v yum &>/dev/null; then
+        sudo yum install -y docker && sudo systemctl start docker
+    else
+        log "无法识别包管理器，请手动安装 Docker: https://docs.docker.com/engine/install/"
+        exit 1
+    fi
+    # 启动 dockerd
+    if ! pgrep dockerd &>/dev/null; then
+        sudo dockerd &>/dev/null &
+        sleep 3
+    fi
+    log "Docker 安装完成"
 fi
 
-# === 启动 Docker ===
+# === 2. 构建并启动 ===
 if command -v docker-compose &>/dev/null; then
     docker-compose up -d
 elif docker compose version &>/dev/null 2>&1; then
     docker compose up -d
 else
+    log "构建镜像..."
     docker build -t xuanshu-agent .
+    log "启动容器..."
+    docker rm -f xuanshu 2>/dev/null || true
     docker run -d -p 8901:8901 --name xuanshu xuanshu-agent
 fi
 
-echo "[玄姝] 服务已启动 (端口 8901)"
-echo "[玄姝] 日志: docker logs -f xuanshu"
+log "服务已启动 → http://localhost:8901"
+log "查看日志: docker logs -f xuanshu"

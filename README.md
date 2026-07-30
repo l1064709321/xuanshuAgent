@@ -12,9 +12,16 @@
 ### 一键启动（推荐）
 
 ```bash
-git clone https://gitee.com/lord-of-the-star/xuan-shu-agent.git xuanshuAgent
+git clone https://github.com/l1064709321/xuanshuAgent.git xuanshuAgent
 cd xuanshuAgent
 bash xuanshu
+```
+
+国内网络慢可换华为云：
+
+```bash
+git clone https://codehub.devcloud.cn-north-4.huaweicloud.com/8965d3a4483445cca386477c8d9dd196/xuanshu-agent.git xuanshuAgent
+cd xuanshuAgent && bash xuanshu
 ```
 
 脚本自动检测并安装 Docker → 构建镜像（全量依赖）→ 启动服务。访问 http://localhost:8901。

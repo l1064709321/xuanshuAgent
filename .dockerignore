@@ -1,0 +1,9 @@
+.venv
+__pycache__
+*.pyc
+.memory
+.memdir
+decompile/__pycache__
+*.db
+.git
+temp

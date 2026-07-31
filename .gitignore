@@ -13,6 +13,9 @@ push.py
 .sandbox/
 .pytest_cache/
 workspace_files/
+workflows/
+*.db
+*.sqlite
 *.log
 req.log
 server.log

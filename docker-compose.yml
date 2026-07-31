@@ -1,6 +1,7 @@
 # ═══════════════════════════════════════════
 #  玄姝 Agent — Docker Compose
 #  一键启动: docker compose up -d
+#  开发模式: docker compose -f docker-compose.yml -f docker-compose.dev.yml up
 # ═══════════════════════════════════════════
 version: "3.8"
 services:
@@ -15,9 +16,9 @@ services:
       - XS_HOST=0.0.0.0
       - XS_PORT=8901
       # 可选：通过环境变量传入 API Key（也可在页面配置）
-      # - AGNES_API_KEY=sk-xxx
-      # - OPENAI_API_KEY=sk-xxx
-      # - JWT_SECRET=your-secret
+      # - AGNES_API_KEY=***
+      # - OPENAI_API_KEY=***
+      # - JWT_SECRET=***
     volumes:
       # 持久化：记忆、数据库、工作流 不随容器销毁丢失
       - xuanshu-memdir:/app/.memdir

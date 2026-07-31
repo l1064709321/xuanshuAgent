@@ -110,6 +110,14 @@
     <div class="sidebar-file-tree" id="sidebarFileTree">
       <div class="file-tree-loading">加载中…</div>
     </div>
+    <div class="sidebar-section-label">🧠 记忆</div>
+    <div class="sidebar-mem-tree" id="sidebarMemTree">
+      <div class="file-tree-loading">加载中…</div>
+    </div>
+    <div class="sidebar-section-label">⚡ 技能市场</div>
+    <div class="sidebar-skill-market" id="sidebarSkillMarket">
+      <div class="file-tree-loading">加载中…</div>
+    </div>
     <div class="status-bar">
       <span class="status-dot offline" id="statusDot"></span>
       <span id="statusLabel">未连接</span>
@@ -120,7 +128,7 @@
   <!-- ===== 主区域 ===== -->
   <main class="main-area">
     <div class="toolbar">
-      <div class="toolbar-avatar" id="toolbarAvatar" onclick="navigateTo('#profile')" title="个人主页">玄</div>
+      <div class="toolbar-avatar" id="toolbarAvatar" onclick="openAvatarDrawer()" title="个人档案">玄</div>
       <span class="u-flex-1"></span>
       <span class="token-badge" id="tokenBadge" title="Token用量">0 tk</span>
       <button class="toolbar-btn theme-btn" onclick="toggleThemeQuickPanel(event)" title="切换主题" aria-label="主题切换" id="toolbarThemeBtn">&#127912;</button>
@@ -171,12 +179,15 @@
 
       <div class="input-area">
         <div class="model-bar" id="modelChips"></div>
-        <div class="input-row">
-          <input type="file" id="fileInput" multiple style="display:none" onchange="uploadFiles()" accept="*/*">
-          <button class="file-browse-btn" id="fileBrowseBtn" title="上传本地文件" aria-label="上传本地文件" onclick="document.getElementById('fileInput').click()">+</button>
-          <span id="imagePreview" style="display:none;margin-right:8px"></span>
+        <input type="file" id="fileInput" multiple style="display:none" onchange="uploadFiles()" accept="*/*">
+        <span id="imagePreview" style="display:none;margin-bottom:8px"></span>
+        <div class="input-pill">
+          <button class="pill-btn pill-add" id="fileBrowseBtn" title="上传文件" aria-label="上传文件" onclick="document.getElementById('fileInput').click()">+</button>
           <textarea id="msg-input" placeholder="输入消息…" rows="1" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();send()}"></textarea>
-          <button class="send-btn" onclick="send()">&uarr;</button>
+          <div class="pill-right">
+            <button class="pill-model" id="pillModelBtn" onclick="showModelQuickPicker(event)" title="切换模型">⚡</button>
+            <button class="pill-send" onclick="send()" title="发送">&uarr;</button>
+          </div>
         </div>
       </div>
 
@@ -460,27 +471,20 @@
       </div>
 
       <div class="profile-section">
-        <div class="section-title">记忆</div>
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--s3)">
-          <span class="section-desc">浏览和管理你的记忆文件</span>
-          <button class="btn btn-ghost btn-sm" onclick="refreshSidebarMemdir()">刷新</button>
-        </div>
-        <div class="profile-list" id="sidebarMemList" style="max-height:260px;overflow-y:auto">
-          <div style="text-align:center;padding:12px;color:var(--text-muted);font-size:13px">点击刷新加载</div>
+        <div class="section-title">个人信息</div>
+        <div class="setting-card">
+          <h4>账号</h4>
+          <p>手机号: <span id="profilePhone">—</span></p>
+          <p>Token 用量: <span id="profileTokens">0 tk</span></p>
         </div>
       </div>
 
       <div class="profile-section">
-        <div class="section-title">技能</div>
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--s3)">
-          <span class="section-desc">Agent 已学习的技能</span>
-          <div style="display:flex;gap:4px">
-            <button class="btn btn-ghost btn-sm" onclick="refreshSkills()">刷新</button>
-            <button class="btn btn-ghost btn-sm" onclick="newSkill()">+ 新建</button>
-          </div>
-        </div>
-        <div class="profile-list" id="sidebarSkillList" style="max-height:260px;overflow-y:auto">
-          <div style="text-align:center;padding:12px;color:var(--text-muted);font-size:13px">暂无技能</div>
+        <div class="section-title">系统操作</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn btn-ghost" onclick="navigateTo('#settings')">全局设置</button>
+          <button class="btn btn-ghost" onclick="exportAll()">导出快照</button>
+          <button class="btn btn-ghost" onclick="importAll()">导入快照</button>
         </div>
       </div>
     </section>
@@ -488,6 +492,48 @@
     </div><!-- /page-stage -->
 
   </main>
+
+  <!-- ===== 头像抽屉（右侧） ===== -->
+  <div class="avatar-drawer-overlay" id="avatarDrawerOverlay" onclick="closeAvatarDrawer()"></div>
+  <aside class="avatar-drawer" id="avatarDrawer">
+    <div class="avatar-drawer-header">
+      <span class="avatar-drawer-title">个人档案</span>
+      <button class="avatar-drawer-close" onclick="closeAvatarDrawer()">&times;</button>
+    </div>
+    <div class="avatar-drawer-body">
+      <!-- 头像 -->
+      <div class="avatar-section">
+        <div class="avatar-big" id="drawerAvatar">玄</div>
+        <div class="avatar-actions">
+          <button class="btn btn-ghost btn-sm" onclick="document.getElementById('avatarFileInput').click()">📷 更换头像</button>
+          <input type="file" id="avatarFileInput" accept="image/*" onchange="uploadAvatarFromFile(this)" style="display:none">
+        </div>
+        <div class="avatar-info">
+          <span class="avatar-phone" id="drawerPhone">—</span>
+          <span class="avatar-tokens" id="drawerTokens">0 tk</span>
+        </div>
+      </div>
+
+      <!-- 记忆文件夹 -->
+      <div class="drawer-section">
+        <div class="drawer-section-title">🧠 记忆文件</div>
+        <div class="drawer-mem-list" id="drawerMemList">
+          <div class="file-tree-loading">加载中…</div>
+        </div>
+      </div>
+
+      <!-- 快捷操作 -->
+      <div class="drawer-section">
+        <div class="drawer-section-title">快捷操作</div>
+        <div class="drawer-actions">
+          <button class="drawer-action-btn" onclick="navigateTo('#settings');closeAvatarDrawer()">⚙️ 全局设置</button>
+          <button class="drawer-action-btn" onclick="exportAll()">📤 导出快照</button>
+          <button class="drawer-action-btn" onclick="importAll()">📥 导入快照</button>
+          <button class="drawer-action-btn" onclick="doLogout()">🚪 退出登录</button>
+        </div>
+      </div>
+    </div>
+  </aside>
 
   <!-- ===== 底部导航（移动端） ===== -->
   <nav class="bottom-nav">
@@ -589,6 +635,7 @@ async function doRegister() {
   if (j.ok) {
     authToken = j.token;
     localStorage.setItem('xuanshu_token', authToken);
+    localStorage.setItem('xuanshu_phone', phone);
     hideAuth();
     document.getElementById('toolbarAvatar').textContent = phone.slice(-2);
   } else {
@@ -607,6 +654,7 @@ async function doLogin() {
   if (j.ok) {
     authToken = j.token;
     localStorage.setItem('xuanshu_token', authToken);
+    localStorage.setItem('xuanshu_phone', phone);
     hideAuth();
     document.getElementById('toolbarAvatar').textContent = phone.slice(-2);
   } else {
@@ -694,7 +742,7 @@ function onHashChange() {
     b.classList.toggle('active', ['#chat','#settings','#profile'][i] === hash);
   });
   if (hash === '#profile') {
-    refreshSidebarMemdir(); refreshSkills();
+    // 个人主页无需额外加载
   }
   if (hash === '#settings') { loadModels(); }
 }
@@ -702,6 +750,8 @@ window.addEventListener('hashchange', onHashChange);
 window.addEventListener('DOMContentLoaded', function() {
   if (!window.location.hash) window.location.hash = '#chat';
   onHashChange();
+  loadSidebarMemTree();
+  loadSkillMarket();
 });
 function switchPanelTab(el, tab) {
   document.querySelectorAll('.panel-tab').forEach(t => { t.classList.remove('active'); t.setAttribute('aria-selected', 'false'); });
@@ -926,6 +976,51 @@ function pickModel(key, name) {
   filterModels();
   buildModelChips();
   applyModelSwitch();
+}
+
+// 模型快速切换弹出菜单
+function showModelQuickPicker(e) {
+  e.stopPropagation();
+  // 移除旧弹出
+  const old = document.getElementById('modelQuickPicker');
+  if (old) { old.remove(); return; }
+
+  const btn = document.getElementById('pillModelBtn');
+  const rect = btn.getBoundingClientRect();
+
+  const picker = document.createElement('div');
+  picker.id = 'modelQuickPicker';
+  picker.className = 'model-quick-picker';
+
+  // 常用模型列表
+  const quickModels = allModels.filter(m => m.has_key || m.key === currentModel).slice(0, 12);
+  let html = '';
+  quickModels.forEach(m => {
+    const active = m.key === currentModel ? ' active' : '';
+    html += '<div class="mqm-item' + active + '" onclick="switchChip(\'' + m.key + '\');document.getElementById(\'modelQuickPicker\').remove()">' +
+      '<span class="mqm-name">' + m.name + '</span>' +
+      '<span class="mqm-provider">' + m.provider + '</span>' +
+    '</div>';
+  });
+  if (!html) html = '<div class="mqm-empty">请先配置 API Key</div>';
+  html += '<div class="mqm-all" onclick="navigateTo(\'#settings\');document.getElementById(\'modelQuickPicker\').remove()">全部模型 →</div>';
+  picker.innerHTML = html;
+
+  // 定位到按钮上方
+  document.body.appendChild(picker);
+  const pickerRect = picker.getBoundingClientRect();
+  picker.style.position = 'fixed';
+  picker.style.bottom = (window.innerHeight - rect.top + 8) + 'px';
+  picker.style.left = (rect.left + rect.width / 2 - pickerRect.width / 2) + 'px';
+
+  // 点击外部关闭
+  setTimeout(() => {
+    document.addEventListener('click', function closePicker() {
+      const p = document.getElementById('modelQuickPicker');
+      if (p) p.remove();
+      document.removeEventListener('click', closePicker);
+    }, { once: true });
+  }, 50);
 }
 
 function buildModelChips() {
@@ -1203,7 +1298,11 @@ async function send() {
     if (d.cmd) {
       addBubble('system', d.reply);
     } else {
-      addBubble('agent', d.reply, d.agent, thinkings);
+      // 群聊模式：显示玄姝 → @副手
+      const mainAgent = '玄姝';
+      const subAgent = d.agent || d.dispatched_to || '';
+      const agentLabel = subAgent ? mainAgent + ' → @' + subAgent : mainAgent;
+      addBubble('agent', d.reply, agentLabel, thinkings);
     }
     if (d.model) {
       currentModel = d.model;
@@ -1229,13 +1328,70 @@ function addBubble(role, content, agentName, thinkings) {
   if (agentName) {
     let thinkingHtml = '';
     if (thinkings && thinkings.length > 0) {
-      const steps = thinkings.map(t =>
-        '<div class="thinking-step">'+
-          '<span class="tstep-tool"><span class="tstep-round">#'+t.round+'</span>'+t.tool+'</span>'+
-          t.thought+
-        '</div>'
-      ).join('');
-      thinkingHtml = '<details class="thinking-chain"><summary>思考过程 ('+thinkings.length+' 步)</summary>'+steps+'</details>';
+      const toolMeta = {
+        'anysearch':    { icon: '🔍', tag: '搜索', cls: 'tc-tag-search' },
+        'web_search':   { icon: '🌐', tag: '搜索', cls: 'tc-tag-search' },
+        'search_wikipedia': { icon: '📖', tag: '百科', cls: 'tc-tag-search' },
+        'web_fetch':    { icon: '🕷️', tag: '抓取', cls: 'tc-tag-search' },
+        'get_weather':  { icon: '🌤️', tag: '天气', cls: 'tc-tag-search' },
+        'run_code':     { icon: '⚡', tag: '代码', cls: 'tc-tag-code' },
+        'read_file':    { icon: '📄', tag: '文件', cls: 'tc-tag-file' },
+        'list_files':   { icon: '📂', tag: '文件', cls: 'tc-tag-file' },
+        'write_file':   { icon: '✏️', tag: '文件', cls: 'tc-tag-file' },
+        'edit_file':    { icon: '✏️', tag: '文件', cls: 'tc-tag-file' },
+        'decompile':    { icon: '🔬', tag: '逆向', cls: 'tc-tag-code' },
+        'decompile_detect': { icon: '🔬', tag: '逆向', cls: 'tc-tag-code' },
+        'browser_navigate': { icon: '🧭', tag: '浏览器', cls: 'tc-tag-browser' },
+        'browser_extract':  { icon: '📑', tag: '浏览器', cls: 'tc-tag-browser' },
+        'browser_click':    { icon: '👆', tag: '浏览器', cls: 'tc-tag-browser' },
+        'browser_type':     { icon: '⌨️', tag: '浏览器', cls: 'tc-tag-browser' },
+        'browser_screenshot': { icon: '📸', tag: '浏览器', cls: 'tc-tag-browser' },
+        'browser_scroll':   { icon: '🔄', tag: '浏览器', cls: 'tc-tag-browser' },
+        'browser_get_state': { icon: '📋', tag: '浏览器', cls: 'tc-tag-browser' },
+        'browser_wait':     { icon: '⏳', tag: '浏览器', cls: 'tc-tag-browser' },
+        'sys_info':     { icon: '🖥️', tag: '系统', cls: 'tc-tag-system' },
+        'process_list': { icon: '📊', tag: '进程', cls: 'tc-tag-system' },
+        'process_kill': { icon: '💀', tag: '进程', cls: 'tc-tag-system' },
+        'disk_usage':   { icon: '💾', tag: '磁盘', cls: 'tc-tag-system' },
+        'memory_usage': { icon: '🧠', tag: '内存', cls: 'tc-tag-system' },
+        'cpu_info':     { icon: '⚙️', tag: 'CPU', cls: 'tc-tag-system' },
+        'network_info': { icon: '🌐', tag: '网络', cls: 'tc-tag-system' },
+        'pkg_install':  { icon: '📦', tag: '包管理', cls: 'tc-tag-system' },
+        'pkg_search':   { icon: '🔎', tag: '包管理', cls: 'tc-tag-system' },
+        'pkg_remove':   { icon: '🗑️', tag: '包管理', cls: 'tc-tag-system' },
+        'adb_check':    { icon: '📱', tag: 'ADB', cls: 'tc-tag-system' },
+        'adb_screenshot': { icon: '📸', tag: 'ADB', cls: 'tc-tag-system' },
+        'adb_tap':      { icon: '👆', tag: 'ADB', cls: 'tc-tag-system' },
+        'adb_swipe':    { icon: '👉', tag: 'ADB', cls: 'tc-tag-system' },
+        'adb_type':     { icon: '⌨️', tag: 'ADB', cls: 'tc-tag-system' },
+        'git_log':      { icon: '📜', tag: 'Git', cls: 'tc-tag-file' },
+        'git_revert':   { icon: '⏪', tag: 'Git', cls: 'tc-tag-file' },
+        'git_status':   { icon: '📋', tag: 'Git', cls: 'tc-tag-file' },
+        'memdir_read':  { icon: '🧠', tag: '记忆', cls: 'tc-tag-memory' },
+        'memdir_write': { icon: '💾', tag: '记忆', cls: 'tc-tag-memory' },
+        'memdir_search': { icon: '🔍', tag: '记忆', cls: 'tc-tag-memory' },
+      };
+      const defaultMeta = { icon: '🔧', tag: '工具', cls: 'tc-tag-code' };
+
+      const steps = thinkings.map(t => {
+        const tools = t.tool.split(',').map(s => s.trim());
+        const toolBadges = tools.map(tn => {
+          const m = toolMeta[tn] || defaultMeta;
+          return '<span class="tc-tool-icon">'+m.icon+'</span><span class="tc-tool-name">'+tn+'</span><span class="tc-tool-tag '+m.cls+'">'+m.tag+'</span>';
+        }).join('');
+        const thoughtText = (t.thought || '').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+        return '<div class="tc-step">'+
+          '<div class="tc-tool-bar">'+
+            '<span class="tc-round">#'+t.round+'</span>'+
+            toolBadges+
+          '</div>'+
+          '<div class="tc-thought">'+thoughtText+'</div>'+
+        '</div>';
+      }).join('');
+      thinkingHtml = '<details class="thinking-chain" open>'+
+        '<summary><span>✦ 思考链</span><span class="tc-badge">'+thinkings.length+' 步</span></summary>'+
+        '<div class="thinking-timeline">'+steps+'</div>'+
+      '</details>';
     }
     d.innerHTML = '<div class="agent-label"><span class="agent-name">'+agentName+'</span></div><div class="agent-body">'+thinkingHtml+html+'</div>';
   } else if (role==='system') {
@@ -1355,27 +1511,7 @@ function uploadProfileAvatar() {
   reader.readAsDataURL(file);
 }
 
-async function refreshSidebarMemdir() {
-  try {
-    const r = await fetch(API + '/memory/list');
-    const d = await r.json();
-    const list = document.getElementById('sidebarMemList');
-    if (!d.ok) { list.innerHTML = '<div style="text-align:center;padding:8px;color:var(--cinnabar);font-size:13px">加载失败</div>'; return; }
-    if (!d.entries.length) {
-      list.innerHTML = '<div style="text-align:center;padding:12px;color:var(--text-muted);font-size:13px">暂无记忆文件</div>';
-      return;
-    }
-    let html = '';
-    d.entries.forEach(e => {
-      html += '<div class="profile-item" onclick="readSidebarMemdir(\'' + e.rel.replace(/'/g, "\\'") + '\')">' +
-        '<span class="pf-dot"></span>' +
-        '<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0">'+e.rel+'</span>' +
-        '<span style="font-size:11px;color:var(--text-muted);margin:0 8px;flex-shrink:0">'+formatSize(e.size)+'</span>' +
-        '<button class="pf-actions" onclick="event.stopPropagation();deleteSidebarMemdir(\'' + e.rel.replace(/'/g, "\\'") + '\')" style="background:none;border:none;color:var(--cinnabar);cursor:pointer;font-size:14px;padding:0 4px">&times;</button></div>';
-    });
-    list.innerHTML = html;
-  } catch(e) { list.innerHTML = '<div style="text-align:center;padding:12px;color:var(--cinnabar);font-size:13px">加载失败</div>'; }
-}
+// refreshSidebarMemdir 已废弃，由 loadSidebarMemTree + loadDrawerMemList 替代
 
 async function readSidebarMemdir(rel) {
   try {
@@ -1401,6 +1537,279 @@ async function deleteSidebarMemdir(rel) {
   } catch(e) { showToast('删除失败'); }
 }
 
+// ========== 侧边栏记忆文件树（只读 — 用户可看不可改）==========
+async function loadSidebarMemTree() {
+  const el = document.getElementById('sidebarMemTree');
+  try {
+    const r = await fetch(API + '/memory/list');
+    const d = await r.json();
+    if (!d.ok || !d.entries.length) {
+      el.innerHTML = '<div class="file-tree-loading">暂无记忆文件</div>';
+      return;
+    }
+    let html = '';
+    d.entries.forEach(e => {
+      const name = e.rel.split('/').pop();
+      const ext = name.split('.').pop().toLowerCase();
+      const icon = ext === 'md' ? '📝' : ext === 'json' ? '📋' : ext === 'txt' ? '📄' : '🗂️';
+      html += '<div class="mem-tree-item" onclick="viewMemFile(\'' + e.rel.replace(/'/g, "\\'") + '\')">' +
+        '<span class="mem-tree-icon">' + icon + '</span>' +
+        '<span class="mem-tree-name" title="' + e.rel + '">' + name + '</span>' +
+        '<span class="mem-tree-size">' + formatSize(e.size) + '</span>' +
+      '</div>';
+    });
+    el.innerHTML = html;
+  } catch(e) {
+    el.innerHTML = '<div class="file-tree-loading">加载失败</div>';
+  }
+}
+
+async function viewMemFile(rel) {
+  try {
+    const r = await fetch(API + '/memory/read', {
+      method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({rel})
+    });
+    const d = await r.json();
+    if (!d.ok) { showToast(d.error); return; }
+    // 在文件查看器中显示（只读）
+    showFileContent(rel, d.content, 'text');
+  } catch(e) { showToast('读取失败'); }
+}
+
+function showFileContent(name, content, type) {
+  const panel = document.getElementById('fileViewerPanel');
+  document.getElementById('fvPath').textContent = name;
+  document.getElementById('fvMeta').textContent = content.length + ' 字符 · 只读';
+  const fvContent = document.getElementById('fvContent');
+  if (type === 'text') {
+    fvContent.textContent = content;
+    fvContent.style.whiteSpace = 'pre-wrap';
+    fvContent.style.fontFamily = 'var(--mono)';
+    fvContent.style.fontSize = '13px';
+  }
+  panel.style.display = 'flex';
+}
+
+// ========== 头像抽屉 ==========
+function openAvatarDrawer() {
+  document.getElementById('avatarDrawer').classList.add('open');
+  document.getElementById('avatarDrawerOverlay').classList.add('show');
+  loadDrawerMemList();
+  // 同步头像
+  const mainAvatar = document.getElementById('toolbarAvatar').textContent;
+  document.getElementById('drawerAvatar').textContent = mainAvatar || '玄';
+  // 同步手机号
+  const phone = localStorage.getItem('xuanshu_phone') || '—';
+  document.getElementById('drawerPhone').textContent = phone;
+  document.getElementById('drawerTokens').textContent = totalTokens + ' tk';
+}
+
+function closeAvatarDrawer() {
+  document.getElementById('avatarDrawer').classList.remove('open');
+  document.getElementById('avatarDrawerOverlay').classList.remove('show');
+}
+
+async function loadDrawerMemList() {
+  const el = document.getElementById('drawerMemList');
+  try {
+    const r = await fetch(API + '/memory/list');
+    const d = await r.json();
+    if (!d.ok || !d.entries.length) {
+      el.innerHTML = '<div class="file-tree-loading">暂无记忆文件</div>';
+      return;
+    }
+    let html = '';
+    d.entries.forEach(e => {
+      const name = e.rel.split('/').pop();
+      const ext = name.split('.').pop().toLowerCase();
+      const icon = ext === 'md' ? '📝' : ext === 'json' ? '📋' : ext === 'txt' ? '📄' : '🗂️';
+      html += '<div class="drawer-mem-item" onclick="viewMemFile(\'' + e.rel.replace(/'/g, "\\'") + '\')">' +
+        '<span class="mem-tree-icon">' + icon + '</span>' +
+        '<span class="mem-tree-name">' + name + '</span>' +
+        '<span class="mem-tree-size">' + formatSize(e.size) + '</span>' +
+      '</div>';
+    });
+    el.innerHTML = html;
+  } catch(e) {
+    el.innerHTML = '<div class="file-tree-loading">加载失败</div>';
+  }
+}
+
+async function uploadAvatarFromFile(input) {
+  const file = input.files[0];
+  if (!file) return;
+  // 读取为 base64 data URL
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const dataUrl = e.target.result;
+    // 更新所有头像显示
+    const initial = file.name.charAt(0).toUpperCase();
+    document.getElementById('toolbarAvatar').textContent = initial;
+    document.getElementById('drawerAvatar').textContent = initial;
+    document.getElementById('profileAvatar').textContent = initial;
+    // 存储到 localStorage
+    localStorage.setItem('xuanshu_avatar', dataUrl);
+    // 如果图片不大，用 CSS background 显示
+    const avatars = ['toolbarAvatar', 'drawerAvatar', 'profileAvatar'];
+    avatars.forEach(id => {
+      const el = document.getElementById(id);
+      if (el) {
+        el.style.backgroundImage = 'url(' + dataUrl + ')';
+        el.style.backgroundSize = 'cover';
+        el.style.backgroundPosition = 'center';
+        el.style.color = 'transparent';
+        el.style.fontSize = '0';
+      }
+    });
+    showToast('头像已更新');
+  };
+  reader.readAsDataURL(file);
+  input.value = '';
+}
+
+// 页面加载时恢复头像
+(function restoreAvatar() {
+  const saved = localStorage.getItem('xuanshu_avatar');
+  if (saved) {
+    ['toolbarAvatar', 'drawerAvatar', 'profileAvatar'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) {
+        el.style.backgroundImage = 'url(' + saved + ')';
+        el.style.backgroundSize = 'cover';
+        el.style.backgroundPosition = 'center';
+        el.style.color = 'transparent';
+        el.style.fontSize = '0';
+      }
+    });
+  }
+})();
+
+// ========== 技能市场 ==========
+async function loadSkillMarket() {
+  const el = document.getElementById('sidebarSkillMarket');
+  try {
+    // 获取所有 Agent 的技能
+    const r = await fetch(API + '/skills/list', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({})
+    });
+    const d = await r.json();
+    const skills = d.skills || [];
+
+    let html = '';
+    // 内置技能模板
+    const builtinSkills = [
+      { name: '联网搜索', desc: '使用搜索引擎获取实时信息', icon: '🔍', agent: '搜索Agent' },
+      { name: '代码执行', desc: '在沙箱中运行 Python 代码', icon: '⚡', agent: '代码Agent' },
+      { name: '文件管理', desc: '读写、编辑、删除文件', icon: '📂', agent: '文件Agent' },
+      { name: '浏览器操控', desc: '打开网页、点击、输入、截图', icon: '🧭', agent: '浏览器Agent' },
+      { name: '系统管理', desc: '进程、磁盘、网络、包管理', icon: '🖥️', agent: '电脑Agent' },
+      { name: '手机控制', desc: 'ADB 操控 Android 设备', icon: '📱', agent: '手机Agent' },
+      { name: '记忆管理', desc: '读写 Agent 长期记忆文件', icon: '🧠', agent: '全部' },
+      { name: 'Git 版本', desc: '查看提交、回滚、恢复', icon: '📜', agent: '代码Agent' },
+    ];
+
+    // 内置技能
+    html += '<div class="skill-market-section"><div class="skill-market-label">内置技能</div>';
+    builtinSkills.forEach(s => {
+      html += '<div class="skill-market-item">' +
+        '<span class="skill-market-icon">' + s.icon + '</span>' +
+        '<div class="skill-market-info">' +
+          '<div class="skill-market-name">' + s.name + '</div>' +
+          '<div class="skill-market-desc">' + s.desc + '</div>' +
+        '</div>' +
+        '<span class="skill-market-badge">' + s.agent + '</span>' +
+      '</div>';
+    });
+    html += '</div>';
+
+    // 已学习的技能
+    if (skills.length) {
+      html += '<div class="skill-market-section"><div class="skill-market-label">已学习 (' + skills.length + ')</div>';
+      skills.forEach(s => {
+        html += '<div class="skill-market-item learned" onclick="viewLearnedSkill(\'' + s.agent + '\',\'' + s.id + '\')">' +
+          '<span class="skill-market-icon">📖</span>' +
+          '<div class="skill-market-info">' +
+            '<div class="skill-market-name">' + escapeHtml(s.name) + '</div>' +
+            '<div class="skill-market-desc">' + s.agent + '</div>' +
+          '</div>' +
+        '</div>';
+      });
+      html += '</div>';
+    }
+
+    // 新建技能按钮
+    html += '<div class="skill-market-add" onclick="showNewSkillDialog()">+ 自定义技能</div>';
+
+    el.innerHTML = html;
+  } catch(e) {
+    el.innerHTML = '<div class="file-tree-loading">加载失败</div>';
+  }
+}
+
+function showNewSkillDialog() {
+  const name = prompt('技能名称:');
+  if (!name) return;
+  const agent = prompt('绑定 Agent (搜索Agent/代码Agent/文件Agent/浏览器Agent/电脑Agent/手机Agent):', '代码Agent');
+  if (!agent) return;
+  const content = prompt('技能描述 (Markdown):', '# ' + name + '\n\n## 使用方法\n\n1. ...');
+  if (!content) return;
+  createSkill(agent, name, content);
+}
+
+async function createSkill(agent, name, content) {
+  try {
+    const r = await fetch(API + '/skills/create', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ agent, name, content })
+    });
+    const d = await r.json();
+    if (d.ok) {
+      showToast('技能已创建');
+      loadSkillMarket();
+    } else {
+      showToast(d.error || '创建失败');
+    }
+  } catch(e) { showToast('创建失败'); }
+}
+
+async function viewLearnedSkill(agent, id) {
+  try {
+    const r = await fetch(API + '/skills/read', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ agent, id })
+    });
+    const d = await r.json();
+    if (d.error) { showToast(d.error); return; }
+    showFileContent(d.name || '技能', d.content || JSON.stringify(d, null, 2), 'text');
+  } catch(e) { showToast('读取失败'); }
+}
+
+// ========== 快照导入导出 ==========
+async function exportAll() {
+  try {
+    const r = await fetch(API + '/snapshots/export', { method: 'POST' });
+    const d = await r.json();
+    showToast(d.ok ? '快照已导出' : '导出失败');
+  } catch(e) { showToast('导出失败'); }
+}
+
+async function importAll() {
+  try {
+    const r = await fetch(API + '/snapshots/import', { method: 'POST' });
+    const d = await r.json();
+    showToast(d.ok ? '快照已导入 (+' + (d.imported || 0) + '条)' : '导入失败');
+    loadSidebarMemTree();
+  } catch(e) { showToast('导入失败'); }
+}
+
+function doLogout() {
+  if (!confirm('确定退出登录？')) return;
+  localStorage.removeItem('xuanshu_token');
+  localStorage.removeItem('xuanshu_phone');
+  location.reload();
+}
+
 // ========== 技能管理 ==========
 function escapeHtml(s) {
   const d = document.createElement('div');
@@ -1415,6 +1824,7 @@ async function refreshSkills(agent) {
   });
   const d = await res.json();
   const list = document.getElementById('sidebarSkillList');
+  if (!list) return; // 元素不存在时静默跳过
   if (!d.ok || !d.skills || !d.skills.length) {
     list.innerHTML = '<div style="font-size:13px;color:var(--text-muted);text-align:center;padding:12px">暂无技能</div>';
     return;
@@ -2393,11 +2803,18 @@ function initParticles() {
   resize();
   window.addEventListener('resize', resize);
 
-  // 从 CSS 变量读取 accent color
-  function getAccentColor() {
+  // 粒子颜色（从 CSS 变量读取，兼容 Canvas rgba）
+  function getParticleColor() {
     const style = getComputedStyle(document.documentElement);
-    const accent = style.getPropertyValue('--accent').trim() || 'oklch(0.62 0.20 230)';
-    return accent;
+    const raw = style.getPropertyValue('--neon-cyan').trim() || '#00f0ff';
+    // 解析 hex 或 rgb
+    if (raw.startsWith('#')) {
+      const r = parseInt(raw.slice(1,3), 16);
+      const g = parseInt(raw.slice(3,5), 16);
+      const b = parseInt(raw.slice(5,7), 16);
+      return { r, g, b };
+    }
+    return { r: 0, g: 240, b: 255 };
   }
 
   class Particle {
@@ -2418,11 +2835,10 @@ function initParticles() {
       if (this.x < 0 || this.x > w) this.vx *= -1;
       if (this.y < 0 || this.y > h) this.vy *= -1;
     }
-    draw(ctx, accent) {
+    draw(ctx, color) {
       ctx.beginPath();
       ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
-      ctx.fillStyle = accent.replace(')', ' / ' + this.opacity + ')')
-        .replace('oklch(', 'oklch(');
+      ctx.fillStyle = 'rgba(' + color.r + ',' + color.g + ',' + color.b + ',' + this.opacity + ')';
       ctx.fill();
     }
   }
@@ -2434,11 +2850,11 @@ function initParticles() {
 
   function animate() {
     ctx.clearRect(0, 0, w, h);
-    const accent = getAccentColor();
+    const color = getParticleColor();
 
     particles.forEach(p => {
       p.update();
-      p.draw(ctx, accent);
+      p.draw(ctx, color);
     });
 
     // 连线：近距离粒子之间
@@ -2451,7 +2867,8 @@ function initParticles() {
           ctx.beginPath();
           ctx.moveTo(particles[i].x, particles[i].y);
           ctx.lineTo(particles[j].x, particles[j].y);
-          ctx.strokeStyle = accent.replace(')', ' / ' + (0.06 * (1 - dist/100)) + ')');
+          const lineOpacity = 0.06 * (1 - dist / 100);
+          ctx.strokeStyle = 'rgba(' + color.r + ',' + color.g + ',' + color.b + ',' + lineOpacity + ')';
           ctx.lineWidth = 0.5;
           ctx.stroke();
         }

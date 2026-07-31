@@ -1,13 +1,13 @@
 """玄姝 — 手机号注册/登录模块（SQLite + 阿里云短信 + JWT）"""
 import os, sqlite3, hashlib, time, random, hmac, json, base64, threading
 from datetime import datetime, timedelta
+from typing import Optional
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 # 网络文件系统不支持 SQLite WAL，用 /tmp 兜底
 import hashlib as _hashlib
-import time as _time
 _ws_hash = _hashlib.md5(BASE_DIR.encode()).hexdigest()[:12]
-_TMP_DB = f"/tmp/.xuanshu_users_{_ws_hash}_{int(_time.time())}.db"
+_TMP_DB = f"/tmp/.xuanshu_users_{_ws_hash}.db"
 try:
     _test = sqlite3.connect(_TMP_DB)
     _test.execute("CREATE TABLE IF NOT EXISTS _init_test (x)")
@@ -183,7 +183,7 @@ def _make_token(user_id: int, phone: str) -> str:
     sig_b64 = base64.urlsafe_b64encode(sig).rstrip(b"=").decode()
     return f"{header}.{body}.{sig_b64}"
 
-def verify_token(token: str) -> dict | None:
+def verify_token(token: str) -> Optional[dict]:
     try:
         parts = token.split(".")
         if len(parts) != 3:
@@ -203,7 +203,7 @@ def verify_token(token: str) -> dict | None:
     except Exception:
         return None
 
-def get_user_from_request() -> dict | None:
+def get_user_from_request() -> Optional[dict]:
     """从 Flask request header 解析当前用户"""
     from flask import request
     auth = request.headers.get("Authorization", "")

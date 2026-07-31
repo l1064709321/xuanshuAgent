@@ -1,13 +1,14 @@
-"""玄姝安全沙箱 v1.0 — 隔离代码执行环境
-- 资源限制：CPU 30s, 内存 512MB, 无网络
-- 临时目录隔离，执行后自动清理
+"""玄姝安全沙箱 v2.0 — 多环境执行
+- 默认沙箱：隔离执行，无网络，无文件写入
+- venv 模式：使用指定虚拟环境（有依赖）
+- 本地模式：直接执行（有完整环境时）
 - seccomp 过滤危险系统调用（Linux）
 """
 import os, sys, tempfile, subprocess, shutil, json
 try:
     import resource
 except ImportError:
-    resource = None  # Windows 上没有 resource 模块
+    resource = None
 from pathlib import Path
 from typing import Optional, Dict
 
@@ -15,26 +16,31 @@ _WS = os.path.dirname(os.path.abspath(__file__))
 _SANDBOX_BASE = os.path.join(_WS, ".sandbox")
 os.makedirs(_SANDBOX_BASE, exist_ok=True)
 
-# 项目级虚拟环境 —— agent 执行 Python 代码时统一走此 venv
-if sys.platform == "win32":
-    _VENV_PYTHON = os.path.join(_WS, ".venv", "Scripts", "python.exe")
-else:
-    _VENV_PYTHON = os.path.join(_WS, ".venv", "bin", "python3")
+# ── 自动检测可用的 Python 解释器 ──
+def _detect_python() -> str:
+    """按优先级检测可用的 Python：venv → 系统 python3 → python"""
+    candidates = [
+        os.path.join(_WS, ".venv", "bin", "python3"),
+        os.path.join(_WS, ".venv", "Scripts", "python.exe"),
+        "/usr/bin/python3",
+        "/usr/local/bin/python3",
+        "python3",
+        "python",
+    ]
+    for p in candidates:
+        if os.path.isfile(p) and os.access(p, os.X_OK):
+            return p
+    return sys.executable  # 最后兜底
 
-
-class SandboxError(Exception):
-    pass
+_PYTHON = _detect_python()
 
 
 def _apply_seccomp():
-    """应用 seccomp-bpf 白名单 —— 仅允许安全的系统调用"""
+    """应用 seccomp-bpf 白名单"""
     try:
-        import ctypes
-        import ctypes.util
+        import ctypes, ctypes.util
     except ImportError:
         return
-
-    # x86_64 系统调用号映射
     _NR = {
         "read": 0, "write": 1, "close": 3, "fstat": 5, "lseek": 8,
         "mmap": 9, "mprotect": 10, "munmap": 11, "brk": 12,
@@ -43,47 +49,27 @@ def _apply_seccomp():
         "futex": 202, "clock_gettime": 228, "getpid": 39,
         "arch_prctl": 158, "set_tid_address": 218, "set_robust_list": 273,
     }
-    allowed = list(_NR.keys())
-
     try:
         libc = ctypes.CDLL(ctypes.util.find_library("c"), use_errno=True)
-
         class SockFilter(ctypes.Structure):
             _fields_ = [("code", ctypes.c_uint16), ("jt", ctypes.c_uint8),
                         ("jf", ctypes.c_uint8), ("k", ctypes.c_uint32)]
-
         class SockFprog(ctypes.Structure):
             _fields_ = [("len", ctypes.c_uint16), ("filter", ctypes.POINTER(SockFilter))]
-
-        AUDIT_ARCH = 0xC000003E  # x86_64
-        filters = []
-        # 验证架构
-        filters.append(SockFilter(0x20, 0, 0, 4))
-        filters.append(SockFilter(0x15, 0, len(allowed) + 1, AUDIT_ARCH))
-
-        # 白名单 syscall
-        for name in allowed:
-            nr = _NR.get(name)
-            if nr is None:
-                continue
+        AUDIT_ARCH = 0xC000003E
+        filters = [SockFilter(0x20, 0, 0, 4), SockFilter(0x15, 0, len(_NR) + 1, AUDIT_ARCH)]
+        for name, nr in _NR.items():
             filters.append(SockFilter(0x20, 0, 0, 0))
             filters.append(SockFilter(0x15, 1, 0, nr))
-
-        # 默认 KILL
         filters.append(SockFilter(0x06, 0, 0, 0x80000000))
-
-        filter_array = (SockFilter * len(filters))(*filters)
-        prog = SockFprog(len(filters), filter_array)
-
-        PR_SET_SECCOMP = 22
-        SECCOMP_MODE_FILTER = 2
-        libc.prctl(PR_SET_SECCOMP, SECCOMP_MODE_FILTER, ctypes.byref(prog))
+        arr = (SockFilter * len(filters))(*filters)
+        prog = SockFprog(len(filters), arr)
+        libc.prctl(22, 2, ctypes.byref(prog))
     except Exception:
         pass
 
 
 def _setup_resource_limits():
-    """设置 CPU 30s, 内存 512MB, 子进程上限 8"""
     try:
         resource.setrlimit(resource.RLIMIT_CPU, (30, 30))
         resource.setrlimit(resource.RLIMIT_AS, (512 * 1024 * 1024, 512 * 1024 * 1024))
@@ -94,64 +80,16 @@ def _setup_resource_limits():
 
 
 def _prepare_sandbox_dir() -> str:
-    """创建临时沙箱目录，并注入自检工具模块"""
     sandbox_dir = tempfile.mkdtemp(prefix="sandbox_", dir=_SANDBOX_BASE)
     os.chmod(sandbox_dir, 0o700)
-    # 注入沙箱自检模块
-    _VERIFY_MODULE = '''
-"""沙箱自检模块 — Agent 可调用 verify() 检查沙箱功能是否正常"""
-import sys, json, math
-
-def _check(name, fn):
-    try:
-        fn()
-        return f"  [pass] {name}"
-    except Exception as e:
-        return f"  [FAIL] {name}: {e}"
-
-def run():
-    results = []
-    # 1. 数学计算
-    results.append(_check("math.sqrt", lambda: math.sqrt(16) == 4.0))
-    # 2. JSON 序列化
-    results.append(_check("json.dumps", lambda: json.loads(json.dumps({"a":1}))=={"a":1}))
-    # 3. 字符串处理
-    results.append(_check("str.split", lambda: "a,b,c".split(",")==["a","b","c"]))
-    # 4. 列表推导
-    results.append(_check("list comp", lambda: [x*2 for x in range(5)]==[0,2,4,6,8]))
-    # 5. 禁止模块拦截
-    try:
-        import os
-        results.append("  [FAIL] os import 应被拦截但未拦截!")
-    except ImportError:
-        results.append("  [pass] os 导入已拦截")
-    # 6. 文件写入拦截
-    try:
-        open("_test.txt", "w").write("x")
-        results.append("  [FAIL] 文件写入应被拦截但未拦截!")
-    except PermissionError:
-        results.append("  [pass] 文件写入已拦截")
-    return "\\n".join(results)
-'''
-    with open(os.path.join(sandbox_dir, "verify_sandbox.py"), "w", encoding="utf-8") as f:
-        f.write(_VERIFY_MODULE)
     return sandbox_dir
 
 
-def run_sandboxed(code: str, timeout: int = 30, env: dict = None) -> Dict:
-    """在隔离环境中执行 Python 代码。
-
-    Returns:
-        {"stdout": str, "stderr": str, "exit_code": int, "timed_out": bool, "error": str|None}
-    """
-    sandbox_dir = _prepare_sandbox_dir()
-    script_path = os.path.join(sandbox_dir, "_exec.py")
-
-    # 包装代码：注入安全护栏
-    wrapper = f"""
+def _inject_guard(code: str, sandbox_dir: str) -> str:
+    """注入安全护栏代码"""
+    return f"""
 import sys, os, builtins
 
-# 预加载标准库中被广泛依赖的安全模块，避免其内部 import os/sys 被连锁拦截
 _SAFE_STDLIB = ['math', 'random', 'json', 'datetime', 'collections', 'itertools',
                 'functools', 're', 'enum', 'typing', 'copy', 'hashlib', 'base64',
                 'csv', 'pathlib', 'string', 'textwrap', 'io', 'codecs']
@@ -159,7 +97,6 @@ for _m in _SAFE_STDLIB:
     try: __import__(_m)
     except: pass
 
-# 禁止危险内置函数
 _orig_open = open
 _sandbox_real = os.path.realpath('{sandbox_dir}')
 def _safe_open(file, mode='r', *args, **kwargs):
@@ -173,10 +110,9 @@ def _safe_open(file, mode='r', *args, **kwargs):
         raise PermissionError("沙箱禁止访问外部路径")
     return _orig_open(file, mode, *args, **kwargs)
 
-# 禁止危险模块
 _orig_import = builtins.__import__
 def _safe_import(name, *args, **kwargs):
-    blocked = ['os', 'subprocess', 'shutil', 'socket', 'requests', 'urllib', 
+    blocked = ['os', 'subprocess', 'shutil', 'socket', 'requests', 'urllib',
                'ctypes', 'multiprocessing', 'threading', 'signal', 'pty',
                'fcntl', 'termios', 'posix', 'grp', 'pwd', 'spwd']
     for b in blocked:
@@ -192,6 +128,27 @@ os.chdir('{sandbox_dir}')
 {code}
 """
 
+
+def run_sandboxed(code: str, timeout: int = 30, env: dict = None,
+                  python: str = None, network: bool = False) -> Dict:
+    """在隔离环境中执行 Python 代码。
+
+    Args:
+        code: 要执行的 Python 代码
+        timeout: 超时秒数
+        env: 额外环境变量
+        python: 指定 Python 解释器（None=自动检测）
+        network: 是否允许网络访问（默认禁止）
+
+    Returns:
+        {"stdout": str, "stderr": str, "exit_code": int, "timed_out": bool, "error": str|None}
+    """
+    sandbox_dir = _prepare_sandbox_dir()
+    script_path = os.path.join(sandbox_dir, "_exec.py")
+    py = python or _PYTHON
+
+    wrapper = _inject_guard(code, sandbox_dir)
+
     try:
         with open(script_path, "w", encoding="utf-8") as f:
             f.write(wrapper)
@@ -199,15 +156,23 @@ os.chdir('{sandbox_dir}')
         shutil.rmtree(sandbox_dir, ignore_errors=True)
         return {"stdout": "", "stderr": str(e), "exit_code": -1, "timed_out": False, "error": str(e)}
 
+    exec_env = {
+        **{k: v for k, v in os.environ.items() if k != "PYTHONPATH"},
+        "HOME": sandbox_dir,
+        "PATH": "/usr/bin:/bin",
+        **(env or {}),
+    }
+    if not network:
+        # 无网络模式：通过空 DNS 阻断
+        exec_env["RESOLV_HOST_CONF"] = "/dev/null"
+
     try:
         proc = subprocess.Popen(
-            [_VENV_PYTHON, script_path],
+            [py, script_path],
             stdout=subprocess.PIPE, stderr=subprocess.PIPE,
             text=True, cwd=sandbox_dir,
-            env={**{k:v for k,v in os.environ.items() if k != "PYTHONPATH"},
-                 "HOME": sandbox_dir, "PATH": "/usr/bin:/bin",
-                 **(env or {})},
-            preexec_fn=(lambda: (_setup_resource_limits(), _apply_seccomp())) if sys.platform == "linux" else None,
+            env=exec_env,
+            preexec_fn=(lambda: (_setup_resource_limits(), _apply_seccomp())) if sys.platform == "linux" and not network else None,
         )
         stdout, stderr = proc.communicate(timeout=timeout)
         return {
@@ -220,8 +185,117 @@ os.chdir('{sandbox_dir}')
     except subprocess.TimeoutExpired:
         proc.kill()
         proc.wait()
-        return {"stdout": "", "stderr": "执行超时({}s)".format(timeout), "exit_code": -1, "timed_out": True, "error": "timeout"}
+        return {"stdout": "", "stderr": f"执行超时({timeout}s)", "exit_code": -1, "timed_out": True, "error": "timeout"}
     except Exception as e:
         return {"stdout": "", "stderr": str(e), "exit_code": -1, "timed_out": False, "error": str(e)}
     finally:
         shutil.rmtree(sandbox_dir, ignore_errors=True)
+
+
+def run_in_venv(code: str, venv_path: str = None, timeout: int = 60) -> Dict:
+    """在指定虚拟环境中执行代码（有依赖，不限制网络/文件）。
+
+    Args:
+        code: Python 代码
+        venv_path: venv 路径（None=自动检测 .venv）
+        timeout: 超时秒数
+    """
+    if venv_path is None:
+        venv_path = os.path.join(_WS, ".venv")
+    venv_py = os.path.join(venv_path, "bin", "python3")
+    if not os.path.isfile(venv_py):
+        venv_py = os.path.join(venv_path, "Scripts", "python.exe")
+    if not os.path.isfile(venv_py):
+        return {"stdout": "", "stderr": f"虚拟环境不存在: {venv_path}", "exit_code": -1, "timed_out": False, "error": "venv not found"}
+
+    script = tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False, dir=_SANDBOX_BASE)
+    script.write(code)
+    script.close()
+
+    try:
+        proc = subprocess.run(
+            [venv_py, script.name],
+            capture_output=True, text=True, timeout=timeout,
+            cwd=_WS,
+            env={**os.environ, "VIRTUAL_ENV": venv_path},
+        )
+        return {
+            "stdout": proc.stdout[:5000],
+            "stderr": proc.stderr[:2000],
+            "exit_code": proc.returncode,
+            "timed_out": False,
+            "error": None,
+        }
+    except subprocess.TimeoutExpired:
+        return {"stdout": "", "stderr": f"执行超时({timeout}s)", "exit_code": -1, "timed_out": True, "error": "timeout"}
+    except Exception as e:
+        return {"stdout": "", "stderr": str(e), "exit_code": -1, "timed_out": False, "error": str(e)}
+    finally:
+        try:
+            os.unlink(script.name)
+        except Exception:
+            pass
+
+
+def run_local(code: str, timeout: int = 60) -> Dict:
+    """直接在当前环境执行（无隔离，信任代码时使用）"""
+    script = tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False, dir=_SANDBOX_BASE)
+    script.write(code)
+    script.close()
+    try:
+        proc = subprocess.run(
+            [sys.executable, script.name],
+            capture_output=True, text=True, timeout=timeout, cwd=_WS,
+        )
+        return {
+            "stdout": proc.stdout[:5000],
+            "stderr": proc.stderr[:2000],
+            "exit_code": proc.returncode,
+            "timed_out": False,
+            "error": None,
+        }
+    except subprocess.TimeoutExpired:
+        return {"stdout": "", "stderr": f"执行超时({timeout}s)", "exit_code": -1, "timed_out": True, "error": "timeout"}
+    except Exception as e:
+        return {"stdout": "", "stderr": str(e), "exit_code": -1, "timed_out": False, "error": str(e)}
+    finally:
+        try:
+            os.unlink(script.name)
+        except Exception:
+            pass
+
+
+def create_venv(venv_path: str = None, packages: list = None) -> Dict:
+    """创建虚拟环境并安装依赖包。
+
+    Args:
+        venv_path: 目标路径（None=.venv）
+        packages: 要安装的包列表
+    """
+    if venv_path is None:
+        venv_path = os.path.join(_WS, ".venv")
+    try:
+        subprocess.run([sys.executable, "-m", "venv", venv_path], check=True, timeout=60)
+        venv_py = os.path.join(venv_path, "bin", "python3")
+        if not os.path.isfile(venv_py):
+            venv_py = os.path.join(venv_path, "Scripts", "python.exe")
+        if packages:
+            subprocess.run(
+                [venv_py, "-m", "pip", "install", "-q"] + packages,
+                timeout=120, capture_output=True, text=True,
+            )
+        return {"ok": True, "path": venv_path, "packages": packages or []}
+    except Exception as e:
+        return {"ok": False, "error": str(e)}
+
+
+def get_env_info() -> Dict:
+    """获取当前执行环境信息，供玄姝决策参考"""
+    return {
+        "python": _PYTHON,
+        "sandbox_dir": _SANDBOX_BASE,
+        "has_venv": os.path.isfile(os.path.join(_WS, ".venv", "bin", "python3")),
+        "venv_path": os.path.join(_WS, ".venv"),
+        "platform": sys.platform,
+        "in_docker": os.path.exists("/.dockerenv"),
+    }

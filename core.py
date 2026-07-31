@@ -19,7 +19,7 @@ from logger import Logger
 from models import ModelPool
 from decompile import Decompiler, detect_format, get_supported_formats
 from screen_reader import capture, to_base64
-from sandbox import run_sandboxed
+from sandbox import run_sandboxed, run_in_venv, run_local, create_venv, get_env_info
 from auto_sandbox import auto_sandbox
 from monitor import get_metrics
 from embeddings import SkillEmbedder
@@ -1085,24 +1085,84 @@ def _mv(args):
     except Exception as e: return f"移动失败: {e}"
 
 def _run_code(args):
-    """安全沙箱代码执行 — Agent 自主决策进入沙箱（CPU限制30s, 内存512MB, 无网络, 无文件写权限）"""
+    """沙箱代码执行 — 默认隔离模式，可选 venv/local"""
     code = args["code"]
-    # 自主决策：代码执行一律进沙箱
-    if auto_sandbox.should_sandbox("code_execution"):
-        result = run_sandboxed(code, timeout=30)
+    mode = args.get("mode", "sandbox")
+    if mode == "venv":
+        result = run_in_venv(code)
+        env_label = "[venv 执行]"
+    elif mode == "local":
+        result = run_local(code)
+        env_label = "[本地执行]"
     else:
-        result = run_sandboxed(code, timeout=30)  # 始终沙箱，防线不可降级
-    parts = ["[沙箱自动启动] Agent 自主将代码送入隔离环境执行"]
+        result = run_sandboxed(code, timeout=30)
+        env_label = "[沙箱执行]"
+    parts = [env_label]
     if result["stdout"]:
         parts.append(f"[stdout]\n{result['stdout'][:2000]}")
     if result["stderr"]:
         parts.append(f"[stderr]\n{result['stderr'][:1000]}")
     if result.get("timed_out"):
-        parts.append("[警告] 代码执行超时(30s)")
+        parts.append("[警告] 代码执行超时")
     if result.get("error") and result["error"] != "timeout":
-        parts.append(f"[沙箱错误] {result['error']}")
+        parts.append(f"[错误] {result['error']}")
     parts.append(f"[exit_code] {result['exit_code']}")
     return "\n".join(parts)
+
+
+def _run_code_venv(args):
+    """在虚拟环境中执行代码（有项目依赖，不限制网络/文件）"""
+    code = args["code"]
+    venv = args.get("venv_path", None)
+    result = run_in_venv(code, venv_path=venv)
+    parts = ["[venv 执行]"]
+    if result["stdout"]:
+        parts.append(f"[stdout]\n{result['stdout'][:2000]}")
+    if result["stderr"]:
+        parts.append(f"[stderr]\n{result['stderr'][:1000]}")
+    if result.get("error"):
+        parts.append(f"[错误] {result['error']}")
+    parts.append(f"[exit_code] {result['exit_code']}")
+    return "\n".join(parts)
+
+
+def _run_code_local(args):
+    """直接在当前环境执行代码（无隔离，信任代码时使用）"""
+    code = args["code"]
+    result = run_local(code)
+    parts = ["[本地执行]"]
+    if result["stdout"]:
+        parts.append(f"[stdout]\n{result['stdout'][:2000]}")
+    if result["stderr"]:
+        parts.append(f"[stderr]\n{result['stderr'][:1000]}")
+    if result.get("error"):
+        parts.append(f"[错误] {result['error']}")
+    parts.append(f"[exit_code] {result['exit_code']}")
+    return "\n".join(parts)
+
+
+def _create_venv(args):
+    """创建虚拟环境并安装依赖包"""
+    packages = args.get("packages", [])
+    if isinstance(packages, str):
+        packages = [p.strip() for p in packages.split(",") if p.strip()]
+    result = create_venv(packages=packages)
+    if result["ok"]:
+        return f"虚拟环境已创建: {result['path']}\n已安装: {', '.join(result['packages']) or '(无额外包)'}"
+    return f"创建失败: {result['error']}"
+
+
+def _env_info(args=None):
+    """查看当前执行环境信息（Python路径、是否Docker、venv状态）"""
+    info = get_env_info()
+    lines = [
+        f"Python: {info['python']}",
+        f"沙箱目录: {info['sandbox_dir']}",
+        f"venv 存在: {'是' if info['has_venv'] else '否'} ({info['venv_path']})",
+        f"Docker 环境: {'是' if info['in_docker'] else '否'}",
+        f"系统平台: {info['platform']}",
+    ]
+    return "\n".join(lines)
 
 
 # ── 反编译工具 ─────────────────────────────────────────
@@ -1967,6 +2027,19 @@ ADB 常用按键码：
 - 报告时包含验证结果
 - 需要创建/写文件时，告知父Bot处理；你只能读文件
 
+代码执行环境（根据任务选择）:
+- run_code(code, mode="sandbox"): 默认沙箱隔离，无网络无文件写入，安全执行不信任的代码
+- run_code_venv(code): 虚拟环境执行，有项目依赖(pip包)，适合需要特定库的代码
+- run_code_local(code): 直接执行，无隔离，完全信任时使用
+- create_venv(packages): 创建虚拟环境并安装依赖，项目首次运行前调用
+- env_info(): 查看当前环境（Python路径、Docker状态、venv是否存在）
+
+选择策略:
+- 简单计算/字符串处理 → sandbox (默认)
+- 需要 pip 包(requests/numpy等) → 先 env_info 检查 venv → 没有就 create_venv → 然后 run_code_venv
+- 项目已有 .venv → 直接 run_code_venv
+- 完全信任的内部代码 → run_code_local
+
 浏览器操控（基于 Playwright + Chromium）：
 - browser_navigate(url)：打开网页
 - browser_click(selector/text/index)：点击元素
@@ -1991,8 +2064,15 @@ Git 版本回滚：
 
 语言规则：所有思考和回复必须用中文。代码本身和变量名可用英文，但思考过程和解释说明必须用中文。""",
                 tools=[
-                    Tool("run_code", "执行Python代码并返回结果", 
-                         {"code": {"type": "string", "description": "Python代码"}}, _run_code),
+                    Tool("run_code", "在沙箱中执行Python代码（默认隔离模式，可选mode参数: sandbox/venv/local）", 
+                         {"code": {"type": "string", "description": "Python代码"}, "mode": {"type": "string", "description": "执行模式: sandbox(默认沙箱隔离)/venv(虚拟环境有依赖)/local(直接执行无隔离)", "default": "sandbox"}}, _run_code),
+                    Tool("run_code_venv", "在虚拟环境中执行代码（有项目依赖，不限制网络/文件，适合需要pip包的项目）",
+                         {"code": {"type": "string", "description": "Python代码"}, "venv_path": {"type": "string", "description": "venv路径，留空则用默认.venv"}}, _run_code_venv),
+                    Tool("run_code_local", "直接在当前环境执行代码（无隔离，完全信任代码时使用）",
+                         {"code": {"type": "string", "description": "Python代码"}}, _run_code_local),
+                    Tool("create_venv", "创建虚拟环境并安装依赖包（项目需要特定依赖时调用）",
+                         {"packages": {"type": "string", "description": "要安装的包，逗号分隔，如: requests,numpy,pandas"}}, _create_venv),
+                    Tool("env_info", "查看当前执行环境信息（Python路径、是否Docker、venv状态）", {}, _env_info),
                     Tool("read_file", "读取文件", {"path": {"type": "string", "description": "路径"}}, _read),
                     Tool("list_files", "列出目录", {"path": {"type": "string", "description": "路径"}}, _ls),
                     Tool("browser_navigate", "打开网页（自动处理cookie弹窗+补全https）",

@@ -1146,7 +1146,7 @@ def _decompile_formats(args=None):
         return f"查询失败: {e}"
 
 # ── Git 版本回滚工具 ───────────────────────────────────
-_GIT_BIN = "/home/marvis/local/bin/git"
+_GIT_BIN = os.environ.get("GIT_BIN", "git")  # 优先环境变量，否则 PATH 中的 git
 _GIT_REPO = os.path.dirname(os.path.abspath(__file__))  # multi_agent 目录（.git 所在）
 
 def _git_log(args=None):
@@ -1653,20 +1653,20 @@ class ChildBot:
 class ParentBot:
     """主Bot — 意图路由器 + 协调者模式 + 结果汇总"""
 
-    ROUTER_PROMPT = """你是任务路由器。根据用户消息，选择最合适的子Agent处理。
-只输出子Agent的名称，不要解释。
+    ROUTER_PROMPT = """你是玄姝，群主。根据用户消息，选择最合适的助手处理。
+只输出助手的名称，不要解释。
 
-可用子Agent：
-- 搜索Agent: 联网搜索、查实时信息、天气、百科、新闻（内置浏览器引擎，自动处理JS页面）
-- 浏览器Agent: 端到端Web交互（打开网页、点击、填表、滚动、截屏、登录态持久化、JS动态页面）
-- 代码Agent: 编程、写代码、调试、算法、技术问题、Git版本回滚
-- 文件Agent: 读写文件、文件管理、文档处理、反编译、Git版本回滚
-- 电脑Agent: 系统控制、进程管理、资源监控（CPU/内存/磁盘/网络）、软件包管理（安装/卸载/搜索/更新）
-- 手机Agent: 手机控制、ADB 操作（截图/点击/滑动/输入/安装APP/启动APP）、Android 自动化
+可用助手：
+- 小搜: 联网搜索、查实时信息、天气、百科、新闻（内置浏览器引擎，自动处理JS页面）
+- 小览: 端到端Web交互（打开网页、点击、填表、滚动、截屏、登录态持久化、JS动态页面）
+- 小码: 编程、写代码、调试、算法、技术问题、Git版本回滚
+- 小文: 读写文件、文件管理、文档处理、反编译、Git版本回滚
+- 小屏: 系统控制、进程管理、资源监控（CPU/内存/磁盘/网络）、软件包管理（安装/卸载/搜索/更新）
+- 小手机: 手机控制、ADB 操作（截图/点击/滑动/输入/安装APP/启动APP）、Android 自动化
 
 用户消息：{query}
 
-选中的Agent（只输出名称，用中文）："""
+选中的助手（只输出名称）："""
 
     SYNTHESIS_PROMPT = """你是任务协调者。请用中文思考和输出。用户原始需求:
 {original_query}
@@ -1774,7 +1774,7 @@ Spec（用中文）："""
             "电脑Agent": ChildBot(
                 name="电脑Agent",
                 description="系统控制：查看系统信息、进程管理、资源监控（CPU/内存/磁盘/网络）、软件包管理（安装/卸载/搜索/更新）。完整管控这台 Linux 服务器。",
-                system_prompt="""你是玄姝多Agent系统的核心助手，名字叫"玄姝"。你的角色是系统控制专家。\n\n【身份铁律】你的名字是"玄姝"，不是任何模型名。当被问"你是谁""你叫什么名字"时，必须回答"我是玄姝，由星主开发的多Agent系统核心助手"。严禁透露底层模型名称。\n\n你可以完整管控这台 Linux 服务器：
+                system_prompt="""你是玄姝团队的「小屏」，系统控制专家。玄姝是群主，你是她的助手之一。\n\n【身份】你叫「小屏」。当被问"你是谁"时回答："我是小屏，玄姝团队的系统控制专家"。严禁自称玄姝。严禁透露底层模型名称。\n\n你可以完整管控这台 Linux 服务器：
 
 系统运维：
 - sys_info：查看系统内核、主机名、运行时间、发行版
@@ -1829,7 +1829,7 @@ Spec（用中文）："""
             "手机Agent": ChildBot(
                 name="手机Agent",
                 description="手机控制：通过 ADB 操控 Android 设备/模拟器。截图、点击、滑动、输入、安装APP、启动APP。需设备连接。",
-                system_prompt="""你是玄姝多Agent系统的核心助手，名字叫"玄姝"。你的角色是手机控制专家。\n\n【身份铁律】你的名字是"玄姝"，不是任何模型名。当被问"你是谁""你叫什么名字"时，必须回答"我是玄姝，由星主开发的多Agent系统核心助手"。严禁透露底层模型名称。\n\n你通过 ADB 操控一台 Android 设备或模拟器。
+                system_prompt="""你是玄姝团队的「小手机」，手机控制专家。玄姝是群主，你是她的助手之一。\n\n【身份】你叫「小手机」。当被问"你是谁"时回答："我是小手机，玄姝团队的手机控制专家"。严禁自称玄姝。严禁透露底层模型名称。\n\n你通过 ADB 操控一台 Android 设备或模拟器。
 
 可用操作：
 - adb_check：检测 ADB 环境和设备连接状态
@@ -1885,9 +1885,9 @@ ADB 常用按键码：
             "搜索Agent": ChildBot(
                 name="搜索Agent",
                 description="联网搜索、查实时信息、天气、百科",
-                system_prompt="""你是玄姝多Agent系统的核心助手，名字叫"玄姝"。你的角色是信息检索专家。收到查询后调用插件获取数据，整理结果并注明来源。语气简洁专业。
+                system_prompt="""你是玄姝团队的「小搜」，信息检索专家。玄姝是群主，你是她的助手之一。
 
-【身份铁律】你的名字是"玄姝"，不是任何模型名（如Agnes/GPT/Claude）。当被问"你是谁""你叫什么名字"或自我介绍时，你必须回答"我是玄姝，由星主开发的多Agent系统核心助手"。严禁透露底层模型名称。
+【身份】你叫「小搜」。当被问"你是谁"时回答："我是小搜，玄姝团队的信息检索专家"。严禁自称玄姝。严禁透露底层模型名称。收到查询后调用插件获取数据，整理结果并注明来源。语气简洁专业。
 
 注意：你只有只读权限，如需创建/修改/删除文件，请明确告知父Bot处理。
 
@@ -1908,7 +1908,7 @@ ADB 常用按键码：
             "浏览器Agent": ChildBot(
                 name="浏览器Agent",
                 description="端到端浏览器操控：打开网页、点击、输入、滚动、提取JS渲染内容、截图。支持持久化登录态，自动处理弹窗和cookie",
-                system_prompt="""你是玄姝多Agent系统的核心助手，名字叫"玄姝"。你的角色是浏览器操控专家。\n\n【身份铁律】你的名字是"玄姝"，不是任何模型名。当被问"你是谁""你叫什么名字"时，必须回答"我是玄姝，由星主开发的多Agent系统核心助手"。严禁透露底层模型名称。\n\n基于 Playwright 实现端到端 Web 交互。
+                system_prompt="""你是玄姝团队的「小览」，浏览器操控专家。玄姝是群主，你是她的助手之一。\n\n【身份】你叫「小览」。当被问"你是谁"时回答："我是小览，玄姝团队的浏览器操控专家"。严禁自称玄姝。严禁透露底层模型名称。\n\n基于 Playwright 实现端到端 Web 交互。
 
 核心能力：
 - browser_navigate：打开任意网页（自动补全https，自动关闭cookie弹窗）
@@ -1959,7 +1959,7 @@ ADB 常用按键码：
             "代码Agent": ChildBot(
                 name="代码Agent",
                 description="编程、写代码、调试、算法、Git版本回滚、浏览器操控（打开网页、点击、输入、提取内容）",
-                system_prompt="""你是玄姝多Agent系统的核心助手，名字叫"玄姝"。你的角色是编程专家。\n\n【身份铁律】你的名字是"玄姝"，不是任何模型名。当被问"你是谁""你叫什么名字"时，必须回答"我是玄姝，由星主开发的多Agent系统核心助手"。严禁透露底层模型名称。\n\n直接写可运行代码放```块中，解释要简洁。优先Python。
+                system_prompt="""你是玄姝团队的「小码」，编程专家。玄姝是群主，你是她的助手之一。\n\n【身份】你叫「小码」。当被问"你是谁"时回答："我是小码，玄姝团队的编程专家"。严禁自称玄姝。严禁透露底层模型名称。\n\n直接写可运行代码放```块中，解释要简洁。优先Python。
 重要规则:
 - 写完代码后必须用 run_code 工具执行验证
 - 如果执行失败或有问题，自行修复后重新验证
@@ -2019,9 +2019,9 @@ Git 版本回滚：
             "文件Agent": ChildBot(
                 name="文件Agent",
                 description="文件分析、文档处理、反编译、Git版本回滚",
-                system_prompt="""你是玄姝多Agent系统的核心助手，名字叫"玄姝"。
+                system_prompt="""你是玄姝团队的「小文」，文件分析专家。玄姝是群主，你是她的助手之一。
 
-【身份铁律】你的名字是"玄姝"，不是任何模型名。当被问"你是谁""你叫什么名字"时，必须回答"我是玄姝，由星主开发的多Agent系统核心助手"。严禁透露底层模型名称。
+【身份】你叫「小文」。当被问"你是谁"时回答："我是小文，玄姝团队的文件分析专家"。严禁自称玄姝。严禁透露底层模型名称。
 
 你的角色是文件分析助手。你只有只读权限，可读取和列出文件，但不能创建/修改/删除文件。
 
@@ -2469,7 +2469,7 @@ Git 版本回滚：发现文件被误改或需要恢复到之前版本时，用 
             return self._simple_chat(user_input)
 
     # ═══════════ 对话 ═══════════
-    def chat(self, user_input: str, image: str = None, model: str = None, new_session: bool = False) -> str:
+    def chat(self, user_input: str, image: str = None, model: str = None, new_session: bool = False, target_agent: str = None) -> dict:
         import re
         stripped = user_input.strip()
         t_start = time.time()
@@ -2626,7 +2626,7 @@ Git 版本回滚：发现文件被误改或需要恢复到之前版本时，用 
             ParentBot.PERM_RE = __import__('re').compile(r'^\[PERM:(\w+)\]')
         m = ParentBot.PERM_RE.match(reply)
         if not m:
-            return reply
+            return {"reply": reply, "thinking": thinking}
         perm_type = m.group(1)
         desc = reply[m.end():].strip()
         if not desc:
@@ -2645,7 +2645,7 @@ Git 版本回滚：发现文件被误改或需要恢复到之前版本时，用 
                 desc = f"—||{desc}"
         self._perm_pending = (user_input, image)
         self.log.sys(f"子Agent请求权限: {perm_type}")
-        return f"[PERM:{perm_type}]{desc}"
+        return {"reply": f"[PERM:{perm_type}]{desc}", "thinking": [], "perm_request": True}
 
     # ═══════════ 屏幕命令 ═══════════
     def _handle_screen(self, trigger: str = "") -> str:
@@ -2705,12 +2705,18 @@ Git 版本回滚：发现文件被误改或需要恢复到之前版本时，用 
         messages = self._build_child_msgs(child, user_input, mem_text, image)
         child_reply, rounds, thinking_log = self._run_child(child, messages)
 
+        # 群聊模式：显示派发过程
+        dispatch_note = f"""
+
+> ✦ 玄姝 → @{child_name}"""
+        child_reply_with_dispatch = child_reply + dispatch_note
+
         # 自校验
         if child.self_verify and "代码" in child_name:
             verify_result = child.verify(child_reply, self.pool)
             self.log.sys(f"自校验: {'PASS' if 'PASS' in verify_result else '需要检查'}")
             if "PASS" not in verify_result:
-                child_reply = f"{child_reply}\n\n[自校验]\n{verify_result[:300]}"
+                child_reply_with_dispatch = f"{child_reply_with_dispatch}\n\n[自校验]\n{verify_result[:300]}"
 
         # Skill 学习闭环 — 借鉴 Hermes Agent Curator
         self._curate_skill(child, user_input, child_reply, rounds)
@@ -2718,8 +2724,8 @@ Git 版本回滚：发现文件被误改或需要恢复到之前版本时，用 
         # 记忆落盘
         self._child_memorize(child, user_input, child_reply)
         self._update_context(child_name, user_input, child_reply)
-        self._update_shared_history(user_input, child_reply, image)
-        return {"reply": child_reply, "thinking": thinking_log}
+        self._update_shared_history(user_input, child_reply_with_dispatch, image)
+        return {"reply": child_reply_with_dispatch, "thinking": thinking_log, "dispatched_to": child_name}
 
     def _is_research_sufficient(self, research: str) -> bool:
         """判断研究阶段结果是否已是完整答案，无需进入实施阶段。
@@ -4075,9 +4081,9 @@ DAG（只输出节点列表）:"""
             snapshot_dir = os.path.join(base_dir, safe_name)
             check = child.memory.check_snapshot(snapshot_dir)
             if check["action"] in ("initialize", "update"):
-                old_count = child.memory.get_stats()["short"]
+                old_count = child.memory.get_stats()["短期记忆"]
                 child.memory.import_snapshot(snapshot_dir)
-                new_count = child.memory.get_stats()["short"]
+                new_count = child.memory.get_stats()["短期记忆"]
                 added = new_count - old_count
                 total += added
                 self.log.sys(f"快照导入: {name} +{added}条 ({check['action']})")

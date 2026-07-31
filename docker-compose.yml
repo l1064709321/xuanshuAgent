@@ -1,8 +1,34 @@
-# 玄姝 Agent — 无需拉源码，compose 拉起
+# ═══════════════════════════════════════════
+#  玄姝 Agent — Docker Compose
+#  一键启动: docker compose up -d
+# ═══════════════════════════════════════════
 version: "3.8"
 services:
   xuanshu:
-    image: l1064709321/xuanshu-agent:latest
+    build: .
+    image: xuanshu-agent:latest
+    container_name: xuanshu-agent
     ports:
       - "8901:8901"
     restart: unless-stopped
+    environment:
+      - XS_HOST=0.0.0.0
+      - XS_PORT=8901
+      # 可选：通过环境变量传入 API Key（也可在页面配置）
+      # - AGNES_API_KEY=sk-xxx
+      # - OPENAI_API_KEY=sk-xxx
+      # - JWT_SECRET=your-secret
+    volumes:
+      # 持久化：记忆、数据库、工作流 不随容器销毁丢失
+      - xuanshu-memdir:/app/.memdir
+      - xuanshu-memory:/app/.memory
+      - xuanshu-workflows:/app/workflows
+      - xuanshu-workspace:/app/workspace_files
+      - xuanshu-skills:/app/.skills
+
+volumes:
+  xuanshu-memdir:
+  xuanshu-memory:
+  xuanshu-workflows:
+  xuanshu-workspace:
+  xuanshu-skills:

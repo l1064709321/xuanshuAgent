@@ -1,9 +1,13 @@
+.git
 .venv
 __pycache__
 *.pyc
-.memory
+.openclaw
+.sandbox
 .memdir
-decompile/__pycache__
+.memory
 *.db
-.git
-temp
+.env
+node_modules
+.DS_Store
+*.log

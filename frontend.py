@@ -15,7 +15,8 @@ import traceback as _tb
 @app.errorhandler(Exception)
 def _global_error_handler(e):
     _tb.print_exc()
-    return jsonify({"error": str(e), "traceback": _tb.format_exc()}), 500
+    # 生产环境不向客户端暴露完整 traceback，仅记录到日志
+    return jsonify({"error": str(e)}), 500
 
 # ── 记忆文件夹路径 ──
 _MEMDIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".memdir")
@@ -81,10 +82,9 @@ pool.add_custom(
     base_url="https://apihub.agnes-ai.com/v1",
     provider="自定义",
 )
-pool.set_model_key(
-    "_custom_agnes",
-    "sk-LWNIQDlVgf3EBfr2JaQ1zRYcPQoF2YtUOIqLjOrlp5Pd3Eh0",
-)
+_agnes_key = os.environ.get("AGNES_API_KEY", "")
+if _agnes_key:
+    pool.set_model_key("_custom_agnes", _agnes_key)
 pool.set_default("_custom_agnes")
 
 bot = ParentBot(pool=pool, verbose=False, coordinator_mode=True)
@@ -312,6 +312,7 @@ def chat():
         "reply": result["reply"],
         "thinking": result.get("thinking", []),
         "agent": agent_name,
+        "dispatched_to": result.get("dispatched_to", agent_name),
         "model": _model(),
         "coordinator_mode": bot.coordinator_mode,
     })
@@ -942,7 +943,7 @@ def read_file_v2():
 def git_log():
     try:
         r = subprocess.run(
-            ["/home/marvis/local/bin/git", "log", "--oneline", "-15", "--format=%h|%s|%ai"],
+            ["git", "log", "--oneline", "-15", "--format=%h|%s|%ai"],
             capture_output=True, text=True, timeout=5,
             cwd=os.path.dirname(os.path.abspath(__file__))
         )
@@ -961,7 +962,7 @@ def git_log():
 def git_status():
     try:
         r = subprocess.run(
-            ["/home/marvis/local/bin/git", "status", "--porcelain"],
+            ["git", "status", "--porcelain"],
             capture_output=True, text=True, timeout=5,
             cwd=os.path.dirname(os.path.abspath(__file__))
         )
@@ -979,18 +980,18 @@ def git_revert():
     if not target:
         return jsonify({"ok": False, "error": "缺少目标 commit hash"})
     try:
-        subprocess.run(["/home/marvis/local/bin/git", "stash", "push", "-u", "-m", "auto-stash-before-revert"],
+        subprocess.run(["git", "stash", "push", "-u", "-m", "auto-stash-before-revert"],
                        capture_output=True, timeout=10,
                        cwd=os.path.dirname(os.path.abspath(__file__)))
         r = subprocess.run(
-            ["/home/marvis/local/bin/git", "reset", "--hard", target],
+            ["git", "reset", "--hard", target],
             capture_output=True, text=True, timeout=10,
             cwd=os.path.dirname(os.path.abspath(__file__))
         )
         if r.returncode != 0:
             return jsonify({"ok": False, "error": r.stderr.strip()})
         r2 = subprocess.run(
-            ["/home/marvis/local/bin/git", "log", "--oneline", "-1", "--format=%h %s"],
+            ["git", "log", "--oneline", "-1", "--format=%h %s"],
             capture_output=True, text=True, timeout=5,
             cwd=os.path.dirname(os.path.abspath(__file__))
         )
@@ -1002,13 +1003,13 @@ def git_revert():
 def git_revert_restore():
     try:
         r = subprocess.run(
-            ["/home/marvis/local/bin/git", "stash", "list"],
+            ["git", "stash", "list"],
             capture_output=True, text=True, timeout=5,
             cwd=os.path.dirname(os.path.abspath(__file__))
         )
         if not r.stdout.strip():
             return jsonify({"ok": False, "error": "没有可恢复的 stash"})
-        subprocess.run(["/home/marvis/local/bin/git", "stash", "pop"], capture_output=True, timeout=10,
+        subprocess.run(["git", "stash", "pop"], capture_output=True, timeout=10,
                        cwd=os.path.dirname(os.path.abspath(__file__)))
         return jsonify({"ok": True, "message": "已恢复回滚前状态"})
     except Exception as e:

@@ -22,3 +22,5 @@ m2.7_test.txt
 test_m2.7.txt
 temp/
 .browser_state.json
+.openclaw/
+preview_server.py

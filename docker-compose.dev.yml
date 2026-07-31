@@ -1,0 +1,19 @@
+# ═══════════════════════════════════════════
+#  玄姝 Agent — 开发模式 Compose 覆盖
+#  用法: docker compose -f docker-compose.yml -f docker-compose.dev.yml up
+#  效果: 源码修改实时生效，无需重新 build
+# ═══════════════════════════════════════════
+version: "3.8"
+services:
+  xuanshu:
+    volumes:
+      # 源码挂载：本地改代码 → 容器内实时生效
+      - .:/app
+      # 但排除这些目录（用 named volume 覆盖容器内的同名路径）
+      - xuanshu-memdir:/app/.memdir
+      - xuanshu-memory:/app/.memory
+      - xuanshu-workflows:/app/workflows
+      - xuanshu-workspace:/app/workspace_files
+      - xuanshu-skills:/app/.skills
+      - /app/.venv        # 排除本地 venv，用容器内的
+      - /app/__pycache__  # 排除 pycache

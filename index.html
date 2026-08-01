@@ -1266,7 +1266,7 @@ loadSidebarAvatar();
 // ========== 对话 ==========
 async function send() {
   const text = inp.value.trim();
-  const btn = document.querySelector('.send-btn');
+  const btn = document.querySelector('.pill-send');
   if (!text) return;
   inp.value = '';
   addBubble('user', text);

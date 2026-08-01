@@ -612,6 +612,133 @@ body::after {
 /* ── u-flex ── */
 .u-flex-1 { flex: 1; }
 
+/* ── Welcome / Empty State ── */
+.welcome {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+}
+.empty-state {
+  text-align: center;
+}
+.greeting {
+  font-size: 28px;
+  font-weight: 700;
+  font-family: 'Noto Serif SC', serif;
+  color: var(--neon-cyan);
+  letter-spacing: 4px;
+  margin-bottom: 8px;
+  text-shadow: 0 0 20px rgba(0,240,255,0.3);
+}
+.subtitle {
+  font-size: 13px;
+  color: var(--text-dim);
+  letter-spacing: 1px;
+}
+.conversation-empty {
+  min-height: 200px;
+}
+
+/* ── Bottom Nav (Mobile) ── */
+.bottom-nav {
+  display: none;
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  z-index: 20;
+  padding: 4px 0 env(safe-area-inset-bottom, 0);
+}
+.bottom-nav-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 8px 0;
+  font-size: 10px;
+  color: var(--text-dim);
+  background: none;
+  border: none;
+  cursor: pointer;
+  transition: color var(--transition);
+}
+.bottom-nav-item.active {
+  color: var(--neon-cyan);
+}
+.bottom-nav-item .nav-icon {
+  font-size: 16px;
+}
+
+/* ── File Viewer ── */
+.file-viewer {
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  max-height: 50vh;
+  background: var(--surface);
+  border-top: 1px solid var(--border-strong);
+  display: flex;
+  flex-direction: column;
+  z-index: 15;
+}
+.file-viewer-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.file-viewer-path {
+  flex: 1;
+  font-size: 12px;
+  font-family: var(--mono);
+  color: var(--neon-cyan);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.file-viewer-close {
+  background: none;
+  border: none;
+  color: var(--text-dim);
+  font-size: 18px;
+  cursor: pointer;
+  padding: 2px 6px;
+}
+.file-viewer-meta {
+  font-size: 11px;
+  color: var(--text-dim);
+  padding: 4px 12px;
+  border-bottom: 1px solid var(--border);
+}
+.file-viewer-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px;
+  font-size: 13px;
+  font-family: var(--mono);
+  color: var(--text);
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+/* ── Token Badge ── */
+.token-badge {
+  font-size: 10px;
+  color: var(--text-dim);
+  padding: 2px 8px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  flex-shrink: 0;
+}
+
+@media (max-width: 768px) {
+  .bottom-nav { display: flex; }
+}
+
 /* ── Top Bar ── */
 .top-bar {
   display: flex;

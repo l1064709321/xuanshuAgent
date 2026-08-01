@@ -10,15 +10,15 @@
 
 ## 快速开始
 
-### Docker（推荐）
+### 一键启动（推荐）
 
 ```bash
 git clone https://gitee.com/l1064709321/xuanshuAgent.git
 cd xuanshuAgent
-docker compose up -d
+bash xuanshu
 ```
 
-访问 http://localhost:8901。
+脚本自动检测并安装 Docker → 构建镜像（全量依赖）→ 启动服务。访问 http://localhost:8901。
 
 ### 手动安装
 

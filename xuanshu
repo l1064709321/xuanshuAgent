@@ -1,89 +1,36 @@
 #!/bin/bash
-# 玄姝 Agent — 一键启动
-# 优先 Docker，没有 Docker 则用 Python 直接跑
 set -e
+cd "$(dirname "$0")"
+echo "玄姝 Agent 启动中..."
 
-log() { echo "[玄姝] $*"; }
-
-PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-cd "$PROJECT_DIR"
-
-echo "╔══════════════════════════════════════╗"
-echo "║       玄姝 Agent 启动中...          ║"
-echo "╚══════════════════════════════════════╝"
-
-# === 1. 检测 Docker ===
+# 检测 Docker
 if command -v docker &>/dev/null; then
-    log "检测到 Docker，使用容器模式启动"
-    if command -v docker-compose &>/dev/null; then
-        docker-compose up -d
-    elif docker compose version &>/dev/null 2>&1; then
-        docker compose up -d
-    else
-        log "构建镜像..."
-        docker build -t xuanshu-agent .
-        log "启动容器..."
-        docker rm -f xuanshu 2>/dev/null || true
-        docker run -d -p 8901:8901 --name xuanshu xuanshu-agent
-    fi
-    log "服务已启动 → http://localhost:8901"
-    log "查看日志: docker logs -f xuanshu"
+    docker compose up -d 2>/dev/null || { docker build -t xuanshu-agent . && docker run -d -p 8901:8901 --name xuanshu xuanshu-agent; }
+    echo "已启动 → http://localhost:8901"
     exit 0
 fi
 
-# === 2. 没有 Docker，用 Python 直接跑 ===
-log "未检测到 Docker，使用 Python 模式启动"
-
 # 检测 Python
 PYTHON=""
-for cmd in python3.12 python3.11 python3.10 python3.9 python3.8 python3 python; do
-    if command -v "$cmd" &>/dev/null; then
-        if "$cmd" -c "import sys; sys.exit(0 if sys.version_info >= (3,8) else 1)" &>/dev/null; then
-            PYTHON="$cmd"
-            break
-        fi
+for cmd in python3 python; do
+    if command -v "$cmd" &>/dev/null && "$cmd" -c "import sys; sys.exit(0 if sys.version_info>=(3,8) else 1)" 2>/dev/null; then
+        PYTHON="$cmd"
+        break
     fi
 done
+[ -z "$PYTHON" ] && echo "错误: 需要 Python 3.8+ 或 Docker" && exit 1
+echo "Python: $PYTHON ($($PYTHON --version 2>&1))"
 
-if [ -z "$PYTHON" ]; then
-    log "错误: 未找到 Python 3.8+"
-    log "请安装: sudo apt install python3 python3-pip python3-venv"
+# 安装依赖（先试镜像，失败用官方源）
+echo "安装依赖..."
+$PYTHON -m pip install -r requirements.txt -q -i https://pypi.tuna.tsinghua.edu.cn/simple 2>/dev/null || \
+$PYTHON -m pip install -r requirements.txt -q || {
+    echo "pip 安装失败，请手动运行: $PYTHON -m pip install -r requirements.txt"
     exit 1
-fi
+}
 
-log "Python: $PYTHON ($($PYTHON --version 2>&1))"
+# 验证
+$PYTHON -c "import flask" 2>/dev/null || { echo "错误: Flask 安装失败"; exit 1; }
 
-# 虚拟环境
-if [ ! -f ".venv/bin/python3" ] && [ ! -f ".venv/bin/python" ]; then
-    log "创建虚拟环境..."
-    $PYTHON -m venv .venv
-    if [ ! -f ".venv/bin/python3" ] && [ ! -f ".venv/bin/python" ]; then
-        log "错误: 虚拟环境创建失败"
-        exit 1
-    fi
-fi
-
-VENV_PY=".venv/bin/python3"
-[ -f "$VENV_PY" ] || VENV_PY=".venv/bin/python"
-
-# 升级 pip
-$VENV_PY -m pip install --upgrade pip -q 2>/dev/null || true
-
-# 安装依赖 — 先试官方源，失败了换清华镜像
-log "安装依赖..."
-if ! $VENV_PY -m pip install -r requirements.txt -q; then
-    log "官方源失败，切换清华镜像..."
-    $VENV_PY -m pip install -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple
-fi
-
-# 验证 Flask
-if ! $VENV_PY -c "import flask" &>/dev/null; then
-    log "错误: Flask 安装不完整"
-    exit 1
-fi
-
-# 启动
-log "启动服务 (端口 8901)..."
-log "访问: http://localhost:8901"
-log "按 Ctrl+C 停止"
-$VENV_PY frontend.py
+echo "已启动 → http://localhost:8901"
+$PYTHON frontend.py

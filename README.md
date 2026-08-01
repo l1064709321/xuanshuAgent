@@ -1,6 +1,6 @@
 # 玄姝 (Xuanshu) — 多 Agent 协作系统
 
-[![Python](https://img.shields.io/badge/Python-3.10+-3776AB?logo=python&logoColor=white)](https://www.python.org/)
+[![Python](https://img.shields.io/badge/Python-3.8+-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SSE](https://img.shields.io/badge/协议-SSE-FF6B35)](#)
 [![REST](https://img.shields.io/badge/协议-REST-009688)](#)
@@ -20,9 +20,9 @@ docker compose up -d
 
 访问 http://localhost:8901。
 
-如果没有 Docker，用启动脚本（自动检测并安装 Docker）：
+如果没有 Docker，启动脚本会自动用 Python 模式（pip 自动选源）：
 
-**Windows（CMD / PowerShell）：**
+**Windows：**
 
 ```cmd
 git clone https://gitee.com/l1064709321/xuanshuAgent.git
@@ -57,7 +57,7 @@ python frontend.py
 
 ### 环境要求
 
-- Python 3.10+ 或 Docker
+- Python 3.8+ 或 Docker
 
 ---
 

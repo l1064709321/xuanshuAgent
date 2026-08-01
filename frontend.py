@@ -63,12 +63,9 @@ def _after_request(resp):
     return resp
 
 # ── 优雅停机 ──
-_shutdown_flag = False
-
 def _handle_shutdown(signum, frame):
-    global _shutdown_flag
     slog.warn("shutdown_signal", signal=signum)
-    _shutdown_flag = True
+    sys.exit(0)
 
 signal.signal(signal.SIGTERM, _handle_shutdown)
 signal.signal(signal.SIGINT, _handle_shutdown)
@@ -142,6 +139,10 @@ def auth_me():
 @app.route("/")
 def index():
     return send_file("index.html")
+
+@app.route("/favicon.ico")
+def favicon():
+    return "", 204
 
 # ── 模型管理 ──
 @app.route("/models", methods=["GET"])

@@ -1,198 +1,366 @@
 # 玄姝 (Xuanshu) — 多 Agent 协作系统
 
-[![Python](https://img.shields.io/badge/Python-3.10+-3776AB?logo=python&logoColor=white)](https://www.python.org/)
+[![Python](https://img.shields.io/badge/Python-3.8+-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
+[![SSE](https://img.shields.io/badge/协议-SSE-FF6B35)](#)
+[![REST](https://img.shields.io/badge/协议-REST-009688)](#)
+[![SQLite](https://img.shields.io/badge/存储-SQLite-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
 [![Docker](https://img.shields.io/badge/Docker-✓-2496ED?logo=docker&logoColor=white)](https://www.docker.com/)
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://www.apache.org/licenses/LICENSE-2.0)
 
-玄姝是一个多 Agent 协作系统。群主「玄姝」分析用户问题，@副手执行任务，每个 Agent 有独立名字、工具集和记忆。
-
----
-
 ## 快速开始
 
-### Docker（推荐）
+### 一键启动（推荐）
 
 ```bash
-git clone https://gitee.com/l1064709321/xuanshuAgent.git
+git clone https://github.com/l1064709321/xuanshuAgent.git xuanshuAgent
 cd xuanshuAgent
-docker compose up -d
+bash xuanshu
 ```
 
-访问 http://localhost:8901。
+国内网络慢可换华为云：
+
+```bash
+git clone https://codehub.devcloud.cn-north-4.huaweicloud.com/8965d3a4483445cca386477c8d9dd196/xuanshu-agent.git xuanshuAgent
+cd xuanshuAgent && bash xuanshu
+```
+
+脚本自动检测并安装 Docker → 构建镜像（全量依赖）→ 启动服务。访问 http://localhost:8901。
 
 ### 手动安装
 
+**Gitee（国内推荐）：**
+
 ```bash
-git clone https://gitee.com/l1064709321/xuanshuAgent.git
+git clone https://gitee.com/lord-of-the-star/xuan-shu-agent.git xuanshuAgent
 cd xuanshuAgent
 pip install -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple
 python frontend.py
 ```
 
-### 开发模式
-
-源码修改实时生效，无需重新 build：
+**GitHub：**
 
 ```bash
-docker compose -f docker-compose.yml -f docker-compose.dev.yml up
+git clone https://github.com/l1064709321/xuanshuAgent.git
+cd xuanshuAgent
+pip install -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple
+python frontend.py
 ```
+
+**华为云：**
+
+```bash
+git clone https://codehub.devcloud.cn-north-4.huaweicloud.com/8965d3a4483445cca386477c8d9dd196/xuanshu-agent.git xuanshuAgent
+cd xuanshuAgent
+pip install -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple
+python frontend.py
+```
+
+### Docker
+
+```bash
+docker build -t xuanshu-agent .
+docker run -d -p 8901:8901 xuanshu-agent
+```
+
+### 环境要求
+
+- Python 3.8+ 或 Docker
 
 ---
 
-## 群聊模式
-
-玄姝是群主，负责分析问题和派发任务。六个副手各有专长：
-
-| 名字 | 角色 | 职责 | 工具 |
-|------|------|------|------|
-| **玄姝** | 群主 | 意图分析、任务派发、结果汇总 | 路由、文件操作 |
-| **小搜** | 搜索 | 联网搜索、天气、百科、网页抓取 | anysearch, web_fetch, wikipedia |
-| **小码** | 编程 | 写代码、调试、Git 版本回滚 | run_code, run_code_venv, create_venv |
-| **小文** | 文件 | 文件读写、反编译、文档处理 | read_file, decompile, git_log |
-| **小览** | 浏览器 | 网页交互、点击、填表、截图 | browser_navigate, browser_click |
-| **小屏** | 系统 | 进程管理、磁盘、网络、包管理 | sys_info, process_list, pkg_install |
-| **小手机** | 手机 | ADB 操控 Android 设备 | adb_tap, adb_screenshot, adb_type |
-
-前端显示效果：
+### 工作流程
 
 ```
-┌─────────────────────────────────┐
-│ 玄姝 → @小搜                     │  ← Agent 标签
-│                                 │
-│ ✦ 思考链                        │
-│   #1 🔍 anysearch  [搜索]       │
-│   #2 🌐 web_fetch  [抓取]       │
-│                                 │
-│ 根据最新搜索结果...              │
-└─────────────────────────────────┘
+用户输入 "帮我写一个快排，测试后保存到 test.py"
+        │
+        ▼
+┌──────────────────┐
+│   父 Bot (Router) │  分析意图 → "代码Agent"
+│  意图路由 + 协调者 │  命中复杂信号 → 启动协调者模式
+└──────┬───────────┘
+       │
+       ▼
+┌──────────────────────────────────────────────┐
+│              协调者模式 (四阶段)                │
+│                                              │
+│  Research ──→ 代码Agent 只读探索：环境、库版本  │
+│     ↓                                        │
+│  Synthesis ─→ 协调者 LLM 生成实施规格 (spec)    │
+│     ↓                                        │
+│  Implementation ─→ 代码Agent 按 spec 编码+测试  │
+│     ↓                                        │
+│  Verification ─→ 验证 LLM 对比原始需求校验      │
+└──────────────────────────────────────────────┘
+       │
+       ▼
+┌──────────────────┐
+│  思考链 SSE 流式   │  每轮工具调用实时推送到前端
+│  折叠面板逐轮展示  │  用户可见完整思考过程
+└──────────────────┘
 ```
+
+**简单任务**（"今天天气怎么样"）：父 Bot 直接路由到搜索Agent，单 Agent 单轮执行。
+
+**复杂任务**（"把项目里所有 TODO 注释提取出来写到文件"）：触发协调者模式，先研究文件结构 → 生成 spec → 按 spec 执行 → 验证结果。
 
 ---
 
-## 思考链
+## 核心架构
 
-每个 Agent 的工具调用过程实时展示：
+### 父 Bot
 
-- 赛博朋克风格时间线，左侧发光节点 + 连线
-- 40+ 工具专属图标和分类色标（搜索=绿、代码=紫、浏览器=粉、系统=红）
-- 逐步淡入动画，最后一步呼吸脉冲
-- 内容 `user-select: none`，不可选中复制
+入口只有一个：`ParentBot.process_input()`。
 
----
+1. **意图路由**：用 `ROUTER_PROMPT` 让 LLM 判断该交给哪个子 Agent
+2. **Continue / Fresh 判定**：检查当前活跃的 Agent 上下文，同 Agent + 相关主题则复用（Continue），否则新开（Fresh）
+3. **协调者模式调度**：检测到复杂任务时自动走四阶段流水线
 
-## 代码执行环境
+### 子 Agent
 
-小码根据任务自动选择执行环境：
+6 个子 Agent，每个都有独立的记忆、工具集、人格宪法：
 
-| 模式 | 场景 | 网络 | 文件 | 依赖 |
-|------|------|------|------|------|
-| `run_code` (sandbox) | 不信任的代码 | ❌ | ❌ 只读 | 仅标准库 |
-| `run_code_venv` | 需要 pip 包 | ✅ | ✅ | venv 里的包 |
-| `run_code_local` | 完全信任 | ✅ | ✅ | 当前环境全部 |
+| Agent | 职责 | 工具 |
+|-------|------|------|
+| 搜索 | 联网搜索、百科、天气、网页抓取 | web_search, web_fetch, weather |
+| 浏览器 | 浏览器交互、页面抓取 | navigate, extract, click, type, scroll, screenshot |
+| 代码 | 编程、调试、shell 执行、沙箱 | shell_run, sandbox_run, git_log, git_revert |
+| 文件 | 文件读写、反编译、项目结构分析 | read_file, write_file, list_dir, decompile, grep |
+| 电脑 | 系统信息、进程管理、资源监控 | sys_info, disk_usage, memory_usage, cpu_info |
+| 应用 | 软件包管理（dnf/yum） | pkg_search, pkg_install, pkg_remove, pkg_update |
 
-```python
-# 小码自动决策：
-# 简单计算 → sandbox
-# 需要 requests/numpy → 先 create_venv → 再 run_code_venv
-# 已有 .venv → 直接 run_code_venv
-```
+所有 Agent 共享：`memdir_*`（共享记忆读写）和 `git_*`（版本回滚）。
 
----
+每个子 Agent 启动时注入人格宪法，定义核心价值观、表达风格、行为边界和工具使用方式。
 
-## 前端功能
-
-### 输入框
-
-椭圆胶囊形，左侧 `+` 上传文件，右侧 `⚡` 切换模型 + `↑` 发送。
-
-### 侧边栏
+### 工具调用
 
 ```
-┌──────────────┐
-│ ☰ 玄姝       │  ← 点击收起/展开
-├──────────────┤
-│ ♦ 对话       │
-│ ♦ 设置       │
-│ ♦ 个人主页   │
-├──────────────┤
-│ 会话         │
-├──────────────┤
-│ 📁 文件      │  ← 用户上传文件
-├──────────────┤
-│ 🧠 记忆      │  ← Agent 记忆（用户只读）
-├──────────────┤
-│ ⚡ 技能市场   │  ← 内置 + 已学 + 自定义
-├──────────────┤
-│ ⬤ 状态      │
-└──────────────┘
+LLM 输出 tool_call
+    │
+    ▼
+_dispatch_tool_call()
+    ├── 1. 解析 function.name + function.arguments (JSON 容错)
+    ├── 2. 模糊匹配工具名 (精确→子串→编辑距离)
+    ├── 3. 参数校验 + 默认值填充
+    └── 4. ToolExecutor.execute()
+            ├── 重试 (最多 2 次)
+            └── 降级 (web_search → web_fetch)
 ```
 
-### 头像抽屉
+### Skill 自学习
 
-点头像 → 右侧滑出面板：头像上传、记忆文件浏览、快捷操作。
+- **触发**：任意 Agent 完成 ≥ 4 轮工具调用的任务
+- **提炼**：LLM 从任务经验中提取 Markdown 格式 Skill 文档
+- **存储**：写入子 Agent 专有目录 `.memdir/skills/*.md`
+- **检索**：jieba 分词 + TF-IDF 向量 + 余弦相似度匹配历史 Skill
+- **持久化**：SQLite 存向量索引
 
-### 技能市场
-
-- 内置技能：联网搜索、代码执行、文件管理等 8 项
-- 已学习技能：Agent 自动提炼的经验
-- 自定义技能：用户手动创建，绑定到指定 Agent
-
----
-
-## 记忆系统
+### 记忆系统
 
 | 层级 | 存储 | 说明 |
 |------|------|------|
-| 短期 | Agent 对话历史 | 当前会话上下文 |
-| 中期 | `.memory/{agent}.json` | 子 Agent 独立记忆 |
-| 长期 | `MEMORY.md` + `USER.md` | Agent 经验 + 用户画像 |
-| 共享 | `.memdir/` | 跨 Agent 文件级记忆 |
+| 短期 | Agent 对话历史 (JSON) | 当前会话上下文 |
+| 中期 | 子 Agent 独立记忆 | `.memory/{agent}.json` |
+| 长期 | MEMORY.md + USER.md | Agent 自身经验 + 用户画像 |
 
-用户在侧边栏「🧠 记忆」中只读浏览，Agent 通过 `memdir_read`/`memdir_write` 工具读写。
+共享记忆文件夹支持跨 Agent 的任意格式文件读写和快照导出。
 
 ---
 
 ## 模型配置
 
-在设置页填入 API Key 并选择模型。支持 130+ 模型：
+在 Web 界面设置页填入 API Key 并选择模型。也可设为 `local`（本地模拟模式，免 Key）。
 
-**直连官方**：OpenAI / Anthropic / Google / DeepSeek / 通义 / 智谱 / 月之暗面 / 豆包 / MiniMax / 腾讯混元 / Mistral / Meta / xAI
+### 直连官方 API
 
-**聚合平台**：SiliconFlow（40+ 国产） / OpenRouter（30+ 海外） / NVIDIA NIM / Groq
+| 厂商 | 模型 |
+|------|------|
+| OpenAI | gpt-5.5 / gpt-5.5-pro / gpt-4o / gpt-4o-mini |
+| Anthropic | claude-opus-4.8 / claude-sonnet-4.6 / claude-haiku-4.5 / claude-fable-5 |
+| Google | gemini-3.1-pro / gemini-3-flash |
+| DeepSeek | deepseek-v4-pro / deepseek-v4-flash / deepseek-v3 / deepseek-r1 |
+| 阿里通义 | qwen3.7-max / qwen3.7-plus / qwen2.5-72b / qwen2.5-32b |
+| 智谱 GLM | glm-5.2 / glm-4.7 / glm-4.7-flash / glm-4-air |
+| 月之暗面 | kimi-k3 / kimi-k2.7-code / kimi-k2.7-code-highspeed / kimi-k2.6 |
+| 字节豆包 | doubao-pro / doubao-lite |
+| 百川 | baichuan4 |
+| MiniMax | minimax-m3 / minimax-m2.7 / minimax-m2.7-fast / abab6.5 |
+| 零一万物 | yi-large |
+| 讯飞星火 | spark-4.0 |
+| 腾讯混元 | hunyuan-pro |
+| Mistral | mistral-large / mistral-small |
+| Meta | llama-4 / llama-3.3 |
+| xAI | grok-3 |
+| Cohere | command-r-plus |
+| NVIDIA | nemotron-super |
+| AI21 | jamba-1.6 |
+| Reka | reka-flash |
 
-**本地推理**：Ollama / LM Studio / vLLM
+### 聚合平台
+
+- **SiliconFlow** — 40+ 国产模型（Qwen/GLM/DeepSeek/Kimi/MiniMax）
+- **OpenRouter** — 30+ 海外模型（DeepSeek/Gemini/Claude/Llama/Nemotron）
+- **NVIDIA NIM** / **Groq** / **Together AI** — 高性能推理
+
+### 本地推理
+
+- **Ollama** / **LM Studio** / **vLLM** — 接入本地部署模型，数据不出机
 
 ---
 
-## Docker
+## 运维
 
-### 生产模式
+### Git 安装（无 sudo 环境）
 
-```bash
-docker compose up -d        # 源码打包在镜像内
-docker compose logs -f      # 查看日志
-docker compose down          # 停止
-```
-
-数据持久化：`.memdir`、`.memory`、`workflows`、`workspace_files`、`.skills` 通过 named volumes 保存，容器销毁不丢数据。
-
-### 开发模式
+受限服务器无 sudo 权限时用 rpm2cpio 装 git：
 
 ```bash
-docker compose -f docker-compose.yml -f docker-compose.dev.yml up
+mkdir -p ~/git_rpm && cd ~/git_rpm
+curl -O https://mirrors.tencent.com/tencentos/4/AppStream/x86_64/os/Packages/git-2.43.7-3.tl4.x86_64.rpm \
+     -O https://mirrors.tencent.com/tencentos/4/AppStream/x86_64/os/Packages/git-core-2.43.7-3.tl4.x86_64.rpm \
+     -O https://mirrors.tencent.com/tencentos/4/AppStream/x86_64/os/Packages/perl-Git-2.43.7-3.tl4.noarch.rpm
+
+mkdir -p ~/local/bin ~/local/libexec/git-core
+for f in *.rpm; do rpm2cpio "$f" | cpio -idmv 2>/dev/null; done
+mv usr/bin/* ~/local/bin/ 2>/dev/null
+mv usr/libexec/git-core/* ~/local/libexec/git-core/ 2>/dev/null
+rm -rf usr *.rpm
+
+export PATH="$HOME/local/bin:$PATH"
+export GIT_EXEC_PATH="$HOME/local/libexec/git-core"
+git --version
 ```
 
-源码 bind mount，改代码实时生效。
+### 常见问题
 
-### 环境变量
+#### Git Clone TLS 错误（Aidlux / ARM）
 
-```yaml
-environment:
-  - AGNES_API_KEY=***       # Agnes 模型 Key
-  - OPENAI_API_KEY=***      # OpenAI Key
-  - JWT_SECRET=***          # JWT 签名密钥
+```bash
+# 方案 A：优先使用 Gitee 镜像
+git clone https://gitee.com/lord-of-the-star/xuan-shu-agent.git
+
+# 方案 B：禁用 SSL 验证
+GIT_SSL_NO_VERIFY=1 git clone --depth 1 https://github.com/l1064709321/xuanshuAgent.git
+
+# 方案 C：wget 下载 zip
+wget --no-check-certificate https://github.com/l1064709321/xuanshuAgent/archive/refs/heads/main.zip
+unzip main.zip && mv xuanshuAgent-main xuanshuAgent
 ```
+
+#### pip install 权限 / 编译错误
+
+```bash
+# 方案 A：修复权限后全量安装
+rm -rf .venv/lib/python3.*/site-packages/wikipedia*
+chmod -R u+w .venv
+source .venv/bin/activate
+pip install --upgrade pip setuptools wheel
+pip install -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple
+
+# 方案 B：仅安装核心依赖（跳过 numpy/scikit-learn/wikipedia）
+# 注册、登录、SMS、对话功能完整可用，仅向量检索降级
+pip install flask requests alibabacloud_dysmsapi20170525 -i https://pypi.tuna.tsinghua.edu.cn/simple
+```
+
+#### Aidlux / ARM 设备 backports.zoneinfo 编译失败
+
+`scikit-learn` 在 ARM Python 3.8 上拉取 `backports.zoneinfo` 编译时权限报错。已改为可选依赖：
+numpy、scikit-learn、wikipedia 未安装时自动降级，不影响注册/登录/SMS。
+
+```bash
+# Aidlux 专用快速启动（镜像源 + 核心依赖）
+git pull
+pip install flask requests alibabacloud_dysmsapi20170525 -i https://pypi.tuna.tsinghua.edu.cn/simple
+bash xuanshu
+```
+
+#### Aidlux Docker 安装被墙
+
+一键脚本通过 `get.docker.com` 安装 Docker 时，Aidlux 等国内 ARM 设备可能因网络阻断失败（`Connection reset by peer`）。先手动安装 Docker，再跑脚本：
+
+```bash
+# Aidlux 直接用系统源装 Docker
+sudo apt update && sudo apt install -y docker.io
+
+# 启动 docker 服务
+sudo dockerd &
+
+# 然后执行一键启动
+bash xuanshu
+```
+
+
+---
+
+## API 端点
+
+### 对话
+
+| 端点 | 方法 | 说明 |
+|------|------|------|
+| `/chat` | POST | 同步对话 |
+| `/chat/stream` | POST | SSE 流式对话 |
+
+### 模型 & Key
+
+| 端点 | 方法 | 说明 |
+|------|------|------|
+| `/models` | GET/POST | 列出/添加模型 |
+| `/models/<key>` | DELETE | 删除模型 |
+| `/set-key` | POST | 设置 API Key |
+| `/model-key` | POST | 为模型设置 Key |
+| `/model-key/status` | GET | Key + 模型状态 |
+| `/switch-model` | POST | 切换当前模型 |
+
+### 记忆 & 上下文
+
+| 端点 | 方法 | 说明 |
+|------|------|------|
+| `/memory/list` | GET | 列出记忆 |
+| `/memory/read` | POST | 读取记忆 |
+| `/memory/write` | POST | 写入记忆 |
+| `/memory/delete` | POST | 删除记忆 |
+| `/context` | GET | 获取上下文 |
+| `/context/save` | POST | 保存上下文 |
+| `/snapshots/export` | POST | 导出快照 |
+| `/snapshots/import` | POST | 导入快照 |
+
+### 文件
+
+| 端点 | 方法 | 说明 |
+|------|------|------|
+| `/browse` | POST | 浏览文件夹 |
+| `/file/read` | POST | 读取文件 |
+
+### 系统 & 工具
+
+| 端点 | 方法 | 说明 |
+|------|------|------|
+| `/api/check_env` | GET | 检查环境 |
+| `/api/presets` | GET | 预设操作 |
+| `/api/run` | POST | 执行命令 |
+| `/agents` | GET | 列出 Agent |
+| `/metrics` | GET | 性能指标 |
+| `/coordinator-mode` | POST | 切换协调者模式 |
+
+### Skill
+
+| 端点 | 方法 | 说明 |
+|------|------|------|
+| `/skills/list` | POST | 列出 Skill |
+| `/skills/read` | POST | 读取 Skill |
+| `/skills/create` | POST | 创建 Skill |
+| `/skills/delete` | POST | 删除 Skill |
+
+### Git
+
+| 端点 | 方法 | 说明 |
+|------|------|------|
+| `/git-log` | GET | 提交记录 |
+| `/git-status` | GET/POST | 工作区状态 |
+| `/git-revert` | POST | 版本回退 |
+| `/git-revert-restore` | POST | 撤销回退 |
 
 ---
 
@@ -200,47 +368,42 @@ environment:
 
 ```
 xuanshuAgent/
-├── core.py              父 Bot + 群聊路由 + 子 Agent + Skill 系统
-├── frontend.py          Flask 后端 + REST API
-├── index.html           Web 前端
-├── style.css            赛博朋克主题样式
-├── models.py            130+ 模型预设 + 多模态路由
-├── auth.py              手机号注册/登录 + JWT
-├── memory.py            子 Agent 独立记忆
-├── sandbox.py           多环境代码执行（sandbox/venv/local）
-├── auto_sandbox.py      自动沙箱检测
-├── workflow.py          工作流引擎
-├── embeddings.py        Skill 向量检索
-├── production.py        生产环境：Trace/Eval/Session/Checkpoint
-├── config.py            配置
-├── requirements.txt     依赖清单
-├── Dockerfile           Docker 镜像
-├── docker-compose.yml   生产模式
-├── docker-compose.dev.yml  开发模式
-├── .gitignore           排除敏感数据
-├── .memdir/             共享记忆（不进仓库）
-├── .memory/             Agent 记忆（不进仓库）
-├── workflows/           用户工作流（不进仓库）
-└── workspace_files/     用户文件（不进仓库）
+├── core.py              父 Bot + 协调者 + 子 Agent + Skill 系统
+├── frontend.py           Flask 后端 + REST API + SSE
+├── models.py             134+ 模型预设
+├── memory.py             子 Agent 独立记忆 + 上下文持久化
+├── web_search.py         联网搜索
+├── monitor.py            性能监控
+├── logger.py             日志模块
+├── light_server.py       轻量 HTTP Server
+├── sandbox.py            沙箱执行环境
+├── auto_sandbox.py       自动沙箱检测
+├── screen_reader.py      屏幕截图读取
+├── main.py               命令行入口
+├── index.html            Web 前端
+├── style.css             样式
+├── xuanshu               一键启动 (Linux/macOS)
+├── xuanshu.bat           一键启动 (Windows)
+├── xuanshu.service       systemd 服务
+├── requirements.txt      依赖清单
+├── .memdir/              共享记忆文件夹
+│   └── snapshots/        记忆快照
+├── .memory/              子 Agent 记忆
+├── .skills/              手动 Skill
+└── decompile/            反编译模块
 ```
 
 ---
 
-## API 端点
+## 反编译
 
-| 端点 | 方法 | 说明 |
-|------|------|------|
-| `/chat` | POST | 对话 |
-| `/chat/stream` | POST | SSE 流式对话 |
-| `/models` | GET/POST | 列出/添加模型 |
-| `/set-key` | POST | 设置 API Key |
-| `/switch-model` | POST | 切换模型 |
-| `/memory/*` | GET/POST | 记忆 CRUD |
-| `/skills/*` | POST | 技能 CRUD |
-| `/workspace/*` | POST | 文件管理 |
-| `/agents` | GET | 列出 Agent |
-| `/health` | GET | 健康检查 |
-| `/auth/*` | POST | 注册/登录 |
+```bash
+python -m decompile target.pyc --format text   # 反编译
+python -m decompile target.pyc --detect        # 仅格式检测
+python -m decompile --tools                    # 查看可用工具
+```
+
+支持：pyc / APK / DEX / JAR / PE / ELF / Mach-O / WASM / Lua / .NET。无外部工具时自动降级到 Python `dis` 反汇编。
 
 ---
 

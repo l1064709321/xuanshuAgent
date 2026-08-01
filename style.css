@@ -153,7 +153,6 @@ body::after {
   transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1),
               border-right-color 0.3s ease;
   overflow: hidden; white-space: nowrap;
-  z-index: 20;
 }
 /* 桌面端：收起侧边栏 */
 .left-sidebar.collapsed {
@@ -321,6 +320,7 @@ body::after {
   position: relative;
   background: var(--bg);
   overflow: hidden;
+  z-index: 1;
 }
 
 /* ── Toolbar ── */
@@ -1027,6 +1027,15 @@ body::after {
   color: var(--text);
 }
 .reply-text strong { color: var(--text); font-weight: 600; }
+
+/* ── Model Bar ── */
+.model-bar {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  padding: 4px 0 8px;
+  overflow-x: auto;
+}
 
 /* ── Input Area ── */
 .input-area {

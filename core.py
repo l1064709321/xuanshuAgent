@@ -2955,9 +2955,12 @@ Git 版本回滚：发现文件被误改或需要恢复到之前版本时，用 
         """
         messages = []
 
-        # ── Slot 1: 硬规则与约束（boot prompt + knowledge）──
+        # ── Slot 1: 硬规则与约束（宪法 + boot prompt + knowledge）──
         # 生产环境：MEMORY.md 读取从"必须"改为"可选"，避免死循环
+        constitution = build_constitution(child.name)
         boot_prompt = (
+            f"{constitution}\n\n"
+            f"---\n\n"
             f"{child.system_prompt}\n\n"
             f"## 启动指令\n"
             f"你的长期经验（MEMORY.md）已自动注入到下方的「Agent 自主记忆」章节，无需主动读取。"

@@ -95,12 +95,6 @@
       <a class="sidebar-nav-item active" href="#chat" data-page="chat">
         <span class="sidebar-nav-icon">&diams;</span> 对话
       </a>
-      <a class="sidebar-nav-item" href="#settings" data-page="settings">
-        <span class="sidebar-nav-icon">&diams;</span> 设置
-      </a>
-      <a class="sidebar-nav-item" href="#profile" data-page="profile">
-        <span class="sidebar-nav-icon">&diams;</span> 个人主页
-      </a>
     </nav>
     <div class="sidebar-section-label">会话</div>
     <div class="sidebar-sessions" id="sessionList">
@@ -151,17 +145,12 @@
           <button class="tqp-chip" data-accent="leather" data-mode="dark" onclick="applyQuick('leather','dark')">书封棕·深</button>
         </div>
       </div>
-      <button class="toolbar-btn" onclick="navigateTo('#settings')" title="设置" aria-label="打开设置">&#9881;</button>
+      <button class="toolbar-btn" onclick="toggleSettings()" title="设置" aria-label="打开设置">&#9881;</button>
       <button class="toolbar-btn" id="toolbarMoreBtn" onclick="toggleMoreMenu(event)" title="更多" aria-label="更多菜单">&#8942;</button>
       <div class="more-menu" id="moreMenu" style="display:none">
         <div class="more-menu-header">Agent 管理</div>
-        <div class="more-menu-item" onclick="closeMoreMenu();navigateTo('#settings')">全局设置</div>
+        <div class="more-menu-item" onclick="closeMoreMenu();toggleSettings()">全局设置</div>
         <div class="more-menu-item" onclick="closeMoreMenu();toggleLeft()">侧栏开关</div>
-        <div class="more-menu-div"></div>
-        <div class="more-menu-header">权限与授权</div>
-        <div class="more-menu-item" onclick="closeMoreMenu();loadAgentConfig()">Agent 配置</div>
-        <div class="more-menu-item" id="moreDownloadPerm" onclick="closeMoreMenu();showDownloadPermInfo()">下载权限</div>
-        <div class="more-menu-item" onclick="closeMoreMenu();navigateTo('#profile')">Agent 资料</div>
       </div>
     </div>
 
@@ -203,15 +192,19 @@
       </div>
     </section>
 
-    <!-- ===== 设置页 ===== -->
-    <section id="page-settings" class="page-section padded page-settings">
-      <button class="back-to-chat" onclick="navigateTo('#chat')" title="返回对话">&larr; 返回</button>
+    <!-- ===== 设置面板（右侧滑出） ===== -->
+    <div class="settings-overlay" id="settingsOverlay" onclick="toggleSettings()"></div>
+    <aside class="settings-panel" id="settingsPanel">
+      <div class="settings-panel-header">
+        <span class="settings-panel-title">设置</span>
+        <button class="settings-panel-close" onclick="toggleSettings()">&times;</button>
+      </div>
+      <div class="settings-panel-body">
       <div class="panel-tabs">
-        <div class="panel-tab active" tabindex="0" role="tab" aria-selected="true" onclick="switchPanelTab(this,'settings')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();switchPanelTab(this,'settings')}">模型</div>
-        <div class="panel-tab" tabindex="0" role="tab" aria-selected="false" onclick="switchPanelTab(this,'theme')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();switchPanelTab(this,'theme')}">主题</div>
-        <div class="panel-tab" tabindex="0" role="tab" aria-selected="false" onclick="switchPanelTab(this,'tools')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();switchPanelTab(this,'tools')}">工具</div>
-        <div class="panel-tab" tabindex="0" role="tab" aria-selected="false" onclick="switchPanelTab(this,'agents')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();switchPanelTab(this,'agents')}">Agent</div>
-        <div class="panel-tab" tabindex="0" role="tab" aria-selected="false" onclick="switchPanelTab(this,'workflow')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();switchPanelTab(this,'workflow')}">工作流</div>
+        <div class="panel-tab active" tabindex="0" role="tab" aria-selected="true" onclick="switchPanelTab(this,'settings')">模型</div>
+        <div class="panel-tab" tabindex="0" role="tab" aria-selected="false" onclick="switchPanelTab(this,'theme')">主题</div>
+        <div class="panel-tab" tabindex="0" role="tab" aria-selected="false" onclick="switchPanelTab(this,'tools')">工具</div>
+        <div class="panel-tab" tabindex="0" role="tab" aria-selected="false" onclick="switchPanelTab(this,'workflow')">工作流</div>
       </div>
 
       <div class="panel-content" id="tab-settings">
@@ -460,37 +453,11 @@
           <div id="wfList" style="display:flex;flex-direction:column;gap:8px;max-height:240px;overflow-y:auto"></div>
         </div>
       </div>
-    </section>
-
-    <!-- ===== 个人主页 ===== -->
-    <section id="page-profile" class="page-section padded">
-      <button class="back-to-chat" onclick="navigateTo('#chat')" title="返回对话">&larr; 返回</button>
-      <div class="page-profile-avatar">
-        <div class="sidebar-avatar" id="profileAvatar">玄</div>
-        <button class="avatar-upload-btn" onclick="document.getElementById('profileAvatarUpload').click()">更换头像</button>
-        <input type="file" id="profileAvatarUpload" accept="image/*" onchange="uploadProfileAvatar()" style="display:none">
-      </div>
-
-      <div class="profile-section">
-        <div class="section-title">个人信息</div>
-        <div class="setting-card">
-          <h4>账号</h4>
-          <p>手机号: <span id="profilePhone">—</span></p>
-          <p>Token 用量: <span id="profileTokens">0 tk</span></p>
-        </div>
-      </div>
-
-      <div class="profile-section">
-        <div class="section-title">系统操作</div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap">
-          <button class="btn btn-ghost" onclick="navigateTo('#settings')">全局设置</button>
-          <button class="btn btn-ghost" onclick="exportAll()">导出快照</button>
-          <button class="btn btn-ghost" onclick="importAll()">导入快照</button>
-        </div>
-      </div>
-    </section>
 
     </div><!-- /page-stage -->
+
+    </div><!-- /settings-panel-body -->
+    </aside><!-- /settings-panel -->
 
   </main>
 
@@ -541,11 +508,8 @@
     <button class="bottom-nav-item active" onclick="navigateTo('#chat')">
       <span class="nav-icon">&diams;</span> 对话
     </button>
-    <button class="bottom-nav-item" onclick="navigateTo('#settings')">
-      <span class="nav-icon">&diams;</span> 设置
-    </button>
-    <button class="bottom-nav-item" onclick="navigateTo('#profile')">
-      <span class="nav-icon">&diams;</span> 主页
+    <button class="bottom-nav-item" onclick="toggleSettings()">
+      <span class="nav-icon">&#9881;</span> 设置
     </button>
   </nav>
 
@@ -712,6 +676,12 @@ function toggleLeft() {
   } else {
     sb.classList.toggle('collapsed');
   }
+}
+function toggleSettings() {
+  const panel = document.getElementById('settingsPanel');
+  const overlay = document.getElementById('settingsOverlay');
+  const isOpen = panel.classList.toggle('open');
+  overlay.classList.toggle('show', isOpen);
 }
 function closeAllPanels() {
   document.getElementById('overlay').classList.remove('show');

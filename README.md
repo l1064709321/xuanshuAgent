@@ -10,6 +10,14 @@
 
 ## 快速开始
 
+### 获取源码
+
+| 源 | 克隆地址 |
+|---|---------|
+| Gitee（推荐国内） | `https://gitee.com/l1064709321/xuanshuAgent.git` |
+| 华为云 CodeHub | `https://codehub.devcloud.cn-north-4.huaweicloud.com/8965d3a4483445cca386477c8d9dd196/xuanshu-agent.git` |
+| GitHub | `https://github.com/l1064709321/xuanshuAgent.git` |
+
 ### 一键启动（推荐）
 
 ```bash
@@ -20,7 +28,7 @@ docker compose up -d
 
 访问 http://localhost:8901。
 
-如果没有 Docker，启动脚本会自动用 Python 模式（pip 自动选源）：
+如果没有 Docker，启动脚本会自动用 Python 模式（pip 自动选源）。将 clone 地址替换为上表中任一源即可：
 
 **Windows：**
 
@@ -30,7 +38,9 @@ cd xuanshuAgent
 xuanshu.bat
 ```
 
-**Linux：**
+- 启动脚本会自动创建虚拟环境、安装依赖并启动服务。端口默认 8901，浏览器打开 http://localhost:8901 即可使用。
+
+**Linux / macOS：**
 
 ```bash
 git clone https://gitee.com/l1064709321/xuanshuAgent.git
@@ -38,13 +48,7 @@ cd xuanshuAgent
 ./xuanshu
 ```
 
-**macOS：**
-
-```bash
-git clone https://gitee.com/l1064709321/xuanshuAgent.git
-cd xuanshuAgent
-./xuanshu
-```
+- 启动后访问 http://localhost:8901。首次运行若遇权限问题执行 `chmod +x xuanshu`。
 
 ### 手动安装
 

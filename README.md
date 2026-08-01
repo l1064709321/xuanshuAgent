@@ -15,10 +15,16 @@
 ```bash
 git clone https://gitee.com/l1064709321/xuanshuAgent.git
 cd xuanshuAgent
-bash xuanshu
+./xuanshu
 ```
 
-脚本自动检测并安装 Docker → 构建镜像（全量依赖）→ 启动服务。访问 http://localhost:8901。
+或直接 Docker Compose：
+
+```bash
+docker compose up -d
+```
+
+访问 http://localhost:8901。
 
 ### 手动安装
 

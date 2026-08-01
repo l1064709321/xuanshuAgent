@@ -15,13 +15,17 @@
 ```bash
 git clone https://gitee.com/l1064709321/xuanshuAgent.git
 cd xuanshuAgent
-./xuanshu
+docker compose up -d
 ```
 
-或直接 Docker Compose：
+或用启动脚本（自动检测并安装 Docker）：
 
 ```bash
-docker compose up -d
+# Linux / macOS
+./xuanshu
+
+# Windows
+xuanshu.bat
 ```
 
 访问 http://localhost:8901。

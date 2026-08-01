@@ -351,7 +351,7 @@ body::after {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 8px 12px;
+  padding: 8px 12px 8px 16px;
   border-bottom: 1px solid var(--border);
   background: var(--surface);
   min-height: 44px;
@@ -365,12 +365,15 @@ body::after {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 13px;
+  font-size: 11px;
   font-weight: 700;
   color: var(--neon-cyan);
   cursor: pointer;
   font-family: 'Noto Serif SC', serif;
   transition: all var(--transition);
+  overflow: hidden;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 .toolbar-avatar:hover {
   border-color: var(--neon-cyan);
@@ -531,15 +534,20 @@ body::after {
 
 /* ── Theme Quick Panel ── */
 .theme-quick-panel {
-  position: absolute;
-  top: 100%;
-  right: 48px;
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
   background: var(--surface);
   border: 1px solid var(--border-strong);
   border-radius: 8px;
-  padding: 8px;
-  z-index: 50;
+  padding: 12px;
+  z-index: 100;
   box-shadow: var(--shadow-lg);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 260px;
 }
 .theme-quick-row {
   display: flex;
@@ -575,15 +583,6 @@ body::after {
   0% { transform: scale(1); }
   50% { transform: scale(0.95); }
   100% { transform: scale(1); }
-}
-
-/* ── Ring Animation (toolbar button) ── */
-.ring {
-  animation: ringPulse 0.6s ease-out;
-}
-@keyframes ringPulse {
-  0% { box-shadow: 0 0 0 0 rgba(0,240,255,0.4); }
-  100% { box-shadow: 0 0 0 8px rgba(0,240,255,0); }
 }
 
 /* ── Skill Viewer Overlay ── */
@@ -2138,4 +2137,107 @@ body::after {
   border-radius: 50%;
   background: var(--neon-cyan);
   animation: tcPulse 1s ease-in-out infinite;
+}
+
+/* ═══ 主题系统：data-mode + data-accent ═══ */
+
+/* ── 浅色模式 ── */
+html[data-mode="light"] {
+  --bg: #f4f6f8;
+  --bg-elevated: #ffffff;
+  --surface: #e8ecf0;
+  --surface-hover: #dce0e6;
+  --border: rgba(100,116,139,0.12);
+  --border-strong: rgba(100,116,139,0.2);
+  --glass: rgba(255,255,255,0.88);
+  --glass-hover: rgba(240,244,248,0.92);
+  --glass-border: rgba(100,116,139,0.1);
+  --glass-active: rgba(100,116,139,0.08);
+  --text: #1e293b;
+  --text-secondary: #475569;
+  --text-dim: #64748b;
+  --text-muted: #94a3b8;
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.08);
+  --shadow: 0 2px 8px rgba(0,0,0,0.1);
+  --shadow-lg: 0 4px 16px rgba(0,0,0,0.12);
+}
+
+/* ── 赛博蓝（默认，深色已有:root，浅色已覆盖） ── */
+html[data-accent="cyber"] {
+  --neon-cyan: #00f0ff;
+  --neon-magenta: #ff00ff;
+  --neon-green: #00ff66;
+  --neon-yellow: #ffee00;
+  --neon-red: #ff3366;
+  --neon-purple: #9933ff;
+  --primary: var(--neon-cyan);
+  --primary-hover: #00d4e0;
+  --primary-glow: rgba(0,240,255,0.45);
+  --primary-text: #80f0ff;
+  --primary-bg: rgba(0,240,255,0.06);
+}
+
+html[data-mode="light"][data-accent="cyber"] {
+  --primary-text: #0891b2;
+  --primary-bg: rgba(6,182,212,0.08);
+}
+
+/* ── 护眼绿 ── */
+html[data-accent="forest"] {
+  --neon-cyan: #00e676;
+  --neon-magenta: #76ff03;
+  --neon-green: #00c853;
+  --neon-yellow: #c6ff00;
+  --neon-red: #ff5252;
+  --neon-purple: #7c4dff;
+  --primary: var(--neon-cyan);
+  --primary-hover: #00c853;
+  --primary-glow: rgba(0,230,118,0.45);
+  --primary-text: #69f0ae;
+  --primary-bg: rgba(0,230,118,0.06);
+}
+
+html[data-mode="light"][data-accent="forest"] {
+  --primary-text: #059669;
+  --primary-bg: rgba(16,185,129,0.08);
+}
+
+/* ── 樱粉 ── */
+html[data-accent="sakura"] {
+  --neon-cyan: #ff80ab;
+  --neon-magenta: #ff4081;
+  --neon-green: #b2ff59;
+  --neon-yellow: #ffe57f;
+  --neon-red: #ff1744;
+  --neon-purple: #e040fb;
+  --primary: var(--neon-cyan);
+  --primary-hover: #ff4081;
+  --primary-glow: rgba(255,128,171,0.45);
+  --primary-text: #f8bbd0;
+  --primary-bg: rgba(255,128,171,0.06);
+}
+
+html[data-mode="light"][data-accent="sakura"] {
+  --primary-text: #db2777;
+  --primary-bg: rgba(236,72,153,0.08);
+}
+
+/* ── 书封棕 ── */
+html[data-accent="leather"] {
+  --neon-cyan: #d4a574;
+  --neon-magenta: #b87333;
+  --neon-green: #8b9a6b;
+  --neon-yellow: #e6c97a;
+  --neon-red: #c0392b;
+  --neon-purple: #8b6b4a;
+  --primary: var(--neon-cyan);
+  --primary-hover: #b87333;
+  --primary-glow: rgba(212,165,116,0.4);
+  --primary-text: #e8cfa0;
+  --primary-bg: rgba(212,165,116,0.06);
+}
+
+html[data-mode="light"][data-accent="leather"] {
+  --primary-text: #92400e;
+  --primary-bg: rgba(180,83,9,0.08);
 }

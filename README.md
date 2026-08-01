@@ -18,17 +18,33 @@ cd xuanshuAgent
 docker compose up -d
 ```
 
-或用启动脚本（自动检测并安装 Docker）：
+访问 http://localhost:8901。
 
-```bash
-# Linux / macOS
-./xuanshu
+如果没有 Docker，用启动脚本（自动检测并安装 Docker）：
 
-# Windows
+**Windows（CMD / PowerShell）：**
+
+```cmd
+git clone https://gitee.com/l1064709321/xuanshuAgent.git
+cd xuanshuAgent
 xuanshu.bat
 ```
 
-访问 http://localhost:8901。
+**Linux：**
+
+```bash
+git clone https://gitee.com/l1064709321/xuanshuAgent.git
+cd xuanshuAgent
+./xuanshu
+```
+
+**macOS：**
+
+```bash
+git clone https://gitee.com/l1064709321/xuanshuAgent.git
+cd xuanshuAgent
+./xuanshu
+```
 
 ### 手动安装
 

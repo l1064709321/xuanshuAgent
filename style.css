@@ -150,9 +150,26 @@ body::after {
   background: var(--surface);
   border-right: 1px solid var(--border);
   display: flex; flex-direction: column;
-  transition: width 0.3s ease, border-right 0.2s ease;
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+              border-right-color 0.3s ease;
   overflow: hidden; white-space: nowrap;
   z-index: 20;
+}
+/* 桌面端：收起侧边栏 */
+.left-sidebar.collapsed {
+  width: 0;
+  border-right-color: transparent;
+}
+.left-sidebar.collapsed .sidebar-header,
+.left-sidebar.collapsed .sidebar-nav,
+.left-sidebar.collapsed .sidebar-section-label,
+.left-sidebar.collapsed .sidebar-file-tree,
+.left-sidebar.collapsed .sidebar-mem-tree,
+.left-sidebar.collapsed .sidebar-skill-market,
+.left-sidebar.collapsed .sidebar-sessions,
+.left-sidebar.collapsed .status-bar {
+  opacity: 0;
+  pointer-events: none;
 }
 .sidebar-header {
   display: flex;
@@ -352,6 +369,10 @@ body::after {
   background: rgba(0,240,255,0.06);
   color: var(--neon-cyan);
   border-color: rgba(0,240,255,0.2);
+}
+.sidebar-toggle {
+  font-size: 16px;
+  font-weight: 700;
 }
 
 /* ── Page Stage & Sections ── */

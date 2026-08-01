@@ -88,6 +88,7 @@
   <!-- ===== 左侧边栏 ===== -->
   <aside class="left-sidebar" id="leftSidebar">
     <div class="sidebar-header">
+      <div class="sidebar-avatar" id="sidebarAvatar" onclick="navigateTo('#profile')" title="个人主页">玄</div>
       <span class="sidebar-logo">玄姝</span>
       <button class="sidebar-close" onclick="toggleLeft()" title="收起侧栏">&times;</button>
     </div>
@@ -122,8 +123,7 @@
   <!-- ===== 主区域 ===== -->
   <main class="main-area">
     <div class="toolbar">
-      <div class="toolbar-avatar" id="toolbarAvatar" onclick="openAvatarDrawer()" title="个人档案">玄</div>
-      <button class="toolbar-btn sidebar-toggle" onclick="toggleLeft()" title="侧栏开关" aria-label="侧栏开关">☰</button>
+      <div class="toolbar-avatar" id="toolbarAvatar" onclick="toggleLeft()" title="侧栏开关">玄</div>
       <span class="u-flex-1"></span>
       <span class="token-badge" id="tokenBadge" title="Token用量">0 tk</span>
       <button class="toolbar-btn theme-btn" onclick="toggleThemeQuickPanel(event)" title="切换主题" aria-label="主题切换" id="toolbarThemeBtn">&#127912;</button>
@@ -173,7 +173,7 @@
         <span id="imagePreview" style="display:none;margin-bottom:8px"></span>
         <div class="input-pill">
           <button class="pill-btn pill-add" id="fileBrowseBtn" title="上传文件" aria-label="上传文件" onclick="document.getElementById('fileInput').click()">+</button>
-          <textarea id="msg-input" placeholder="输入消息…" rows="1" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();send()}"></textarea>
+          <textarea id="msg-input" placeholder="输入消息…" rows="1"></textarea>
           <div class="pill-right">
             <button class="pill-model" id="pillModelBtn" onclick="showModelQuickPicker(event)" title="切换模型">⚡</button>
             <button class="pill-send" onclick="send()" title="发送">&uarr;</button>
@@ -507,6 +507,20 @@ let currentSessionId = 'sess_' + Date.now();
 const conv = document.getElementById('conv');
 const inp = document.getElementById('msg-input');
 let pendingImage = null;
+
+// 输入框实时自动调节高度
+inp.addEventListener('input', () => {
+  inp.style.height = 'auto';
+  inp.style.height = Math.min(inp.scrollHeight, 120) + 'px';
+});
+// 发送后重置高度
+inp.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    send();
+    inp.style.height = 'auto';
+  }
+});
 let authToken = localStorage.getItem('xuanshu_token') || '';
 
 // ========== 账号系统 ==========
@@ -1327,7 +1341,7 @@ function addBubble(role, content, agentName, thinkings) {
       const defaultMeta = { icon: '🔧', tag: '工具', cls: 'tc-tag-code' };
 
       const steps = thinkings.map(t => {
-        const tools = t.tool.split(',').map(s => s.trim());
+        const tools = (t.tool || '').split(',').filter(Boolean).map(s => s.trim());
         const toolBadges = tools.map(tn => {
           const m = toolMeta[tn] || defaultMeta;
           return '<span class="tc-tool-icon">'+m.icon+'</span><span class="tc-tool-name">'+tn+'</span><span class="tc-tool-tag '+m.cls+'">'+m.tag+'</span>';
@@ -1341,10 +1355,15 @@ function addBubble(role, content, agentName, thinkings) {
           '<div class="tc-thought">'+thoughtText+'</div>'+
         '</div>';
       }).join('');
-      thinkingHtml = '<details class="thinking-chain" open>'+
+      thinkingHtml = '<details class="thinking-chain">'+
         '<summary><span>✦ 思考链</span><span class="tc-badge">'+thinkings.length+' 步</span></summary>'+
         '<div class="thinking-timeline">'+steps+'</div>'+
       '</details>';
+      // 思考完成后延迟折叠：先短暂展示再收起
+      setTimeout(() => {
+        const details = d.querySelector('details.thinking-chain');
+        if (details && details.open) details.open = false;
+      }, 2500);
     }
     d.innerHTML = '<div class="agent-label"><span class="agent-name">'+agentName+'</span></div><div class="agent-body">'+thinkingHtml+html+'</div>';
   } else if (role==='system') {
@@ -1600,10 +1619,11 @@ async function uploadAvatarFromFile(input) {
     document.getElementById('toolbarAvatar').textContent = initial;
     document.getElementById('drawerAvatar').textContent = initial;
     document.getElementById('profileAvatar').textContent = initial;
+    document.getElementById('sidebarAvatar').textContent = initial;
     // 存储到 localStorage
     localStorage.setItem('xuanshu_avatar', dataUrl);
     // 如果图片不大，用 CSS background 显示
-    const avatars = ['toolbarAvatar', 'drawerAvatar', 'profileAvatar'];
+    const avatars = ['toolbarAvatar', 'drawerAvatar', 'profileAvatar', 'sidebarAvatar'];
     avatars.forEach(id => {
       const el = document.getElementById(id);
       if (el) {
@@ -1624,7 +1644,7 @@ async function uploadAvatarFromFile(input) {
 (function restoreAvatar() {
   const saved = localStorage.getItem('xuanshu_avatar');
   if (saved) {
-    ['toolbarAvatar', 'drawerAvatar', 'profileAvatar'].forEach(id => {
+    ['toolbarAvatar', 'drawerAvatar', 'profileAvatar', 'sidebarAvatar'].forEach(id => {
       const el = document.getElementById(id);
       if (el) {
         el.style.backgroundImage = 'url(' + saved + ')';

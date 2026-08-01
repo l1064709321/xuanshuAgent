@@ -176,6 +176,28 @@ body::after {
   justify-content: space-between;
   padding: 16px 16px 12px;
   border-bottom: 1px solid var(--border);
+  gap: 10px;
+}
+.sidebar-avatar {
+  width: 36px; height: 36px;
+  border-radius: 50%;
+  background: rgba(0,240,255,0.08);
+  border: 1px solid rgba(0,240,255,0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--neon-cyan);
+  cursor: pointer;
+  flex-shrink: 0;
+  font-family: 'Noto Serif SC', serif;
+  transition: all var(--transition);
+  overflow: hidden;
+}
+.sidebar-avatar:hover {
+  border-color: var(--neon-cyan);
+  box-shadow: 0 0 8px rgba(0,240,255,0.2);
 }
 .sidebar-logo {
   font-size: 18px;
@@ -183,6 +205,7 @@ body::after {
   font-family: 'Noto Serif SC', serif;
   color: var(--neon-cyan);
   letter-spacing: 2px;
+  flex: 1;
 }
 .sidebar-close {
   background: none;
@@ -371,11 +394,6 @@ body::after {
   color: var(--neon-cyan);
   border-color: rgba(0,240,255,0.2);
 }
-.sidebar-toggle {
-  font-size: 16px;
-  font-weight: 700;
-}
-
 /* ── Page Stage & Sections ── */
 .page-stage {
   flex: 1;
@@ -802,6 +820,13 @@ body::after {
   font-size: 13px;
   color: var(--text-dim);
   letter-spacing: 1px;
+}
+/* 对话区：撑满剩余空间，保持在底部输入框上方 */
+#conv {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
 }
 .conversation-empty {
   min-height: 200px;
@@ -1893,9 +1918,15 @@ body::after {
   border-radius: 6px;
   background: rgba(0,240,255,0.02);
   overflow: hidden;
-  /* 禁止选中/复制思考链内容 */
+  /* 禁止选中/复制思考链全部内容 */
   -webkit-user-select: none;
   user-select: none;
+  -webkit-touch-callout: none;
+}
+.thinking-chain * {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
 }
 
 .thinking-chain summary {

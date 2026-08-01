@@ -548,6 +548,88 @@ body::after {
   color: var(--neon-cyan);
 }
 
+/* ── Nav Pulse Animation ── */
+.nav-pulse {
+  animation: navPulse 0.4s ease-out;
+}
+@keyframes navPulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(0.95); }
+  100% { transform: scale(1); }
+}
+
+/* ── Ring Animation (toolbar button) ── */
+.ring {
+  animation: ringPulse 0.6s ease-out;
+}
+@keyframes ringPulse {
+  0% { box-shadow: 0 0 0 0 rgba(0,240,255,0.4); }
+  100% { box-shadow: 0 0 0 8px rgba(0,240,255,0); }
+}
+
+/* ── Skill Viewer Overlay ── */
+.skill-viewer-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.6);
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.skill-viewer-panel {
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: 12px;
+  padding: 24px;
+  max-width: 500px;
+  width: 90%;
+  max-height: 80vh;
+  overflow-y: auto;
+  position: relative;
+}
+.skill-viewer-panel h2 {
+  font-size: 16px;
+  color: var(--text);
+  margin-bottom: 12px;
+}
+.skill-viewer-panel p {
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+.skill-viewer-close {
+  position: absolute;
+  top: 12px; right: 12px;
+  background: none;
+  border: none;
+  color: var(--text-dim);
+  font-size: 20px;
+  cursor: pointer;
+}
+
+/* ── Skill Form Overlay ── */
+.skill-form-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.6);
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.skill-form-panel {
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: 12px;
+  padding: 24px;
+  max-width: 450px;
+  width: 90%;
+  max-height: 80vh;
+  overflow-y: auto;
+}
+
 /* ── Profile Page ── */
 .profile-section {
   margin-bottom: 20px;

@@ -14,15 +14,15 @@
 
 | 源 | 克隆地址 |
 |---|---------|
-| Gitee（推荐国内） | `https://gitee.com/l1064709321/xuanshuAgent.git` |
-| 华为云 CodeHub | `https://codehub.devcloud.cn-north-4.huaweicloud.com/8965d3a4483445cca386477c8d9dd196/xuanshu-agent.git` |
+| 华为云 CodeHub（推荐国内） | `https://codehub.devcloud.cn-north-4.huaweicloud.com/8965d3a4483445cca386477c8d9dd196/xuanshu-agent.git` |
+| Gitee | `https://gitee.com/l1064709321/xuanshuAgent.git` |
 | GitHub | `https://github.com/l1064709321/xuanshuAgent.git` |
 
 ### 一键启动（推荐）
 
 ```bash
-git clone https://gitee.com/l1064709321/xuanshuAgent.git
-cd xuanshuAgent
+git clone https://codehub.devcloud.cn-north-4.huaweicloud.com/8965d3a4483445cca386477c8d9dd196/xuanshu-agent.git
+cd xuanshu-agent
 docker compose up -d
 ```
 
@@ -33,8 +33,8 @@ docker compose up -d
 **Windows：**
 
 ```cmd
-git clone https://gitee.com/l1064709321/xuanshuAgent.git
-cd xuanshuAgent
+git clone https://codehub.devcloud.cn-north-4.huaweicloud.com/8965d3a4483445cca386477c8d9dd196/xuanshu-agent.git
+cd xuanshu-agent
 xuanshu.bat
 ```
 
@@ -43,8 +43,8 @@ xuanshu.bat
 **Linux / macOS：**
 
 ```bash
-git clone https://gitee.com/l1064709321/xuanshuAgent.git
-cd xuanshuAgent
+git clone https://codehub.devcloud.cn-north-4.huaweicloud.com/8965d3a4483445cca386477c8d9dd196/xuanshu-agent.git
+cd xuanshu-agent
 ./xuanshu
 ```
 

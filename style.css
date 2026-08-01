@@ -313,13 +313,14 @@ body::after {
 .status-dot.offline { background: var(--text-muted); }
 
 /* ── Main Content Area ── */
-.main {
+.main-area {
   flex: 1;
   display: flex;
   flex-direction: column;
   min-width: 0;
   position: relative;
   background: var(--bg);
+  overflow: hidden;
 }
 
 /* ── Toolbar ── */
@@ -710,6 +711,68 @@ body::after {
 /* ── Model Search ── */
 .model-search-input {
   width: 100%;
+}
+
+/* ── Settings Panel (Right Sidebar) ── */
+.settings-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.45);
+  z-index: 35;
+}
+.settings-overlay.show {
+  display: block;
+}
+.settings-panel {
+  position: fixed;
+  right: 0; top: 0; bottom: 0;
+  width: 360px;
+  max-width: 90vw;
+  background: var(--surface);
+  border-left: 1px solid var(--border);
+  z-index: 36;
+  transform: translateX(100%);
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.settings-panel.open {
+  transform: translateX(0);
+  box-shadow: -8px 0 30px rgba(0,0,0,0.3);
+}
+.settings-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.settings-panel-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--neon-cyan);
+  letter-spacing: 1px;
+}
+.settings-panel-close {
+  background: none;
+  border: none;
+  color: var(--text-dim);
+  font-size: 22px;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+.settings-panel-close:hover {
+  color: var(--text);
+  background: rgba(255,255,255,0.05);
+}
+.settings-panel-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0;
 }
 
 /* ── u-flex ── */

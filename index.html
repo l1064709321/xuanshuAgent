@@ -129,6 +129,7 @@
   <main class="main-area">
     <div class="toolbar">
       <div class="toolbar-avatar" id="toolbarAvatar" onclick="openAvatarDrawer()" title="个人档案">玄</div>
+      <button class="toolbar-btn sidebar-toggle" onclick="toggleLeft()" title="侧栏开关" aria-label="侧栏开关">☰</button>
       <span class="u-flex-1"></span>
       <span class="token-badge" id="tokenBadge" title="Token用量">0 tk</span>
       <button class="toolbar-btn theme-btn" onclick="toggleThemeQuickPanel(event)" title="切换主题" aria-label="主题切换" id="toolbarThemeBtn">&#127912;</button>
@@ -697,7 +698,7 @@ function collapseLeft() {
   const sb = document.getElementById('leftSidebar');
   if (IS_MOBILE.matches) {
     sb.classList.remove('open');
-    document.getElementById('overlay').classList.remove('active');
+    document.getElementById('overlay').classList.remove('show');
   } else {
     sb.classList.add('collapsed');
   }
@@ -705,17 +706,18 @@ function collapseLeft() {
 
 function toggleLeft() {
   const sb = document.getElementById('leftSidebar');
-  const cls = IS_MOBILE.matches ? 'open' : 'collapsed';
-  sb.classList.toggle(cls);
   if (IS_MOBILE.matches) {
-    document.getElementById('overlay').classList.toggle('active', sb.classList.contains('open'));
+    sb.classList.toggle('open');
+    document.getElementById('overlay').classList.toggle('show', sb.classList.contains('open'));
+  } else {
+    sb.classList.toggle('collapsed');
   }
 }
-function toggleRight() { navigateTo('#settings'); }
 function closeAllPanels() {
-  document.getElementById('overlay').classList.remove('active');
+  document.getElementById('overlay').classList.remove('show');
   document.getElementById('leftSidebar').classList.remove('open');
   closeMoreMenu();
+  closeAvatarDrawer();
 }
 
 // ========== Hash 路由 ==========

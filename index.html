@@ -123,10 +123,15 @@
   <!-- ===== 主区域 ===== -->
   <main class="main-area">
     <div class="toolbar">
-      <div class="toolbar-avatar" id="toolbarAvatar" onclick="toggleLeft()" title="侧栏开关">玄</div>
+      <div class="toolbar-avatar" id="toolbarAvatar" onclick="navigateTo('#profile')" title="个人主页">玄</div>
       <span class="u-flex-1"></span>
       <span class="token-badge" id="tokenBadge" title="Token用量">0 tk</span>
-      <button class="toolbar-btn theme-btn" onclick="toggleThemeQuickPanel(event)" title="切换主题" aria-label="主题切换" id="toolbarThemeBtn">&#127912;</button>
+      <button class="toolbar-btn" id="toolbarMoreBtn" onclick="toggleMoreMenu(event)" title="菜单" aria-label="更多菜单">&#8942;</button>
+      <div class="more-menu" id="moreMenu" style="display:none">
+        <div class="more-menu-header">Agent 管理</div>
+        <div class="more-menu-item" onclick="closeMoreMenu();toggleThemeQuickPanel(event)">切换主题</div>
+        <div class="more-menu-item" onclick="closeMoreMenu();toggleSettings()">全局设置</div>
+      </div>
       <div class="theme-quick-panel" id="themeQuickPanel" style="display:none">
         <div class="theme-quick-row">
           <button class="tqp-chip" data-accent="cyber" data-mode="light" onclick="applyQuick('cyber','light')">科幻蓝·浅</button>
@@ -144,13 +149,6 @@
           <button class="tqp-chip" data-accent="leather" data-mode="light" onclick="applyQuick('leather','light')">书封棕·浅</button>
           <button class="tqp-chip" data-accent="leather" data-mode="dark" onclick="applyQuick('leather','dark')">书封棕·深</button>
         </div>
-      </div>
-      <button class="toolbar-btn" onclick="toggleSettings()" title="设置" aria-label="打开设置">&#9881;</button>
-      <button class="toolbar-btn" id="toolbarMoreBtn" onclick="toggleMoreMenu(event)" title="更多" aria-label="更多菜单">&#8942;</button>
-      <div class="more-menu" id="moreMenu" style="display:none">
-        <div class="more-menu-header">Agent 管理</div>
-        <div class="more-menu-item" onclick="closeMoreMenu();toggleSettings()">全局设置</div>
-        <div class="more-menu-item" onclick="closeMoreMenu();toggleLeft()">侧栏开关</div>
       </div>
     </div>
 
@@ -540,7 +538,7 @@ async function checkAuth() {
     const j = await r.json();
     if (j.ok) {
       hideAuth();
-      document.getElementById('toolbarAvatar').textContent = (j.user.phone || '').slice(-2) || '玄';
+      document.getElementById('toolbarAvatar').textContent = '玄';
       return;
     }
   } catch(e) {}
@@ -597,7 +595,7 @@ async function doRegister() {
     localStorage.setItem('xuanshu_token', authToken);
     localStorage.setItem('xuanshu_phone', phone);
     hideAuth();
-    document.getElementById('toolbarAvatar').textContent = phone.slice(-2);
+    // toolbarAvatar 固定显示玄姝
   } else {
     err.textContent = j.error;
   }
@@ -616,7 +614,7 @@ async function doLogin() {
     localStorage.setItem('xuanshu_token', authToken);
     localStorage.setItem('xuanshu_phone', phone);
     hideAuth();
-    document.getElementById('toolbarAvatar').textContent = phone.slice(-2);
+    // toolbarAvatar 固定显示玄姝
   } else {
     err.textContent = j.error;
   }
@@ -2163,17 +2161,14 @@ setTimeout(() => {
 // ========== 更多菜单 ==========
 let themePanelOpen = false;
 function toggleThemeQuickPanel(e) {
-  e.stopPropagation();
+  if(e) e.stopPropagation();
   const panel = document.getElementById('themeQuickPanel');
-  const btn = document.getElementById('toolbarThemeBtn');
   if (themePanelOpen) {
     panel.style.display = 'none';
     themePanelOpen = false;
-    btn.classList.remove('ring');
   } else {
     panel.style.display = 'flex';
     themePanelOpen = true;
-    btn.classList.add('ring');
     // close more menu if open
     const mm = document.getElementById('moreMenu');
     if (mm) mm.style.display = 'none';
@@ -2184,7 +2179,7 @@ function toggleThemeQuickPanel(e) {
     document.querySelectorAll('.tqp-chip').forEach(c => {
       c.classList.toggle('active', c.dataset.accent === curAccent && c.dataset.mode === curMode);
     });
-    setTimeout(() => { document.addEventListener('click', () => { panel.style.display = 'none'; themePanelOpen = false; btn.classList.remove('ring'); }, { once: true }); }, 10);
+    setTimeout(() => { document.addEventListener('click', () => { panel.style.display = 'none'; themePanelOpen = false; }, { once: true }); }, 10);
   }
 }
 function applyQuick(accent, mode) {
@@ -2194,11 +2189,14 @@ function applyQuick(accent, mode) {
   localStorage.setItem('marvis-theme-mode', mode);
   // update chips
   document.querySelectorAll('.tqp-chip').forEach(c => c.classList.toggle('active', c.dataset.accent === accent && c.dataset.mode === mode));
-  // also update settings page dropdowns if they exist
+  // update settings page dropdowns if they exist
   const accSel = document.getElementById('themeAccent');
   const modeSel = document.getElementById('themeMode');
   if (accSel) accSel.value = accent;
   if (modeSel) modeSel.value = mode;
+  // close panel after selection
+  const panel = document.getElementById('themeQuickPanel');
+  if (panel) { panel.style.display = 'none'; themePanelOpen = false; }
 }
 
 let moreMenuOpen = false;

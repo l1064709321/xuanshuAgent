@@ -21,7 +21,7 @@ from decompile import Decompiler, detect_format, get_supported_formats
 from screen_reader import capture, to_base64
 from sandbox import run_sandboxed, run_in_venv, run_local, create_venv, get_env_info
 from auto_sandbox import auto_sandbox
-from monitor import get_metrics
+from monitor import get_metrics, get_token_hit_tracker
 from embeddings import SkillEmbedder
 from production import (
     TaskDecomposer, ToolCallParser, ToolOrchestrator,
@@ -35,6 +35,8 @@ from production import (
 # ── 共享记忆文件夹（文件级持久化）──
 _MEMDIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".memdir")
 os.makedirs(_MEMDIR, exist_ok=True)
+# ── 技能市场（项目级共享技能库）──
+_SKILLS_MARKET = os.path.join(os.path.dirname(os.path.abspath(__file__)), "skills")
 
 
 class MemdirStore:
@@ -894,7 +896,7 @@ class PermissionBroker:
         self._lock = threading.RLock()
         self._pending: Dict[str, dict] = {}
         self._results: Dict[str, bool] = {}
-        self._enabled = False  # 默认关闭权限检查
+        self._enabled = True  # 默认开启权限检查，仅白名单路径可访问
         self._whitelist.add(os.path.realpath(_WS))
 
     @property
@@ -2943,92 +2945,61 @@ Git 版本回滚：发现文件被误改或需要恢复到之前版本时，用 
             model_name = resp.get("_model", "")
             if model_name:
                 model_degrader.record_success(model_name)
+        # Token 缓存命中率追踪
+        prompt_tokens = usage.get("prompt_tokens", 0)
+        cached_tokens = usage.get("prompt_tokens_details", {}).get("cached_tokens", 0)
+        completion_tokens = usage.get("completion_tokens", 0)
+        if prompt_tokens:
+            get_token_hit_tracker().record(agent, prompt_tokens, cached_tokens, completion_tokens)
         return resp
 
     def _build_child_msgs(self, child: ChildBot, user_input: str,
                           extra_context: str = "", image: str = None) -> list:
-        """构建子Agent消息列表 — v5: Codex CLI PromptSlot 四分组注入
-        Slot 1: DEVELOPER_POLICY — 硬规则、边界、约束（最高优先级）
-        Slot 2: CONTEXTUAL — 对话上下文、知识库、记忆（参考信息）
-        Slot 3: USER_PROFILE — 用户画像（从 USER.md 提取偏好）
-        用户消息独立为 user role
+        """构建子Agent消息列表 — v6: 前缀冻结（Prefix Freezing）
+        system[0] 冻结层：宪法 + system_prompt + 全量知识库 + 全量技能 + 用户画像
+        system[1] 动态层：最近2条对话 + 长期摘要 + top2记忆 + extra_context
+        预期缓存命中率 ~93%（冻结层 ~4500t / 总 ~4800t）
         """
         messages = []
 
-        # ── Slot 1: 硬规则与约束（宪法 + boot prompt + knowledge）──
-        # 生产环境：MEMORY.md 读取从"必须"改为"可选"，避免死循环
+        # ── system[0]: 冻结层 —— 每次调用几乎不变，最大化 LLM 前缀缓存命中 ──
         constitution = build_constitution(child.name)
-        boot_prompt = (
-            f"{constitution}\n\n"
-            f"---\n\n"
-            f"{child.system_prompt}\n\n"
-            f"## 启动指令\n"
-            f"你的长期经验（MEMORY.md）已自动注入到下方的「Agent 自主记忆」章节，无需主动读取。"
-            f"只有当你想更新 MEMORY.md 时才用 memdir_write。\n\n"
-            f"如需查询记忆文件夹现有文件，可选调用 memdir_list/memdir_search。"
-        )
-        policy_lines = [boot_prompt]
+        frozen_parts = [
+            f"{constitution}\n\n---\n\n{child.system_prompt}\n\n"
+            "## 启动指令\n"
+            "你的长期经验（MEMORY.md）已自动注入到下方的「Agent 自主记忆」章节，无需主动读取。"
+            "只有当你想更新 MEMORY.md 时才用 memdir_write。\n"
+            "如需查询记忆文件夹现有文件，可选调用 memdir_list/memdir_search。"
+        ]
+
+        # 全量知识库（按需注入 → 全量预加载）
         if child.knowledge:
-            kb_text = "\n\n".join(child.knowledge)
-            policy_lines.append(f"[知识库]\n{kb_text}")
-        messages.append({"role": "system", "content": "\n\n".join(policy_lines)})
+            frozen_parts.append("[知识库]\n" + "\n\n".join(child.knowledge))
 
-        # ── Slot 2: 上下文信息（对话提炼 + 长期摘要 + 记忆文件夹 + Skill）──
-        ctx_parts = []
+        # 全量技能预编译（共享市场 + 子Agent私有，市场优先以保证稳定性）
+        skill_texts = []
+        # 共享技能市场（项目级，所有 Agent 共用）
+        market_dir = Path(_SKILLS_MARKET)
+        if market_dir.exists():
+            for sf in sorted(market_dir.glob("*.md")):
+                if sf.name == "README.md":
+                    continue
+                try:
+                    skill_texts.append(sf.read_text(encoding="utf-8"))
+                except Exception:
+                    pass
+        # 子Agent私有技能（Agent 自我学习积累）
+        agent_skill_dir = child.memdir / "skills"
+        if agent_skill_dir.exists():
+            for sf in sorted(agent_skill_dir.glob("*.md")):
+                try:
+                    skill_texts.append(sf.read_text(encoding="utf-8"))
+                except Exception:
+                    pass
+        if skill_texts:
+            frozen_parts.append("[技能库]\n" + "\n---\n".join(skill_texts))
 
-        # 2a. 最近对话提炼
-        recent = self.shared_msgs[-8:]
-        if recent:
-            distilled = self._distill_context(recent)
-            ctx_block = "[## 对话关键要点]" + (f"\n{distilled}" if distilled else "")
-            ctx_block += "\n\n[## 最近原始对话]\n"
-            for m in recent:
-                role_label = "用户" if m["role"] == "user" else "助手"
-                ctx_block += f"【{role_label}】{m['content']}\n"
-            ctx_parts.append(ctx_block)
-
-        # 2b. 长期上下文摘要
-        if self._context_summary:
-            ctx_parts.append(
-                f"[长期上下文摘要 - 这是此前对话中提炼的关键信息]\n{self._context_summary}")
-
-        # 2c. Agent 自主记忆（MEMORY.md — 关键词匹配）
-        if self._agent_memory:
-            query_keywords = set(user_input.lower().split())
-            relevant_entries = []
-            for line in self._agent_memory.split("\n"):
-                if line.strip().startswith("[") and "]" in line and "|" in line:
-                    entry_text = line.lower()
-                    hits = sum(1 for w in query_keywords if w in entry_text and len(w) > 1)
-                    if hits >= 1 or len(query_keywords) <= 3:
-                        relevant_entries.append(line.strip())
-            if relevant_entries:
-                memory_hint = "\n".join(relevant_entries[:8])
-                ctx_parts.append(
-                    f"[Agent 自主记忆 — 与当前问题相关的过往经验]\n{memory_hint}")
-
-        # 2d. 记忆文件夹上下文
-        mem_results = memdir.search(user_input)
-        if mem_results:
-            mem_lines = ["[记忆文件夹 - 匹配记录]"]
-            for r in mem_results[:5]:
-                mem_lines.append(f"### {r['rel']}\n{r['preview'][:500]}")
-            ctx_parts.append("\n".join(mem_lines))
-
-        # 2e. 学习到的 Skill
-        skill_text = self._inject_skills(child, user_input)
-        if skill_text:
-            ctx_parts.append(skill_text)
-
-        # 2f. extra_context
-        if extra_context:
-            ctx_parts.append(extra_context)
-
-        if ctx_parts:
-            messages.append({"role": "system",
-                "content": "[上下文信息]\n\n" + "\n\n---\n\n".join(ctx_parts)})
-
-        # ── Slot 3: 用户画像（从 USER.md 提取偏好）──
+        # 用户画像（从 Slot3 并入冻结层）
         if self._user_profile:
             profile_lines = []
             for line in self._user_profile.split("\n"):
@@ -3038,11 +3009,45 @@ Git 版本回滚：发现文件被误改或需要恢复到之前版本时，用 
                     content = line.split("]", 1)[-1].split("|")[0].strip()
                     profile_lines.append(f"- {tag} {content}")
             if profile_lines:
-                messages.append({"role": "system",
-                    "content": "[用户画像 — 偏好与习惯]\n" + "\n".join(profile_lines[:5])})
+                frozen_parts.append("[用户画像 — 偏好与习惯]\n" + "\n".join(profile_lines[:5]))
+
+        messages.append({"role": "system", "content": "\n\n---\n\n".join(frozen_parts)})
+
+        # ── system[1]: 动态层 —— 每次对话不同，控制在 ~300t 以内 ──
+        dyn_parts = []
+
+        # 最近 2 条原始对话（不蒸馏，保持低 token 开销）
+        recent = self.shared_msgs[-2:]
+        if recent:
+            block = "[## 最近对话]\n"
+            for m in recent:
+                role_label = "用户" if m["role"] == "user" else "助手"
+                block += f"【{role_label}】{m['content']}\n"
+            dyn_parts.append(block)
+
+        # 长期上下文摘要
+        if self._context_summary:
+            dyn_parts.append(
+                f"[长期上下文摘要]\n{self._context_summary}")
+
+        # top 2 记忆文件夹匹配（从 top 5 缩减）
+        mem_results = memdir.search(user_input)
+        if mem_results:
+            mem_lines = ["[记忆文件夹 - 匹配记录]"]
+            for r in mem_results[:2]:
+                mem_lines.append(f"### {r['rel']}\n{r['preview'][:500]}")
+            dyn_parts.append("\n".join(mem_lines))
+
+        # extra_context
+        if extra_context:
+            dyn_parts.append(extra_context)
+
+        if dyn_parts:
+            messages.append({"role": "system",
+                "content": "[上下文信息]\n\n" + "\n\n---\n\n".join(dyn_parts)})
 
         # ── 用户消息 ──
-        content = f"{extra_context}\n---\n{user_input}" if extra_context else user_input
+        content = user_input
         if image:
             content = [
                 {"type": "text", "text": content},
@@ -3050,7 +3055,7 @@ Git 版本回滚：发现文件被误改或需要恢复到之前版本时，用 
             ]
         messages.append({"role": "user", "content": content})
 
-        # P3: 思维链注入 — 复杂分析型任务自动追加 CoT 指令
+        # P3: 思维链注入
         if self._is_cot_task(user_input):
             messages.append({"role": "system",
                 "content": "[思维链指令]\n这是一个需要深度推理的任务。"

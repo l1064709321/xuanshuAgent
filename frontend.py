@@ -439,6 +439,24 @@ def token_budget():
     return jsonify({"ok": True, "used": budget.remaining(), "limit": budget.daily_limit,
                     "remaining": budget.remaining()})
 
+@app.route("/ping", methods=["GET"])
+def ping():
+    """轻量心跳检查 — 无任何依赖，极速响应"""
+    return jsonify({"ok": True, "ts": time.time()})
+
+@app.route("/token-stats", methods=["GET"])
+def token_stats():
+    """Token 命中率实时统计"""
+    from monitor import get_token_hit_tracker, get_metrics
+    tracker = get_token_hit_tracker()
+    metrics = get_metrics()
+    stats = tracker.stats()
+    budget = getattr(bot, "_token_budget", None)
+    if budget:
+        stats["budget"] = {"limit": budget.daily_limit, "used": budget._used, "remaining": budget.remaining()}
+    stats["metrics_summary"] = {k: {"tokens": v["llm_tokens"], "calls": v["llm_calls"]} for k, v in metrics.to_dict().items()}
+    return jsonify({"ok": True, **stats})
+
 @app.route("/context", methods=["GET"])
 def get_context():
     """返回持久化的对话上下文，前端关闭页面后重新打开时恢复"""
@@ -980,6 +998,8 @@ def git_revert():
     target = data.get("hash", "").strip()
     if not target:
         return jsonify({"ok": False, "error": "缺少目标 commit hash"})
+    if not data.get("confirm"):
+        return jsonify({"ok": False, "error": "高危操作：需传 confirm=true 确认执行 git reset --hard", "need_confirm": True})
     try:
         subprocess.run(["git", "stash", "push", "-u", "-m", "auto-stash-before-revert"],
                        capture_output=True, timeout=10,

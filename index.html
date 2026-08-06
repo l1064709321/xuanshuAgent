@@ -96,6 +96,9 @@
       <a class="sidebar-nav-item active" href="#chat" data-page="chat">
         <span class="sidebar-nav-icon">&diams;</span> 对话
       </a>
+      <a class="sidebar-nav-item" href="#monitor" data-page="monitor" onclick="openMonitor()">
+        <span class="sidebar-nav-icon">&#9673;</span> 监控
+      </a>
     </nav>
     <div class="sidebar-section-label">会话</div>
     <div class="sidebar-sessions" id="sessionList">
@@ -130,7 +133,7 @@
       <div class="more-menu" id="moreMenu" style="display:none">
         <div class="more-menu-header">Agent 管理</div>
         <div class="more-menu-item" onclick="closeMoreMenu();toggleThemeQuickPanel(event)">切换主题</div>
-        <div class="more-menu-item" onclick="closeMoreMenu();toggleSettings()">全局设置</div>
+        <div class="more-menu-item" onclick="closeMoreMenu();navigateTo('#settings')">全局设置</div>
       </div>
       <div class="theme-quick-panel" id="themeQuickPanel" style="display:none">
         <div class="theme-quick-row">
@@ -150,6 +153,12 @@
           <button class="tqp-chip" data-accent="leather" data-mode="dark" onclick="applyQuick('leather','dark')">书封棕·深</button>
         </div>
       </div>
+    </div>
+
+    <!-- 连接断开提示条 -->
+    <div class="conn-banner" id="connBanner" style="display:none">
+      <span class="conn-banner-icon">&#9888;</span>
+      <span class="conn-banner-msg">连接已断开，正在重连…</span>
     </div>
 
     <div class="page-stage">
@@ -191,11 +200,11 @@
     </section>
 
     <!-- ===== 设置面板（右侧滑出） ===== -->
-    <div class="settings-overlay" id="settingsOverlay" onclick="toggleSettings()"></div>
+    <div class="settings-overlay" id="settingsOverlay" onclick="toggleSettings();if(location.hash==='#settings')navigateTo('#chat')"></div>
     <aside class="settings-panel" id="settingsPanel">
       <div class="settings-panel-header">
         <span class="settings-panel-title">设置</span>
-        <button class="settings-panel-close" onclick="toggleSettings()">&times;</button>
+        <button class="settings-panel-close" onclick="toggleSettings();if(location.hash==='#settings')navigateTo('#chat')">&times;</button>
       </div>
       <div class="settings-panel-body">
       <div class="panel-tabs">
@@ -438,6 +447,77 @@
     </div><!-- /settings-panel-body -->
     </aside><!-- /settings-panel -->
 
+    <!-- ===== Token 监控面板 ===== -->
+    <aside class="settings-panel" id="monitorPanel" style="display:none">
+      <div class="settings-panel-header">
+        <span class="settings-panel-title">Token 监控</span>
+        <button class="settings-panel-close" onclick="closeMonitor()">&times;</button>
+      </div>
+      <div class="settings-panel-body">
+        <!-- 心跳状态条 -->
+        <div class="heartbeat-bar" id="heartbeatBar">
+          <span class="heartbeat-dot" id="heartbeatDot"></span>
+          <span class="heartbeat-msg" id="heartbeatMsg">检测中…</span>
+          <span class="heartbeat-latency" id="heartbeatLat"></span>
+        </div>
+        <!-- 总览卡片 -->
+        <div class="monitor-overview" id="monitorOverview">
+          <div class="monitor-card">
+            <div class="monitor-card-label">缓存命中率</div>
+            <div class="monitor-card-value" id="mHitRate" style="color:var(--accent)">--%</div>
+          </div>
+          <div class="monitor-card">
+            <div class="monitor-card-label">总 Token 消耗</div>
+            <div class="monitor-card-value" id="mTotalTokens">--</div>
+          </div>
+          <div class="monitor-card">
+            <div class="monitor-card-label">消耗速率</div>
+            <div class="monitor-card-value" id="mRate">-- tk/min</div>
+          </div>
+          <div class="monitor-card">
+            <div class="monitor-card-label">预算剩余</div>
+            <div class="monitor-card-value" id="mBudget">--</div>
+          </div>
+        </div>
+        <!-- 详情细分 -->
+        <div class="settings-section">
+          <div class="settings-section-title">Token 细分</div>
+          <table class="monitor-table" id="monitorTable">
+            <thead><tr><th>Agent</th><th>调用次数</th><th>输入 Token</th><th>缓存命中</th><th>输出 Token</th><th>命中率</th></tr></thead>
+            <tbody id="monitorTableBody"></tbody>
+          </table>
+          <div id="monitorEmpty" style="text-align:center;color:var(--text-muted);padding:20px">暂无数据，等待 LLM 调用后自动更新…</div>
+        </div>
+        <!-- 时序趋势 -->
+        <div class="settings-section">
+          <div class="settings-section-title">近 5 分钟趋势</div>
+          <div class="monitor-bar-wrap" id="monitorBarWrap">
+            <canvas id="monitorBar" width="400" height="120"></canvas>
+          </div>
+          <div style="display:flex;gap:8px;justify-content:center;font-size:11px;margin-top:4px">
+            <span style="color:var(--accent)">■ 输入</span>
+            <span style="color:#a78bfa">■ 缓存</span>
+            <span style="color:#4ade80">■ 输出</span>
+          </div>
+        </div>
+        <!-- 操作 -->
+        <div class="settings-section">
+          <button class="credential-btn" onclick="fetchTokenStats()" style="width:100%">手动刷新</button>
+          <div style="display:flex;align-items:center;gap:8px;margin-top:8px">
+            <input type="checkbox" id="autoRefresh" checked onchange="toggleAutoRefresh()">
+            <label for="autoRefresh" style="font-size:13px;color:var(--text-muted)">自动刷新 (3s)</label>
+          </div>
+        </div>
+        <div class="settings-section">
+          <div class="settings-section-title">日预算进度</div>
+          <div class="budget-bar-wrap">
+            <div class="budget-bar" id="budgetBar" style="width:0%"></div>
+          </div>
+          <div style="font-size:12px;color:var(--text-muted);margin-top:4px;text-align:right" id="budgetLabel">--</div>
+        </div>
+      </div>
+    </aside>
+
   </main>
 
   <!-- ===== 头像抽屉（右侧） ===== -->
@@ -489,6 +569,9 @@
     </button>
     <button class="bottom-nav-item" onclick="toggleSettings()">
       <span class="nav-icon">&#9881;</span> 设置
+    </button>
+    <button class="bottom-nav-item" onclick="openMonitor()">
+      <span class="nav-icon">&#9673;</span> 监控
     </button>
   </nav>
 
@@ -673,12 +756,21 @@ function toggleLeft() {
 function toggleSettings() {
   const panel = document.getElementById('settingsPanel');
   const overlay = document.getElementById('settingsOverlay');
-  const isOpen = panel.classList.toggle('open');
-  overlay.classList.toggle('show', isOpen);
+  const isOpen = !panel.classList.contains('open');
+  if (isOpen) {
+    panel.classList.add('open');
+    overlay.classList.add('show');
+    loadModels();
+  } else {
+    panel.classList.remove('open');
+    overlay.classList.remove('show');
+  }
 }
 function closeAllPanels() {
   document.getElementById('overlay').classList.remove('show');
   document.getElementById('leftSidebar').classList.remove('open');
+  document.getElementById('settingsPanel').classList.remove('open');
+  document.getElementById('settingsOverlay').classList.remove('show');
   closeMoreMenu();
   closeAvatarDrawer();
 }
@@ -697,8 +789,16 @@ function navigateTo(hash) {
 }
 function onHashChange() {
   const hash = window.location.hash || '#chat';
+
+  // 关闭设置面板（非 #settings 时）
+  if (hash !== '#settings') {
+    document.getElementById('settingsPanel').classList.remove('open');
+    document.getElementById('settingsOverlay').classList.remove('show');
+  }
+
   document.querySelectorAll('.page-section').forEach(s => s.classList.remove('active'));
-  const page = document.getElementById('page-' + hash.slice(1));
+  const pageId = 'page-' + (hash === '#settings' ? 'chat' : hash.slice(1));
+  const page = document.getElementById(pageId);
   if (page) page.classList.add('active');
   document.querySelectorAll('.sidebar-nav-item').forEach(a => {
     a.classList.toggle('active', a.getAttribute('href') === hash);
@@ -709,7 +809,16 @@ function onHashChange() {
   if (hash === '#profile') {
     // 个人主页无需额外加载
   }
-  if (hash === '#settings') { loadModels(); }
+  if (hash === '#settings') {
+    // 打开滑动设置面板
+    const panel = document.getElementById('settingsPanel');
+    const overlay = document.getElementById('settingsOverlay');
+    if (!panel.classList.contains('open')) {
+      panel.classList.add('open');
+      overlay.classList.add('show');
+    }
+    loadModels();
+  }
 }
 window.addEventListener('hashchange', onHashChange);
 window.addEventListener('DOMContentLoaded', function() {
@@ -722,9 +831,10 @@ function switchPanelTab(el, tab) {
   document.querySelectorAll('.panel-tab').forEach(t => { t.classList.remove('active'); t.setAttribute('aria-selected', 'false'); });
   el.classList.add('active');
   el.setAttribute('aria-selected', 'true');
-  ['settings','theme','tools','agents'].forEach(id => {
+  ['settings','theme','tools','workflow'].forEach(id => {
     document.getElementById('tab-' + id).style.display = id === tab ? '' : 'none';
   });
+  if (tab === 'workflow') { setTimeout(loadWorkflows, 100); }
 }
 
 // ========== 主题切换 ==========
@@ -2745,19 +2855,8 @@ document.addEventListener('keydown', function(e) {
   }
 });
 
-// 页面 / tab 切换加载
-const origNavigateTo = navigateTo;
-navigateTo = function(hash) {
-  origNavigateTo(hash);
-  if (hash === '#settings') {
-    const tab = document.querySelector('.panel-tab[aria-selected="true"]');
-    if (tab && tab.getAttribute('data-page') === 'workflow') { loadWorkflows(); }
-  }
-};
-document.addEventListener('click', function(e) {
-  const tab = e.target.closest('.panel-tab');
-  if (tab && tab.getAttribute('data-page') === 'workflow') { setTimeout(loadWorkflows, 100); }
-});
+// (已移除重复的 tab 切换加载 - switchPanelTab 统一处理)
+document.addEventListener('click', function(e) { });
 
 // ========== 粒子云画布 ==========
 function initParticles() {
@@ -2863,6 +2962,248 @@ function initParticles() {
     requestAnimationFrame(animate);
   }
   animate();
+}
+
+// ========== Token 监控面板 ==========
+let monitorTimer = null;
+let autoRefreshOn = true;
+
+function openMonitor() {
+  const panel = document.getElementById('monitorPanel');
+  const settings = document.getElementById('settingsPanel');
+  if (settings) settings.style.display = 'none';
+  panel.style.display = 'flex';
+  fetchTokenStats();
+  startAutoRefresh();
+}
+
+function closeMonitor() {
+  const panel = document.getElementById('monitorPanel');
+  panel.style.display = 'none';
+  stopAutoRefresh();
+  navigateTo('#chat');
+}
+
+function toggleAutoRefresh() {
+  autoRefreshOn = document.getElementById('autoRefresh').checked;
+  if (autoRefreshOn) startAutoRefresh(); else stopAutoRefresh();
+}
+
+function startAutoRefresh() {
+  stopAutoRefresh();
+  if (autoRefreshOn) monitorTimer = setInterval(fetchTokenStats, 3000);
+}
+
+function stopAutoRefresh() {
+  if (monitorTimer) { clearInterval(monitorTimer); monitorTimer = null; }
+}
+
+// ===== 心跳检查 =====
+let heartbeatTimer = null;
+let heartbeatFailCount = 0;
+let heartbeatStopped = false;  // 用户触发重连标记
+const HEARTBEAT_MAX_FAIL = 5;  // 连续失败5次判定为断开，暂停心跳
+
+function startHeartbeat() {
+  stopHeartbeat();
+  heartbeatFailCount = 0;
+  heartbeatStopped = false;
+  doPing();
+  heartbeatTimer = setInterval(doPing, 5000);
+}
+
+function stopHeartbeat() {
+  if (heartbeatTimer) { clearInterval(heartbeatTimer); heartbeatTimer = null; }
+}
+
+async function doPing() {
+  if (heartbeatStopped) return;
+  const start = performance.now();
+  try {
+    const r = await fetch('/ping', { signal: AbortSignal.timeout(4000) });
+    if (!r.ok) throw new Error('bad status');
+    const d = await r.json();
+    const latency = Math.round(performance.now() - start);
+
+    heartbeatFailCount = 0;
+    updateHeartbeatUI('alive', latency);
+    updateConnBanner(false);
+  } catch (e) {
+    heartbeatFailCount++;
+    updateHeartbeatUI('dead', 0);
+    if (heartbeatFailCount >= HEARTBEAT_MAX_FAIL) {
+      stopHeartbeat();
+      heartbeatStopped = true;
+      updateConnBanner(true, true);  // paused mode
+    }
+  }
+}
+
+function updateHeartbeatUI(state, latency) {
+  const dot = document.getElementById('heartbeatDot');
+  const msg = document.getElementById('heartbeatMsg');
+  const lat = document.getElementById('heartbeatLat');
+  const bar = document.getElementById('heartbeatBar');
+  if (!dot || !bar) return;
+
+  if (state === 'alive') {
+    bar.className = 'heartbeat-bar';
+    dot.style.cssText = 'background:var(--ok);animation:pulse-dot 2s infinite;';
+    msg.textContent = '心跳正常 · 每5秒';
+    lat.textContent = latency + 'ms';
+  } else {
+    bar.className = 'heartbeat-bar dead';
+    dot.style.cssText = 'background:var(--err);animation:none;';
+    msg.textContent = '心跳超时';
+    lat.textContent = '—';
+  }
+}
+
+function updateConnBanner(show, paused) {
+  const banner = document.getElementById('connBanner');
+  const statusDot = document.getElementById('statusDot');
+  const statusLabel = document.getElementById('statusLabel');
+  const panelDot = document.getElementById('panelStatusDot');
+
+  if (show) {
+    banner.style.display = 'flex';
+    if (paused) {
+      banner.className = 'conn-banner retrying';
+      banner.querySelector('.conn-banner-msg').textContent = '连接已断开 · 输入消息自动重连';
+    } else {
+      banner.className = 'conn-banner';
+    }
+    if (statusDot) { statusDot.className = 'status-dot offline'; }
+    if (statusLabel) statusLabel.textContent = '连接断开';
+    if (panelDot) { panelDot.className = 'status-dot offline'; }
+  } else {
+    banner.style.display = 'none';
+    if (statusDot) { statusDot.className = 'status-dot online'; }
+    if (statusLabel) statusLabel.textContent = '已连接';
+    if (panelDot) { panelDot.className = 'status-dot online'; }
+  }
+}
+
+// 用户输入消息时自动恢复心跳
+function onUserInputWake() {
+  if (heartbeatStopped) {
+    updateConnBanner(false);
+    startHeartbeat();
+  }
+}
+document.addEventListener('DOMContentLoaded', function() {
+  var input = document.getElementById('msg-input');
+  if (input) {
+    input.addEventListener('input', onUserInputWake);
+    input.addEventListener('keydown', onUserInputWake);
+  }
+  // 发送按钮也触发恢复
+  var sendBtn = document.querySelector('.pill-send');
+  if (sendBtn) sendBtn.addEventListener('click', onUserInputWake);
+});
+
+// 页面加载即启动心跳
+startHeartbeat();
+
+async function fetchTokenStats() {
+  try {
+    const r = await fetch('/token-stats');
+    const j = await r.json();
+    if (!j.ok) return;
+    renderMonitor(j);
+  } catch(e) { /* 静默失败 */ }
+}
+
+function renderMonitor(j) {
+  // 总览卡片
+  document.getElementById('mHitRate').textContent = j.hit_rate + '%';
+  const totalTk = (j.total.prompt_tokens + j.total.completion_tokens);
+  document.getElementById('mTotalTokens').textContent = totalTk > 1000 ? (totalTk/1000).toFixed(1)+'k' : totalTk;
+  document.getElementById('mRate').textContent = j.tokens_per_minute + ' tk/min';
+  if (j.budget) {
+    document.getElementById('mBudget').textContent = (j.budget.remaining/1000).toFixed(0)+'k';
+    const pct = ((j.budget.used / j.budget.limit) * 100).toFixed(1);
+    document.getElementById('budgetBar').style.width = Math.min(pct, 100) + '%';
+    document.getElementById('budgetLabel').textContent = (j.budget.used/1000).toFixed(0)+'k / '+(j.budget.limit/1000).toFixed(0)+'k ('+pct+'%)';
+  }
+
+  // 细分表格
+  const tb = document.getElementById('monitorTableBody');
+  const empty = document.getElementById('monitorEmpty');
+  const agents = j.by_agent || {};
+  const hasData = j.total.calls > 0;
+  empty.style.display = hasData ? 'none' : '';
+  document.getElementById('monitorTable').style.display = hasData ? '' : 'none';
+  if (!hasData) return;
+  tb.innerHTML = '';
+  for (const [name, a] of Object.entries(agents)) {
+    const hitPct = a.prompt_tokens > 0 ? ((a.cached_tokens / a.prompt_tokens) * 100).toFixed(1) : '0.0';
+    tb.innerHTML += `<tr>
+      <td>${escHtml(name)}</td><td>${a.calls}</td><td>${fmtTk(a.prompt_tokens)}</td>
+      <td>${fmtTk(a.cached_tokens)}</td><td>${fmtTk(a.completion_tokens)}</td><td>${hitPct}%</td>
+    </tr>`;
+  }
+
+  // 趋势柱状图
+  drawMonitorBar(j.timeline || []);
+}
+
+function drawMonitorBar(timeline) {
+  const canvas = document.getElementById('monitorBar');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  ctx.clearRect(0, 0, W, H);
+  if (!timeline.length) return;
+
+  // 按 10 秒桶聚合
+  const now = Date.now() / 1000;
+  const buckets = [];
+  const bucketSize = 10; // 10s per bar
+  const maxBars = 40;
+  for (let i = 0; i < maxBars; i++) {
+    buckets.push({ t: now - (maxBars - i) * bucketSize, prompt: 0, cached: 0, completion: 0 });
+  }
+  for (const entry of timeline) {
+    const idx = Math.floor((entry.ts - (now - maxBars * bucketSize)) / bucketSize);
+    if (idx >= 0 && idx < maxBars) {
+      buckets[idx].prompt += entry.prompt;
+      buckets[idx].cached += entry.cached;
+      buckets[idx].completion += entry.completion;
+    }
+  }
+
+  const maxVal = Math.max(1, ...buckets.map(b => b.prompt + b.completion));
+  const barW = (W - 4) / maxBars - 1;
+
+  for (let i = 0; i < maxBars; i++) {
+    const b = buckets[i];
+    const x = 2 + i * (barW + 1);
+    // 输入 (prompt) 层
+    const h1 = (b.prompt / maxVal) * (H - 4);
+    ctx.fillStyle = 'var(--accent)';
+    ctx.fillRect(x, H - 2 - h1, barW, h1);
+    // 缓存命中层
+    if (b.cached > 0) {
+      const h2 = (b.cached / maxVal) * (H - 4);
+      ctx.fillStyle = 'rgba(167,139,250,0.7)';
+      ctx.fillRect(x, H - 2 - h2, barW, h2);
+    }
+    // 输出层 (叠在输入顶部)
+    if (b.completion > 0) {
+      const h3 = (b.completion / maxVal) * (H - 4);
+      ctx.fillStyle = 'rgba(74,222,128,0.6)';
+      ctx.fillRect(x, H - 2 - h1 - h3, barW, h3);
+    }
+  }
+}
+
+function fmtTk(n) { return n > 1000 ? (n/1000).toFixed(1)+'k' : String(n); }
+
+function escHtml(s) {
+  const d = document.createElement('div');
+  d.textContent = s;
+  return d.innerHTML;
 }
 </script>
 </body>

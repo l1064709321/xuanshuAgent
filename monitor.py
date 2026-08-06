@@ -5,7 +5,7 @@
 import time, json, os
 from typing import Dict, Optional
 from collections import defaultdict
-from threading import Lock
+from threading import Lock, RLock
 
 _WS = os.path.dirname(os.path.abspath(__file__))
 
@@ -92,6 +92,106 @@ class Metrics:
 
 
 _global_metrics = Metrics()
+
+
+# ═══════════════════════════════════════════
+# Token 命中率实时追踪
+# ═══════════════════════════════════════════
+
+class TokenHitTracker:
+    """Token 缓存命中率追踪器 — 记录每次 LLM 调用的 token 分布"""
+
+    def __init__(self, history_size: int = 200):
+        self._lock = RLock()
+        self.history_size = history_size
+        self.reset()
+
+    def reset(self):
+        with self._lock:
+            self._by_agent: Dict[str, dict] = defaultdict(lambda: {
+                "prompt_tokens": 0,
+                "cached_tokens": 0,
+                "completion_tokens": 0,
+                "calls": 0,
+            })
+            self._total = {"prompt_tokens": 0, "cached_tokens": 0, "completion_tokens": 0, "calls": 0}
+            self._timeline: list = []  # [(ts, prompt, cached, completion, agent), ...]
+            self._start_time = time.time()
+
+    def record(self, agent: str, prompt_tokens: int, cached_tokens: int = 0, completion_tokens: int = 0):
+        with self._lock:
+            a = self._by_agent[agent]
+            a["prompt_tokens"] += prompt_tokens
+            a["cached_tokens"] += cached_tokens
+            a["completion_tokens"] += completion_tokens
+            a["calls"] += 1
+            self._total["prompt_tokens"] += prompt_tokens
+            self._total["cached_tokens"] += cached_tokens
+            self._total["completion_tokens"] += completion_tokens
+            self._total["calls"] += 1
+            self._timeline.append((time.time(), prompt_tokens, cached_tokens, completion_tokens, agent))
+            if len(self._timeline) > self.history_size:
+                self._timeline = self._timeline[-self.history_size:]
+
+    @property
+    def hit_rate(self) -> float:
+        """缓存命中率 = cached_tokens / prompt_tokens"""
+        with self._lock:
+            if self._total["prompt_tokens"] == 0:
+                return 0.0
+            return self._total["cached_tokens"] / self._total["prompt_tokens"]
+
+    @property
+    def tokens_per_minute(self) -> float:
+        """每分钟 Token 消耗速率 (基于最近 5 分钟)"""
+        with self._lock:
+            window = 300  # 5 分钟
+            cutoff = time.time() - window
+            recent = [e for e in self._timeline if e[0] >= cutoff]
+            if not recent:
+                return 0.0
+            total = sum(e[1] + e[3] for e in recent)  # prompt + completion
+            elapsed = time.time() - max(cutoff, recent[0][0])
+            if elapsed <= 0:
+                return 0.0
+            return total / (elapsed / 60)
+
+    def stats(self) -> dict:
+        """返回完整 Token 统计"""
+        with self._lock:
+            uptime = time.time() - self._start_time
+            by_minute = []
+            for entry in self._timeline[-50:]:
+                by_minute.append({
+                    "ts": entry[0],
+                    "prompt": entry[1],
+                    "cached": entry[2],
+                    "completion": entry[3],
+                    "agent": entry[4],
+                })
+            return {
+                "uptime_s": int(uptime),
+                "total": dict(self._total),
+                "hit_rate": round(self.hit_rate * 100, 2),
+                "tokens_per_minute": round(self.tokens_per_minute, 1),
+                "by_agent": {k: dict(v) for k, v in self._by_agent.items()},
+                "timeline": by_minute,
+            }
+
+    def feed_from_metrics(self, agent: str, prompt_tokens: int, cached_tokens: int = 0):
+        """从现有的 Metrics.record_llm 中接入 — 兼容层。
+        注意：此方法不记录 completion_tokens，仅用于历史兼容；不污染命中率统计。"""
+        self.record(agent, prompt_tokens=prompt_tokens, cached_tokens=cached_tokens, completion_tokens=0)
+
+
+_token_hit_tracker = None
+
+
+def get_token_hit_tracker() -> TokenHitTracker:
+    global _token_hit_tracker
+    if _token_hit_tracker is None:
+        _token_hit_tracker = TokenHitTracker()
+    return _token_hit_tracker
 
 
 def get_metrics() -> Metrics:

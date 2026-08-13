@@ -1,3280 +1,6686 @@
 <!DOCTYPE html>
+
 <html lang="zh">
+
 <head>
+
 <meta charset="UTF-8">
+
 <meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover">
+
 <title>玄姝 Agent</title>
+
 <link rel="preconnect" href="https://fonts.googleapis.com">
+
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;500;600;700&family=DM+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
 <link rel="stylesheet" href="style.css">
+
 </head>
+
 <body>
-<a href="#msg-input" class="skip-link">跳到输入框</a>
 
-<!-- 登录/注册弹窗 -->
+<a href="#msg-input" class="skip-link">璺冲埌杈撳叆妗?/a>
+
+
+
+<!-- 鐧诲綍/娉ㄥ唽寮圭獥 -->
+
 <div class="auth-overlay" id="authOverlay">
+
   <div class="auth-container">
+
     <div class="auth-header">
+
       <div class="auth-logo">玄姝</div>
+
       <div class="auth-tabs">
-        <button class="auth-tab active" onclick="switchAuthTab('login')">登录</button>
-        <button class="auth-tab" onclick="switchAuthTab('register')">注册</button>
+
+        <button class="auth-tab active" onclick="switchAuthTab('login')">鐧诲綍</button>
+
+        <button class="auth-tab" onclick="switchAuthTab('register')">娉ㄥ唽</button>
+
       </div>
+
     </div>
+
     <div class="auth-form" id="authFormLogin">
+
       <div class="form-group">
-        <label class="form-label">手机号</label>
-        <input id="loginPhone" type="tel" class="form-input auth-input" placeholder="输入手机号" maxlength="11" autocomplete="tel">
+
+        <label class="form-label">鎵嬫満鍙?/label>
+
+        <input id="loginPhone" type="tel" class="form-input auth-input" placeholder="杈撳叆鎵嬫満鍙? maxlength="11" autocomplete="tel">
+
       </div>
+
       <div class="form-group">
-        <label class="form-label">密码</label>
-        <input id="loginPassword" type="password" class="form-input auth-input" placeholder="输入密码" autocomplete="current-password">
+
+        <label class="form-label">瀵嗙爜</label>
+
+        <input id="loginPassword" type="password" class="form-input auth-input" placeholder="杈撳叆瀵嗙爜" autocomplete="current-password">
+
       </div>
+
       <div class="auth-error" id="loginError"></div>
-      <button class="btn btn-primary auth-btn" onclick="doLogin()">登录</button>
+
+      <button class="btn btn-primary auth-btn" onclick="doLogin()">鐧诲綍</button>
+
     </div>
+
     <div class="auth-form" id="authFormRegister" style="display:none">
+
       <div class="form-group">
-        <label class="form-label">手机号</label>
-        <input id="regPhone" type="tel" class="form-input auth-input" placeholder="输入手机号" maxlength="11" autocomplete="tel">
+
+        <label class="form-label">鎵嬫満鍙?/label>
+
+        <input id="regPhone" type="tel" class="form-input auth-input" placeholder="杈撳叆鎵嬫満鍙? maxlength="11" autocomplete="tel">
+
       </div>
+
       <div class="form-group">
-        <label class="form-label">验证码</label>
+
+        <label class="form-label">楠岃瘉鐮?/label>
+
         <div class="auth-code-row">
-          <input id="regCode" type="text" class="form-input auth-input auth-code-input" placeholder="6位验证码" maxlength="6" autocomplete="one-time-code">
-          <button class="btn btn-ghost auth-code-btn" id="sendCodeBtn" onclick="doSendCode()">获取验证码</button>
+
+          <input id="regCode" type="text" class="form-input auth-input auth-code-input" placeholder="6浣嶉獙璇佺爜" maxlength="6" autocomplete="one-time-code">
+
+          <button class="btn btn-ghost auth-code-btn" id="sendCodeBtn" onclick="doSendCode()">鑾峰彇楠岃瘉鐮?/button>
+
         </div>
+
       </div>
+
       <div class="form-group">
-        <label class="form-label">设置密码</label>
-        <input id="regPassword" type="password" class="form-input auth-input" placeholder="至少6位" minlength="6" autocomplete="new-password">
+
+        <label class="form-label">璁剧疆瀵嗙爜</label>
+
+        <input id="regPassword" type="password" class="form-input auth-input" placeholder="鑷冲皯6浣? minlength="6" autocomplete="new-password">
+
       </div>
+
       <div class="auth-error" id="regError"></div>
-      <button class="btn btn-primary auth-btn" onclick="doRegister()">注册</button>
+
+      <button class="btn btn-primary auth-btn" onclick="doRegister()">娉ㄥ唽</button>
+
     </div>
+
   </div>
+
 </div>
 
-<!-- 权限弹窗 -->
+
+
+<!-- 鏉冮檺寮圭獥 -->
+
 <div class="permission-overlay" id="permOverlay">
+
   <div class="permission-dialog">
-    <h3 id="permTitle">权限请求</h3>
+
+    <h3 id="permTitle">鏉冮檺璇锋眰</h3>
+
     <div class="perm-detail">
+
       <div class="perm-row">
-        <span class="perm-label">权限类型</span>
+
+        <span class="perm-label">鏉冮檺绫诲瀷</span>
+
         <span class="perm-value" id="permTypeVal">&mdash;</span>
+
       </div>
+
       <div class="perm-row">
-        <span class="perm-label">操作目标</span>
+
+        <span class="perm-label">鎿嶄綔鐩爣</span>
+
         <span class="perm-value perm-path" id="permTargetVal">&mdash;</span>
+
       </div>
+
     </div>
+
     <p class="perm-reason" id="permReason"></p>
+
     <div class="perm-actions">
-      <button class="btn btn-ghost" onclick="permitReply('deny')">拒绝</button>
-      <button class="btn btn-primary" onclick="permitReply('allow')">允许</button>
+
+      <button class="btn btn-ghost" onclick="permitReply('deny')">鎷掔粷</button>
+
+      <button class="btn btn-primary" onclick="permitReply('allow')">鍏佽</button>
+
     </div>
+
   </div>
+
 </div>
 
-<!-- 遮罩层 -->
+
+
+<!-- 閬僵灞?-->
+
 <div class="mobile-overlay" id="overlay" onclick="closeAllPanels()"></div>
 
-<!-- 粒子云画布 -->
+
+
+<!-- 绮掑瓙浜戠敾甯?-->
+
 <canvas id="particleCanvas"></canvas>
+
+
 
 <div class="app">
 
-  <!-- ===== 左侧边栏 ===== -->
+
+
+  <!-- ===== 宸︿晶杈规爮 ===== -->
+
   <aside class="left-sidebar" id="leftSidebar">
+
     <div class="sidebar-header">
-      <div class="sidebar-avatar" id="sidebarAvatar" onclick="navigateTo('#profile')" title="个人主页">玄</div>
+
+      <div class="sidebar-avatar" id="sidebarAvatar" onclick="navigateTo('#profile')" title="涓汉涓婚〉">鐜?/div>
+
       <span class="sidebar-logo">玄姝</span>
-      <button class="sidebar-close" onclick="toggleLeft()" title="收起侧栏">&times;</button>
+
+      <button class="sidebar-close" onclick="toggleLeft()" title="鏀惰捣渚ф爮">&times;</button>
+
     </div>
+
     <nav class="sidebar-nav" id="sidebarNav">
+
       <a class="sidebar-nav-item active" href="#chat" data-page="chat">
-        <span class="sidebar-nav-icon">&diams;</span> 对话
+
+        <span class="sidebar-nav-icon">&diams;</span> 瀵硅瘽
+
       </a>
+
       <a class="sidebar-nav-item" href="#monitor" data-page="monitor" onclick="openMonitor()">
-        <span class="sidebar-nav-icon">&#9673;</span> 监控
+
+        <span class="sidebar-nav-icon">&#9673;</span> 鐩戞帶
+
       </a>
+
     </nav>
-    <div class="sidebar-section-label">会话</div>
+
+    <div class="sidebar-section-label">浼氳瘽</div>
+
     <div class="sidebar-sessions" id="sessionList">
-      <div class="session-item active" tabindex="0" role="button" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click()}">当前对话</div>
+
+      <div class="session-item active" tabindex="0" role="button" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click()}">褰撳墠瀵硅瘽</div>
+
     </div>
-    <div class="sidebar-section-label">📁 文件</div>
+
+    <div class="sidebar-section-label">馃搧 鏂囦欢</div>
+
     <div class="sidebar-file-tree" id="sidebarFileTree">
-      <div class="file-tree-loading">加载中…</div>
+
+      <div class="file-tree-loading">鍔犺浇涓€?/div>
+
     </div>
-    <div class="sidebar-section-label">🧠 记忆</div>
+
+    <div class="sidebar-section-label">馃 璁板繂</div>
+
     <div class="sidebar-mem-tree" id="sidebarMemTree">
-      <div class="file-tree-loading">加载中…</div>
+
+      <div class="file-tree-loading">鍔犺浇涓€?/div>
+
     </div>
-    <div class="sidebar-section-label">⚡ 技能市场</div>
+
+    <div class="sidebar-section-label">鈿?鎶€鑳藉競鍦?/div>
+
     <div class="sidebar-skill-market" id="sidebarSkillMarket">
-      <div class="file-tree-loading">加载中…</div>
+
+      <div class="file-tree-loading">鍔犺浇涓€?/div>
+
     </div>
+
     <div class="status-bar">
+
       <span class="status-dot offline" id="statusDot"></span>
-      <span id="statusLabel">未连接</span>
+
+      <span id="statusLabel">鏈繛鎺?/span>
+
       <span id="tokenCount" style="margin-left:auto">0 tk</span>
+
     </div>
+
   </aside>
 
-  <!-- ===== 主区域 ===== -->
+
+
+  <!-- ===== 涓诲尯鍩?===== -->
+
   <main class="main-area">
+
     <div class="toolbar">
-      <div class="toolbar-avatar" id="toolbarAvatar" onclick="navigateTo('#profile')" title="个人主页">玄</div>
+
+      <button class="sidebar-toggle-btn" id="sidebarToggleBtn" onclick="toggleLeft()" title="灞曞紑渚ф爮" style="display:none">&#9776;</button>
+
+      <div class="toolbar-avatar" id="toolbarAvatar" onclick="navigateTo('#profile')" title="涓汉涓婚〉">鐜?/div>
+
       <span class="u-flex-1"></span>
-      <span class="token-badge" id="tokenBadge" title="Token用量">0 tk</span>
-      <button class="toolbar-btn" id="toolbarMoreBtn" onclick="toggleMoreMenu(event)" title="菜单" aria-label="更多菜单">&#8942;</button>
+
+      <span class="token-badge" id="tokenBadge" title="Token鐢ㄩ噺">0 tk</span>
+
+      <button class="toolbar-btn" id="toolbarMoreBtn" onclick="toggleMoreMenu(event)" title="鑿滃崟" aria-label="鏇村鑿滃崟">&#8942;</button>
+
       <div class="more-menu" id="moreMenu" style="display:none">
-        <div class="more-menu-header">Agent 管理</div>
-        <div class="more-menu-item" onclick="closeMoreMenu();toggleThemeQuickPanel(event)">切换主题</div>
-        <div class="more-menu-item" onclick="closeMoreMenu();navigateTo('#settings')">全局设置</div>
+
+        <div class="more-menu-header">Agent 绠＄悊</div>
+
+        <div class="more-menu-item" onclick="closeMoreMenu();toggleThemeQuickPanel(event)">鍒囨崲涓婚</div>
+
+        <div class="more-menu-item" onclick="closeMoreMenu();navigateTo('#settings')">鍏ㄥ眬璁剧疆</div>
+
       </div>
+
       <div class="theme-quick-panel" id="themeQuickPanel" style="display:none">
+
         <div class="theme-quick-row">
-          <button class="tqp-chip" data-accent="cyber" data-mode="light" onclick="applyQuick('cyber','light')">科幻蓝·浅</button>
-          <button class="tqp-chip" data-accent="cyber" data-mode="dark" onclick="applyQuick('cyber','dark')">科幻蓝·深</button>
+
+          <button class="tqp-chip" data-accent="cyber" data-mode="light" onclick="applyQuick('cyber','light')">绉戝够钃澛锋祬</button>
+
+          <button class="tqp-chip" data-accent="cyber" data-mode="dark" onclick="applyQuick('cyber','dark')">绉戝够钃澛锋繁</button>
+
         </div>
+
         <div class="theme-quick-row">
-          <button class="tqp-chip" data-accent="forest" data-mode="light" onclick="applyQuick('forest','light')">护眼绿·浅</button>
-          <button class="tqp-chip" data-accent="forest" data-mode="dark" onclick="applyQuick('forest','dark')">护眼绿·深</button>
+
+          <button class="tqp-chip" data-accent="forest" data-mode="light" onclick="applyQuick('forest','light')">鎶ょ溂缁柯锋祬</button>
+
+          <button class="tqp-chip" data-accent="forest" data-mode="dark" onclick="applyQuick('forest','dark')">鎶ょ溂缁柯锋繁</button>
+
         </div>
+
         <div class="theme-quick-row">
-          <button class="tqp-chip" data-accent="sakura" data-mode="light" onclick="applyQuick('sakura','light')">樱粉·浅</button>
-          <button class="tqp-chip" data-accent="sakura" data-mode="dark" onclick="applyQuick('sakura','dark')">樱粉·深</button>
+
+          <button class="tqp-chip" data-accent="sakura" data-mode="light" onclick="applyQuick('sakura','light')">妯辩矇路娴?/button>
+
+          <button class="tqp-chip" data-accent="sakura" data-mode="dark" onclick="applyQuick('sakura','dark')">妯辩矇路娣?/button>
+
         </div>
+
         <div class="theme-quick-row">
-          <button class="tqp-chip" data-accent="leather" data-mode="light" onclick="applyQuick('leather','light')">书封棕·浅</button>
-          <button class="tqp-chip" data-accent="leather" data-mode="dark" onclick="applyQuick('leather','dark')">书封棕·深</button>
+
+          <button class="tqp-chip" data-accent="leather" data-mode="light" onclick="applyQuick('leather','light')">涔﹀皝妫暵锋祬</button>
+
+          <button class="tqp-chip" data-accent="leather" data-mode="dark" onclick="applyQuick('leather','dark')">涔﹀皝妫暵锋繁</button>
+
         </div>
+
       </div>
+
     </div>
 
-    <!-- 连接断开提示条 -->
+
+
+    <!-- 杩炴帴鏂紑鎻愮ず鏉?-->
+
     <div class="conn-banner" id="connBanner" style="display:none">
+
       <span class="conn-banner-icon">&#9888;</span>
-      <span class="conn-banner-msg">连接已断开，正在重连…</span>
+
+      <span class="conn-banner-msg">杩炴帴宸叉柇寮€锛屾鍦ㄩ噸杩炩€?/span>
+
     </div>
+
+
 
     <div class="page-stage">
 
-    <!-- ===== 对话页 ===== -->
+
+
+    <!-- ===== 瀵硅瘽椤?===== -->
+
     <section id="page-chat" class="page-section active">
+
       <div class="conversation" id="conv">
+
         <div class="welcome conversation-empty" id="welcome">
+
           <div class="empty-state">
+
             <div class="greeting">玄姝</div>
-            <div class="subtitle">多模型智能助手 &middot; 已就绪</div>
+
+            <div class="subtitle">澶氭ā鍨嬫櫤鑳藉姪鎵?&middot; 宸插氨缁?/div>
+
           </div>
+
         </div>
+
       </div>
+
+
 
       <div class="input-area">
+
         <div class="model-bar" id="modelChips"></div>
+
         <input type="file" id="fileInput" multiple style="display:none" onchange="uploadFiles()" accept="*/*">
+
         <span id="imagePreview" style="display:none;margin-bottom:8px"></span>
+
         <div class="input-pill">
-          <button class="pill-btn pill-add" id="fileBrowseBtn" title="上传文件" aria-label="上传文件" onclick="document.getElementById('fileInput').click()">+</button>
-          <textarea id="msg-input" placeholder="输入消息…" rows="1"></textarea>
+
+          <button class="pill-btn pill-add" id="fileBrowseBtn" title="涓婁紶鏂囦欢" aria-label="涓婁紶鏂囦欢" onclick="document.getElementById('fileInput').click()">+</button>
+
+          <textarea id="msg-input" placeholder="杈撳叆娑堟伅鈥? rows="1"></textarea>
+
           <div class="pill-right">
-            <button class="pill-model" id="pillModelBtn" onclick="showModelQuickPicker(event)" title="切换模型">⚡</button>
-            <button class="pill-tts-toggle" id="ttsToggleBtn" onclick="toggleTTS()" title="语音朗读">🔊</button>
-            <button class="pill-send" onclick="send()" title="发送">&uarr;</button>
+
+            <button class="pill-model" id="pillModelBtn" onclick="showModelQuickPicker(event)" title="鍒囨崲妯″瀷">鈿?/button>
+
+            <button class="pill-tts-toggle" id="ttsToggleBtn" onclick="toggleTTS()" title="璇煶朗读">馃攰</button>
+
+            <button class="pill-send" onclick="send()" title="鍙戦€?>&uarr;</button>
+
           </div>
+
         </div>
+
       </div>
 
-      <!-- 文件查看面板 -->
+
+
+      <!-- 鏂囦欢鏌ョ湅闈㈡澘 -->
+
       <div class="file-viewer" id="fileViewerPanel" style="display:none">
+
         <div class="file-viewer-header">
-          <span class="file-viewer-path" id="fvPath">—</span>
-          <button class="file-viewer-close" onclick="closeFileViewer()" aria-label="关闭文件查看器">&times;</button>
+
+          <span class="file-viewer-path" id="fvPath">鈥?/span>
+
+          <button class="file-viewer-close" onclick="closeFileViewer()" aria-label="鍏抽棴鏂囦欢鏌ョ湅鍣?>&times;</button>
+
         </div>
+
         <div class="file-viewer-meta" id="fvMeta"></div>
+
         <div class="file-viewer-content" id="fvContent"></div>
+
       </div>
+
     </section>
 
-    <!-- ===== 设置面板（右侧滑出） ===== -->
+
+
+    <!-- ===== 璁剧疆闈㈡澘锛堝彸渚ф粦鍑猴級 ===== -->
+
     <div class="settings-overlay" id="settingsOverlay" onclick="toggleSettings();if(location.hash==='#settings')navigateTo('#chat')"></div>
+
     <aside class="settings-panel" id="settingsPanel">
+
       <div class="settings-panel-header">
-        <span class="settings-panel-title">设置</span>
+
+        <span class="settings-panel-title">璁剧疆</span>
+
         <button class="settings-panel-close" onclick="toggleSettings();if(location.hash==='#settings')navigateTo('#chat')">&times;</button>
+
       </div>
+
       <div class="settings-panel-body">
+
       <div class="panel-tabs">
-        <div class="panel-tab active" tabindex="0" role="tab" aria-selected="true" onclick="switchPanelTab(this,'settings')">模型</div>
-        <div class="panel-tab" tabindex="0" role="tab" aria-selected="false" onclick="switchPanelTab(this,'theme')">主题</div>
-        <div class="panel-tab" tabindex="0" role="tab" aria-selected="false" onclick="switchPanelTab(this,'tools')">工具</div>
-        <div class="panel-tab" tabindex="0" role="tab" aria-selected="false" onclick="switchPanelTab(this,'workflow')">工作流</div>
+
+        <div class="panel-tab active" tabindex="0" role="tab" aria-selected="true" onclick="switchPanelTab(this,'settings')">妯″瀷</div>
+
+        <div class="panel-tab" tabindex="0" role="tab" aria-selected="false" onclick="switchPanelTab(this,'theme')">涓婚</div>
+
+        <div class="panel-tab" tabindex="0" role="tab" aria-selected="false" onclick="switchPanelTab(this,'tools')">宸ュ叿</div>
+
+        <div class="panel-tab" tabindex="0" role="tab" aria-selected="false" onclick="switchPanelTab(this,'workflow')">宸ヤ綔娴?/div>
+
       </div>
+
+
 
       <div class="panel-content" id="tab-settings">
+
         <div class="panel-section">
-          <div class="section-title">连接状态</div>
+
+          <div class="section-title">杩炴帴鐘舵€?/div>
+
           <div class="status-indicator panel-status-box">
+
             <span class="status-dot offline" id="panelStatusDot"></span>
-            <span id="panelStatusLabel">未连接 API</span>
+
+            <span id="panelStatusLabel">鏈繛鎺?API</span>
+
           </div>
+
         </div>
+
         <div class="panel-section">
+
           <div class="section-title">API Key</div>
+
           <div class="form-group">
+
             <label for="keyInput" class="form-label">OpenAI API Key</label>
+
             <input id="keyInput" type="password" class="form-input" placeholder="sk-xxxxxxxx" autocomplete="off">
+
           </div>
+
           <div style="display:flex;gap:8px;flex-wrap:wrap">
-            <button class="btn btn-primary" onclick="applyKey()">应用 Key</button>
-            <button class="btn btn-ghost" onclick="resetKey()">重置为本地模式</button>
+
+            <button class="btn btn-primary" onclick="applyKey()">搴旂敤 Key</button>
+
+            <button class="btn btn-ghost" onclick="resetKey()">閲嶇疆涓烘湰鍦版ā寮?/button>
+
           </div>
+
         </div>
+
         <div class="panel-section">
-          <button class="btn btn-ghost" onclick="clearAllModelKeys()" style="font-size:12px">清除所有独立 Key</button>
+
+          <button class="btn btn-ghost" onclick="clearAllModelKeys()" style="font-size:12px">娓呴櫎鎵€鏈夌嫭绔?Key</button>
+
         </div>
+
         <div class="panel-section">
-          <div class="section-title">模型选择</div>
+
+          <div class="section-title">妯″瀷閫夋嫨</div>
+
           <div class="form-group">
-            <label for="modelSearch" class="form-label">搜索模型</label>
-            <input id="modelSearch" type="text" class="form-input model-search-input" placeholder="搜索模型…" oninput="filterModels()">
+
+            <label for="modelSearch" class="form-label">鎼滅储妯″瀷</label>
+
+            <input id="modelSearch" type="text" class="form-input model-search-input" placeholder="鎼滅储妯″瀷鈥? oninput="filterModels()">
+
           </div>
+
           <div class="form-group">
-            <label for="providerFilter" class="form-label">筛选厂商</label>
+
+            <label for="providerFilter" class="form-label">绛涢€夊巶鍟?/label>
+
             <select id="providerFilter" class="form-input model-search-input" onchange="filterModels()">
-              <option value="">全部厂商</option>
+
+              <option value="">鍏ㄩ儴鍘傚晢</option>
+
             </select>
+
           </div>
+
           <div id="modelList" style="max-height:320px;overflow-y:auto;display:flex;flex-direction:column;gap:4px"></div>
-          <button class="btn btn-ghost" id="showCustomBtn" onclick="showCustomModel()" style="margin-top:12px;width:100%">+ 自定义模型</button>
+
+          <button class="btn btn-ghost" id="showCustomBtn" onclick="showCustomModel()" style="margin-top:12px;width:100%">+ 鑷畾涔夋ā鍨?/button>
+
           <div id="customModelForm" style="display:none;margin-top:16px;padding-top:16px;border-top:1px solid var(--rule)">
-            <div class="section-title" style="margin-top:0">添加自定义模型</div>
+
+            <div class="section-title" style="margin-top:0">娣诲姞鑷畾涔夋ā鍨?/div>
+
             <div class="form-group">
-              <label for="customName" class="form-label">模型名称</label>
-              <input id="customName" class="form-input" placeholder="如 MyModel">
+
+              <label for="customName" class="form-label">妯″瀷鍚嶇О</label>
+
+              <input id="customName" class="form-input" placeholder="濡?MyModel">
+
             </div>
+
             <div class="form-group">
+
               <label for="customUrl" class="form-label">API Base URL</label>
-              <input id="customUrl" class="form-input" placeholder="如 https://api.xxx.com/v1" oninput="autoDetectUrl()" autocomplete="url">
+
+              <input id="customUrl" class="form-input" placeholder="濡?https://api.xxx.com/v1" oninput="autoDetectUrl()" autocomplete="url">
+
             </div>
+
             <div class="form-group">
+
               <label for="customModelId" class="form-label">Model ID</label>
-              <input id="customModelId" class="form-input" placeholder="默认同名称">
+
+              <input id="customModelId" class="form-input" placeholder="榛樿鍚屽悕绉?>
+
             </div>
+
             <div id="urlDetect" style="font-size:12px;color:var(--text-muted);margin-bottom:8px"></div>
+
             <div style="display:flex;gap:8px">
-              <button class="btn btn-primary" onclick="addCustomModel()" style="flex:1">添加</button>
-              <button class="btn btn-ghost" onclick="hideCustomModel()" style="flex:1">取消</button>
+
+              <button class="btn btn-primary" onclick="addCustomModel()" style="flex:1">娣诲姞</button>
+
+              <button class="btn btn-ghost" onclick="hideCustomModel()" style="flex:1">鍙栨秷</button>
+
             </div>
+
           </div>
+
         </div>
+
         <div class="panel-section">
-          <div class="section-title">Token 统计</div>
-          <div style="font-size:13px;color:var(--text-muted)">累计: <span id="tokenCount">0 tk</span></div>
-          <div style="font-size:13px;color:var(--text-muted);margin-top:4px">模型: <span id="panelModel">本地模拟</span></div>
+
+          <div class="section-title">Token 缁熻</div>
+
+          <div style="font-size:13px;color:var(--text-muted)">绱: <span id="tokenCount">0 tk</span></div>
+
+          <div style="font-size:13px;color:var(--text-muted);margin-top:4px">妯″瀷: <span id="panelModel">鏈湴妯℃嫙</span></div>
+
         </div>
+
       </div>
+
+
 
       <div class="panel-content" id="tab-theme" style="display:none">
+
         <div class="panel-section">
-          <div class="section-title">背景模式</div>
+
+          <div class="section-title">鑳屾櫙妯″紡</div>
+
           <div class="mode-switch-row">
+
             <div class="mode-card active" id="modeDark" onclick="setMode('dark')">
+
               <div class="mode-thumb dark-thumb"></div>
-              <span>深色</span>
+
+              <span>娣辫壊</span>
+
             </div>
+
             <div class="mode-card" id="modeLight" onclick="setMode('light')">
+
               <div class="mode-thumb light-thumb"></div>
-              <span>浅色</span>
+
+              <span>娴呰壊</span>
+
             </div>
+
           </div>
+
         </div>
+
         <div class="panel-section">
-          <div class="section-title">配色方案</div>
+
+          <div class="section-title">閰嶈壊鏂规</div>
+
           <div class="accent-palette">
-            <div class="accent-chip active" id="chipCyber" onclick="setAccent('cyber')" title="科幻蓝">
+
+            <div class="accent-chip active" id="chipCyber" onclick="setAccent('cyber')" title="绉戝够钃?>
+
               <span class="chip-dot" style="background:oklch(0.62 0.20 230)"></span>
-              <span class="chip-label">科幻蓝</span>
+
+              <span class="chip-label">绉戝够钃?/span>
+
             </div>
-            <div class="accent-chip" id="chipForest" onclick="setAccent('forest')" title="护眼绿">
+
+            <div class="accent-chip" id="chipForest" onclick="setAccent('forest')" title="鎶ょ溂缁?>
+
               <span class="chip-dot" style="background:oklch(0.50 0.15 145)"></span>
-              <span class="chip-label">护眼绿</span>
+
+              <span class="chip-label">鎶ょ溂缁?/span>
+
             </div>
-            <div class="accent-chip" id="chipSakura" onclick="setAccent('sakura')" title="樱粉">
+
+            <div class="accent-chip" id="chipSakura" onclick="setAccent('sakura')" title="妯辩矇">
+
               <span class="chip-dot" style="background:oklch(0.62 0.16 5)"></span>
-              <span class="chip-label">樱粉</span>
+
+              <span class="chip-label">妯辩矇</span>
+
             </div>
-            <div class="accent-chip" id="chipLeather" onclick="setAccent('leather')" title="书封棕">
+
+            <div class="accent-chip" id="chipLeather" onclick="setAccent('leather')" title="涔﹀皝妫?>
+
               <span class="chip-dot" style="background:oklch(0.50 0.10 55)"></span>
-              <span class="chip-label">书封棕</span>
+
+              <span class="chip-label">涔﹀皝妫?/span>
+
             </div>
+
           </div>
+
         </div>
+
       </div>
 
+
+
       <div class="panel-content" id="tab-tools" style="display:none">
+
         <div class="panel-section">
+
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
-            <div class="section-title" style="margin:0">工具适配层</div>
-            <span id="toolAdapterStatus" style="font-size:12px;color:var(--text-muted)">未连接</span>
+
+            <div class="section-title" style="margin:0">宸ュ叿閫傞厤灞?/div>
+
+            <span id="toolAdapterStatus" style="font-size:12px;color:var(--text-muted)">鏈繛鎺?/span>
+
           </div>
+
           <div style="display:flex;gap:8px;margin-bottom:12px">
-            <input id="toolAdapterUrl" class="form-input" placeholder="适配层地址" value="http://127.0.0.1:9010" style="flex:1;">
-            <button class="btn btn-primary" onclick="checkToolEnv()" style="white-space:nowrap">扫描</button>
+
+            <input id="toolAdapterUrl" class="form-input" placeholder="閫傞厤灞傚湴鍧€" value="http://127.0.0.1:9010" style="flex:1;">
+
+            <button class="btn btn-primary" onclick="checkToolEnv()" style="white-space:nowrap">鎵弿</button>
+
           </div>
+
           <div id="toolEnvResult" style="font-size:12px;color:var(--text-muted);margin-bottom:8px"></div>
+
           <div class="tool-grid" id="toolGrid"></div>
+
         </div>
+
         <div class="panel-section" id="presetSection" style="display:none">
-          <div class="section-title" id="presetTitle">预设操作</div>
+
+          <div class="section-title" id="presetTitle">棰勮鎿嶄綔</div>
+
           <div id="presetList" style="display:flex;flex-direction:column;gap:8px"></div>
+
           <div id="presetParams" style="margin-top:12px;display:none"></div>
+
         </div>
+
         <div class="panel-section">
-          <div class="section-title">自定义命令</div>
+
+          <div class="section-title">鑷畾涔夊懡浠?/div>
+
           <div class="form-group">
+
             <select id="customToolSelect" class="form-input" onchange="updateCustomTool()">
-              <option value="">选择工具</option>
+
+              <option value="">閫夋嫨宸ュ叿</option>
+
             </select>
+
           </div>
+
           <div class="form-group">
-            <input id="customCmd" class="form-input" placeholder="输入命令…" onkeydown="if(event.key==='Enter'){runCustomCmd()}" style="font-family:var(--mono)">
+
+            <input id="customCmd" class="form-input" placeholder="杈撳叆鍛戒护鈥? onkeydown="if(event.key==='Enter'){runCustomCmd()}" style="font-family:var(--mono)">
+
           </div>
-          <button class="btn btn-primary" onclick="runCustomCmd()" style="width:100%">执行</button>
+
+          <button class="btn btn-primary" onclick="runCustomCmd()" style="width:100%">鎵ц</button>
+
         </div>
+
         <div class="panel-section" id="toolOutput" style="display:none">
+
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-            <div class="section-title" style="margin:0">执行结果</div>
-            <button class="btn btn-ghost btn-sm" onclick="document.getElementById('toolOutput').style.display='none'">关闭</button>
+
+            <div class="section-title" style="margin:0">鎵ц缁撴灉</div>
+
+            <button class="btn btn-ghost btn-sm" onclick="document.getElementById('toolOutput').style.display='none'">鍏抽棴</button>
+
           </div>
+
           <div id="toolExitCode" style="font-size:12px;color:var(--text-muted);margin-bottom:4px"></div>
+
           <pre id="toolOutputContent" class="tool-output"></pre>
+
         </div>
+
       </div>
+
+
+
 
 
       <div class="panel-content" id="tab-workflow" style="display:none">
-        <!-- 顶部工具栏 -->
+
+        <!-- 椤堕儴宸ュ叿鏍?-->
+
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
-          <div class="section-title" style="margin:0">可视化编排</div>
+
+          <div class="section-title" style="margin:0">鍙鍖栫紪鎺?/div>
+
           <div style="display:flex;gap:6px">
-            <button class="btn btn-ghost btn-sm" onclick="showWFCreate()">新建</button>
-            <button class="btn btn-primary btn-sm" onclick="saveCanvasWF()">保存到云端</button>
+
+            <button class="btn btn-ghost btn-sm" onclick="showWFCreate()">鏂板缓</button>
+
+            <button class="btn btn-primary btn-sm" onclick="saveCanvasWF()">淇濆瓨鍒颁簯绔?/button>
+
           </div>
+
         </div>
 
-        <!-- 规则名称 + 触发条件 -->
+
+
+        <!-- 瑙勫垯鍚嶇О + 瑙﹀彂鏉′欢 -->
+
         <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap">
-          <input id="wfCanvasName" class="form-input" placeholder="规则名称" style="width:160px" value="">
+
+          <input id="wfCanvasName" class="form-input" placeholder="瑙勫垯鍚嶇О" style="width:160px" value="">
+
           <select id="wfCanvasTriggerType" class="form-input" style="width:120px" onchange="onCanvasTriggerChange()">
-            <option value="keyword">关键词匹配</option>
-            <option value="prefix">前缀匹配</option>
-            <option value="regex">正则匹配</option>
+
+            <option value="keyword">鍏抽敭璇嶅尮閰?/option>
+
+            <option value="prefix">鍓嶇紑鍖归厤</option>
+
+            <option value="regex">姝ｅ垯鍖归厤</option>
+
           </select>
-          <input id="wfCanvasTriggerVal" class="form-input" placeholder="关键词，逗号分隔" style="flex:1;min-width:160px" value="">
+
+          <input id="wfCanvasTriggerVal" class="form-input" placeholder="鍏抽敭璇嶏紝閫楀彿鍒嗛殧" style="flex:1;min-width:160px" value="">
+
           <select id="wfCanvasTriggerMode" class="form-input" style="width:100px" onchange="syncCanvasWF()">
-            <option value="any">任一</option>
-            <option value="all">全词</option>
+
+            <option value="any">浠讳竴</option>
+
+            <option value="all">鍏ㄨ瘝</option>
+
           </select>
+
           <label style="font-size:12px;display:flex;align-items:center;gap:4px;white-space:nowrap">
-            <input type="checkbox" id="wfCanvasEnabled" checked onchange="syncCanvasWF()">启用
+
+            <input type="checkbox" id="wfCanvasEnabled" checked onchange="syncCanvasWF()">鍚敤
+
           </label>
+
         </div>
 
-        <!-- 节点面板 + 画布 -->
+
+
+        <!-- 鑺傜偣闈㈡澘 + 鐢诲竷 -->
+
         <div style="display:flex;gap:0;border:1px solid var(--rule);border-radius:var(--radius-md);overflow:hidden;height:420px">
-          <!-- 左侧节点模板 -->
+
+          <!-- 宸︿晶鑺傜偣妯℃澘 -->
+
           <div style="width:100px;background:var(--ink-surface);border-right:1px solid var(--rule);padding:8px;display:flex;flex-direction:column;gap:8px;overflow-y:auto">
-            <div style="font-size:11px;color:var(--text-muted);text-align:center;margin-bottom:4px">拖入画布</div>
+
+            <div style="font-size:11px;color:var(--text-muted);text-align:center;margin-bottom:4px">鎷栧叆鐢诲竷</div>
+
             <div class="wf-palette-node" draggable="true" data-action="web_search" ondragstart="onPaletteDrag(event)">
+
               <div class="wf-palette-dot" style="background:#3b82f6"></div>
-              <span>搜索</span>
+
+              <span>鎼滅储</span>
+
             </div>
+
             <div class="wf-palette-node" draggable="true" data-action="ai_summary" ondragstart="onPaletteDrag(event)">
+
               <div class="wf-palette-dot" style="background:#8b5cf6"></div>
-              <span>AI总结</span>
+
+              <span>AI鎬荤粨</span>
+
             </div>
+
             <div class="wf-palette-node" draggable="true" data-action="write_file" ondragstart="onPaletteDrag(event)">
+
               <div class="wf-palette-dot" style="background:#10b981"></div>
-              <span>写文件</span>
+
+              <span>鍐欐枃浠?/span>
+
             </div>
+
             <div class="wf-palette-node" draggable="true" data-action="notify" ondragstart="onPaletteDrag(event)">
+
               <div class="wf-palette-dot" style="background:#f59e0b"></div>
-              <span>通知</span>
+
+              <span>閫氱煡</span>
+
             </div>
+
           </div>
-          <!-- SVG 画布 -->
+
+          <!-- SVG 鐢诲竷 -->
+
           <div style="flex:1;position:relative;overflow:auto;background:var(--ink-bg)"
+
                ondragover="onCanvasDragOver(event)" ondrop="onCanvasDrop(event)"
+
                onclick="onCanvasClick(event)">
+
             <svg id="wfCanvas" width="800" height="420" style="display:block;cursor:default">
+
               <defs>
+
                 <marker id="arrowhead" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+
                   <polygon points="0 0, 8 3, 0 6" fill="var(--text-muted)"/>
+
                 </marker>
+
               </defs>
+
             </svg>
+
           </div>
+
         </div>
 
-        <!-- 节点属性编辑浮层 -->
+
+
+        <!-- 鑺傜偣灞炴€х紪杈戞诞灞?-->
+
         <div id="wfNodeEditor" style="display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:999;
+
           background:var(--ink-surface);border:1px solid var(--rule);border-radius:var(--radius-md);padding:16px;
+
           min-width:280px;box-shadow:0 8px 32px rgba(0,0,0,0.3)">
-          <div style="font-weight:600;margin-bottom:12px" id="wfNodeEditorTitle">编辑节点</div>
+
+          <div style="font-weight:600;margin-bottom:12px" id="wfNodeEditorTitle">缂栬緫鑺傜偣</div>
+
           <div id="wfNodeEditorBody"></div>
+
           <div style="display:flex;gap:8px;margin-top:12px">
-            <button class="btn btn-primary btn-sm" onclick="applyNodeEdit()" style="flex:1">确定</button>
-            <button class="btn btn-ghost btn-sm" onclick="closeNodeEdit()" style="flex:1">取消</button>
+
+            <button class="btn btn-primary btn-sm" onclick="applyNodeEdit()" style="flex:1">纭畾</button>
+
+            <button class="btn btn-ghost btn-sm" onclick="closeNodeEdit()" style="flex:1">鍙栨秷</button>
+
           </div>
+
         </div>
+
         <div id="wfNodeOverlay" style="display:none;position:fixed;inset:0;z-index:998;background:rgba(0,0,0,0.3)" onclick="closeNodeEdit()"></div>
 
-        <!-- 规则列表 -->
+
+
+        <!-- 瑙勫垯鍒楄〃 -->
+
         <div class="panel-section" style="margin-top:12px">
+
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
-            <div class="section-title" style="margin:0">已保存规则</div>
+
+            <div class="section-title" style="margin:0">宸蹭繚瀛樿鍒?/div>
+
           </div>
+
           <div id="wfList" style="display:flex;flex-direction:column;gap:8px;max-height:240px;overflow-y:auto"></div>
+
         </div>
+
       </div>
+
+
 
     </div><!-- /page-stage -->
 
+
+
     </div><!-- /settings-panel-body -->
+
     </aside><!-- /settings-panel -->
 
-    <!-- ===== Token 监控面板 ===== -->
+
+
+    <!-- ===== Token 鐩戞帶闈㈡澘 ===== -->
+
     <aside class="settings-panel" id="monitorPanel" style="display:none">
+
       <div class="settings-panel-header">
-        <span class="settings-panel-title">Token 监控</span>
+
+        <span class="settings-panel-title">Token 鐩戞帶</span>
+
         <button class="settings-panel-close" onclick="closeMonitor()">&times;</button>
+
       </div>
+
       <div class="settings-panel-body">
-        <!-- 心跳状态条 -->
+
+        <!-- 蹇冭烦鐘舵€佹潯 -->
+
         <div class="heartbeat-bar" id="heartbeatBar">
+
           <span class="heartbeat-dot" id="heartbeatDot"></span>
-          <span class="heartbeat-msg" id="heartbeatMsg">检测中…</span>
+
+          <span class="heartbeat-msg" id="heartbeatMsg">妫€娴嬩腑鈥?/span>
+
           <span class="heartbeat-latency" id="heartbeatLat"></span>
+
         </div>
-        <!-- 总览卡片 -->
+
+        <!-- 鎬昏鍗＄墖 -->
+
         <div class="monitor-overview" id="monitorOverview">
+
           <div class="monitor-card">
-            <div class="monitor-card-label">缓存命中率</div>
+
+            <div class="monitor-card-label">缂撳瓨鍛戒腑鐜?/div>
+
             <div class="monitor-card-value" id="mHitRate" style="color:var(--accent)">--%</div>
+
           </div>
+
           <div class="monitor-card">
-            <div class="monitor-card-label">总 Token 消耗</div>
+
+            <div class="monitor-card-label">鎬?Token 娑堣€?/div>
+
             <div class="monitor-card-value" id="mTotalTokens">--</div>
+
           </div>
+
           <div class="monitor-card">
-            <div class="monitor-card-label">消耗速率</div>
+
+            <div class="monitor-card-label">娑堣€楅€熺巼</div>
+
             <div class="monitor-card-value" id="mRate">-- tk/min</div>
+
           </div>
+
           <div class="monitor-card">
-            <div class="monitor-card-label">预算剩余</div>
+
+            <div class="monitor-card-label">棰勭畻鍓╀綑</div>
+
             <div class="monitor-card-value" id="mBudget">--</div>
+
           </div>
+
         </div>
-        <!-- 详情细分 -->
+
+        <!-- 璇︽儏缁嗗垎 -->
+
         <div class="settings-section">
-          <div class="settings-section-title">Token 细分</div>
+
+          <div class="settings-section-title">Token 缁嗗垎</div>
+
           <table class="monitor-table" id="monitorTable">
-            <thead><tr><th>Agent</th><th>调用次数</th><th>输入 Token</th><th>缓存命中</th><th>输出 Token</th><th>命中率</th></tr></thead>
+
+            <thead><tr><th>Agent</th><th>璋冪敤娆℃暟</th><th>杈撳叆 Token</th><th>缂撳瓨鍛戒腑</th><th>杈撳嚭 Token</th><th>鍛戒腑鐜?/th></tr></thead>
+
             <tbody id="monitorTableBody"></tbody>
+
           </table>
-          <div id="monitorEmpty" style="text-align:center;color:var(--text-muted);padding:20px">暂无数据，等待 LLM 调用后自动更新…</div>
+
+          <div id="monitorEmpty" style="text-align:center;color:var(--text-muted);padding:20px">鏆傛棤鏁版嵁锛岀瓑寰?LLM 璋冪敤鍚庤嚜鍔ㄦ洿鏂扳€?/div>
+
         </div>
-        <!-- 时序趋势 -->
+
+        <!-- 鏃跺簭瓒嬪娍 -->
+
         <div class="settings-section">
-          <div class="settings-section-title">近 5 分钟趋势</div>
+
+          <div class="settings-section-title">杩?5 鍒嗛挓瓒嬪娍</div>
+
           <div class="monitor-bar-wrap" id="monitorBarWrap">
+
             <canvas id="monitorBar" width="400" height="120"></canvas>
+
           </div>
+
           <div style="display:flex;gap:8px;justify-content:center;font-size:11px;margin-top:4px">
-            <span style="color:var(--accent)">■ 输入</span>
-            <span style="color:#a78bfa">■ 缓存</span>
-            <span style="color:#4ade80">■ 输出</span>
+
+            <span style="color:var(--accent)">鈻?杈撳叆</span>
+
+            <span style="color:#a78bfa">鈻?缂撳瓨</span>
+
+            <span style="color:#4ade80">鈻?杈撳嚭</span>
+
           </div>
+
         </div>
-        <!-- 操作 -->
+
+        <!-- 鎿嶄綔 -->
+
         <div class="settings-section">
-          <button class="credential-btn" onclick="fetchTokenStats()" style="width:100%">手动刷新</button>
+
+          <button class="credential-btn" onclick="fetchTokenStats()" style="width:100%">鎵嬪姩鍒锋柊</button>
+
           <div style="display:flex;align-items:center;gap:8px;margin-top:8px">
+
             <input type="checkbox" id="autoRefresh" checked onchange="toggleAutoRefresh()">
-            <label for="autoRefresh" style="font-size:13px;color:var(--text-muted)">自动刷新 (3s)</label>
+
+            <label for="autoRefresh" style="font-size:13px;color:var(--text-muted)">鑷姩鍒锋柊 (3s)</label>
+
           </div>
+
         </div>
+
         <div class="settings-section">
-          <div class="settings-section-title">日预算进度</div>
+
+          <div class="settings-section-title">鏃ラ绠楄繘搴?/div>
+
           <div class="budget-bar-wrap">
+
             <div class="budget-bar" id="budgetBar" style="width:0%"></div>
+
           </div>
+
           <div style="font-size:12px;color:var(--text-muted);margin-top:4px;text-align:right" id="budgetLabel">--</div>
+
         </div>
+
       </div>
+
     </aside>
+
+
 
   </main>
 
-  <!-- ===== 头像抽屉（右侧） ===== -->
+
+
+  <!-- ===== 澶村儚鎶藉眽锛堝彸渚э級 ===== -->
+
   <div class="avatar-drawer-overlay" id="avatarDrawerOverlay" onclick="closeAvatarDrawer()"></div>
+
   <aside class="avatar-drawer" id="avatarDrawer">
+
     <div class="avatar-drawer-header">
-      <span class="avatar-drawer-title">个人档案</span>
+
+      <span class="avatar-drawer-title">涓汉妗ｆ</span>
+
       <button class="avatar-drawer-close" onclick="closeAvatarDrawer()">&times;</button>
+
     </div>
+
     <div class="avatar-drawer-body">
-      <!-- 头像 -->
+
+      <!-- 澶村儚 -->
+
       <div class="avatar-section">
-        <div class="avatar-big" id="drawerAvatar">玄</div>
+
+        <div class="avatar-big" id="drawerAvatar">鐜?/div>
+
         <div class="avatar-actions">
-          <button class="btn btn-ghost btn-sm" onclick="document.getElementById('avatarFileInput').click()">📷 更换头像</button>
+
+          <button class="btn btn-ghost btn-sm" onclick="document.getElementById('avatarFileInput').click()">馃摲 鏇存崲澶村儚</button>
+
           <input type="file" id="avatarFileInput" accept="image/*" onchange="uploadAvatarFromFile(this)" style="display:none">
+
         </div>
+
         <div class="avatar-info">
-          <span class="avatar-phone" id="drawerPhone">—</span>
+
+          <span class="avatar-phone" id="drawerPhone">鈥?/span>
+
           <span class="avatar-tokens" id="drawerTokens">0 tk</span>
+
         </div>
+
       </div>
 
-      <!-- 记忆文件夹 -->
+
+
+      <!-- 璁板繂鏂囦欢澶?-->
+
       <div class="drawer-section">
-        <div class="drawer-section-title">🧠 记忆文件</div>
+
+        <div class="drawer-section-title">馃 璁板繂鏂囦欢</div>
+
         <div class="drawer-mem-list" id="drawerMemList">
-          <div class="file-tree-loading">加载中…</div>
+
+          <div class="file-tree-loading">鍔犺浇涓€?/div>
+
         </div>
+
       </div>
 
-      <!-- 快捷操作 -->
+
+
+      <!-- 蹇嵎鎿嶄綔 -->
+
       <div class="drawer-section">
-        <div class="drawer-section-title">快捷操作</div>
+
+        <div class="drawer-section-title">蹇嵎鎿嶄綔</div>
+
         <div class="drawer-actions">
-          <button class="drawer-action-btn" onclick="navigateTo('#settings');closeAvatarDrawer()">⚙️ 全局设置</button>
-          <button class="drawer-action-btn" onclick="exportAll()">📤 导出快照</button>
-          <button class="drawer-action-btn" onclick="importAll()">📥 导入快照</button>
-          <button class="drawer-action-btn" onclick="doLogout()">🚪 退出登录</button>
+
+          <button class="drawer-action-btn" onclick="navigateTo('#settings');closeAvatarDrawer()">鈿欙笍 鍏ㄥ眬璁剧疆</button>
+
+          <button class="drawer-action-btn" onclick="exportAll()">馃摛 瀵煎嚭蹇収</button>
+
+          <button class="drawer-action-btn" onclick="importAll()">馃摜 瀵煎叆蹇収</button>
+
+          <button class="drawer-action-btn" onclick="doLogout()">馃毆 閫€鍑虹櫥褰?/button>
+
         </div>
+
       </div>
+
     </div>
+
   </aside>
 
-  <!-- ===== 底部导航（移动端） ===== -->
+
+
+  <!-- ===== 搴曢儴瀵艰埅锛堢Щ鍔ㄧ锛?===== -->
+
   <nav class="bottom-nav">
+
     <button class="bottom-nav-item active" onclick="navigateTo('#chat')">
-      <span class="nav-icon">&diams;</span> 对话
+
+      <span class="nav-icon">&diams;</span> 瀵硅瘽
+
     </button>
+
     <button class="bottom-nav-item" onclick="toggleSettings()">
-      <span class="nav-icon">&#9881;</span> 设置
+
+      <span class="nav-icon">&#9881;</span> 璁剧疆
+
     </button>
+
     <button class="bottom-nav-item" onclick="openMonitor()">
-      <span class="nav-icon">&#9673;</span> 监控
+
+      <span class="nav-icon">&#9673;</span> 鐩戞帶
+
     </button>
+
   </nav>
+
+
 
 </div>
 
+
+
 <script>
-// ========== 状态 ==========
+
+// ========== 鐘舵€?==========
+
 const API = '';
+
 let currentModel = 'deepseek-v3';
+
 let hasKey = false;
+
 let savedKey = '';
+
 let totalTokens = 0;
+
 let currentSessionId = 'sess_' + Date.now();
+
 const conv = document.getElementById('conv');
+
 const inp = document.getElementById('msg-input');
+
 let pendingImage = null;
 
-// 输入框实时自动调节高度
+
+
+// 杈撳叆妗嗗疄鏃惰嚜鍔ㄨ皟鑺傞珮搴?
+
 inp.addEventListener('input', () => {
+
   inp.style.height = 'auto';
+
   inp.style.height = Math.min(inp.scrollHeight, 120) + 'px';
+
 });
-// 发送后重置高度
+
+// 鍙戦€佸悗閲嶇疆楂樺害
+
 inp.addEventListener('keydown', (e) => {
+
   if (e.key === 'Enter' && !e.shiftKey) {
+
     e.preventDefault();
+
     send();
+
     inp.style.height = 'auto';
+
   }
+
 });
+
 let authToken = localStorage.getItem('xuanshu_token') || '';
 
-// ========== 账号系统 ==========
+
+
+// ========== 璐﹀彿绯荤粺 ==========
+
 function showAuth() {
+
   document.getElementById('authOverlay').style.display = 'flex';
+
   document.querySelector('.app').style.display = 'none';
+
 }
+
 function hideAuth() {
+
   document.getElementById('authOverlay').style.display = 'none';
+
   document.querySelector('.app').style.display = 'flex';
+
 }
+
+
 
 async function checkAuth() {
+
   if (!authToken) { showAuth(); return; }
+
   try {
+
     const r = await fetch(API + '/auth/me', { headers: { 'Authorization': 'Bearer ' + authToken } });
+
     const j = await r.json();
+
     if (j.ok) {
+
       hideAuth();
-      document.getElementById('toolbarAvatar').textContent = '玄';
+
+      document.getElementById('toolbarAvatar').textContent = '鐜?;
+
       return;
+
     }
+
   } catch(e) {}
+
   localStorage.removeItem('xuanshu_token');
+
   authToken = '';
+
   showAuth();
+
 }
+
+
 
 function switchAuthTab(tab) {
+
   document.querySelectorAll('.auth-tab').forEach(t => t.classList.remove('active'));
+
   document.querySelectorAll('.auth-form').forEach(f => f.style.display = 'none');
+
   event.target.classList.add('active');
+
   document.getElementById(tab === 'login' ? 'authFormLogin' : 'authFormRegister').style.display = '';
+
   document.getElementById('loginError').textContent = '';
+
   document.getElementById('regError').textContent = '';
+
 }
+
+
 
 async function doSendCode() {
+
   const phone = document.getElementById('regPhone').value.trim();
+
   const btn = document.getElementById('sendCodeBtn');
+
   const err = document.getElementById('regError');
-  if (!/^\d{11}$/.test(phone)) { err.textContent = '请输入正确的手机号'; return; }
+
+  if (!/^\d{11}$/.test(phone)) { err.textContent = '璇疯緭鍏ユ纭殑鎵嬫満鍙?; return; }
+
   btn.disabled = true;
+
   try {
+
     const r = await fetch(API + '/auth/send-code', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({phone}) });
+
     const j = await r.json();
+
     if (j.ok) {
-      if (j.mock && j.code) { err.style.color = 'var(--accent)'; err.textContent = '（模拟）验证码: ' + j.code; }
-      else { err.style.color = 'var(--accent)'; err.textContent = '验证码已发送，5分钟内有效'; }
+
+      if (j.mock && j.code) { err.style.color = 'var(--accent)'; err.textContent = '锛堟ā鎷燂級楠岃瘉鐮? ' + j.code; }
+
+      else { err.style.color = 'var(--accent)'; err.textContent = '楠岃瘉鐮佸凡鍙戦€侊紝5鍒嗛挓鍐呮湁鏁?; }
+
       let cd = 60;
+
       btn.textContent = cd + 's';
-      const t = setInterval(() => { cd--; btn.textContent = cd + 's'; if(cd<=0){clearInterval(t);btn.textContent='获取验证码';btn.disabled=false;} }, 1000);
+
+      const t = setInterval(() => { cd--; btn.textContent = cd + 's'; if(cd<=0){clearInterval(t);btn.textContent='鑾峰彇楠岃瘉鐮?;btn.disabled=false;} }, 1000);
+
     } else {
+
       err.style.color = 'var(--cinnabar)';
+
       err.textContent = j.error;
+
       btn.disabled = false;
+
     }
-  } catch(e) { err.textContent = '网络错误'; btn.disabled = false; }
+
+  } catch(e) { err.textContent = '缃戠粶閿欒'; btn.disabled = false; }
+
 }
+
+
 
 async function doRegister() {
+
   const phone = document.getElementById('regPhone').value.trim();
+
   const code = document.getElementById('regCode').value.trim();
+
   const password = document.getElementById('regPassword').value;
+
   const err = document.getElementById('regError');
+
   err.style.color = 'var(--cinnabar)';
-  if (!/^\d{11}$/.test(phone)) { err.textContent = '请输入正确的手机号'; return; }
-  if (code.length !== 6) { err.textContent = '请输入6位验证码'; return; }
-  if (password.length < 6) { err.textContent = '密码至少6位'; return; }
+
+  if (!/^\d{11}$/.test(phone)) { err.textContent = '璇疯緭鍏ユ纭殑鎵嬫満鍙?; return; }
+
+  if (code.length !== 6) { err.textContent = '璇疯緭鍏?浣嶉獙璇佺爜'; return; }
+
+  if (password.length < 6) { err.textContent = '瀵嗙爜鑷冲皯6浣?; return; }
+
   const r = await fetch(API + '/auth/register', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({phone, code, password}) });
+
   const j = await r.json();
+
   if (j.ok) {
+
     authToken = j.token;
+
     localStorage.setItem('xuanshu_token', authToken);
+
     localStorage.setItem('xuanshu_phone', phone);
+
     hideAuth();
-    // toolbarAvatar 固定显示玄姝
+
+    // toolbarAvatar 鍥哄畾鏄剧ず玄姝
+
   } else {
+
     err.textContent = j.error;
+
   }
+
 }
+
+
 
 async function doLogin() {
+
   const phone = document.getElementById('loginPhone').value.trim();
+
   const password = document.getElementById('loginPassword').value;
+
   const err = document.getElementById('loginError');
+
   err.style.color = 'var(--cinnabar)';
-  if (!phone || !password) { err.textContent = '请输入手机号和密码'; return; }
+
+  if (!phone || !password) { err.textContent = '璇疯緭鍏ユ墜鏈哄彿鍜屽瘑鐮?; return; }
+
   const r = await fetch(API + '/auth/login', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({phone, password}) });
+
   const j = await r.json();
+
   if (j.ok) {
+
     authToken = j.token;
+
     localStorage.setItem('xuanshu_token', authToken);
+
     localStorage.setItem('xuanshu_phone', phone);
+
     hideAuth();
-    // toolbarAvatar 固定显示玄姝
+
+    // toolbarAvatar 鍥哄畾鏄剧ず玄姝
+
   } else {
+
     err.textContent = j.error;
+
   }
+
 }
+
+
 
 document.addEventListener('keydown', function(e) {
+
   if (e.key === 'Enter' && document.getElementById('authOverlay').style.display === 'flex') {
+
     const loginForm = document.getElementById('authFormLogin');
+
     if (loginForm.style.display !== 'none') { doLogin(); }
+
     else { doRegister(); }
+
   }
+
 });
+
+
 
 inp.addEventListener('paste', async (e) => {
+
   const items = e.clipboardData?.items;
+
   if (!items) return;
+
   for (const item of items) {
+
     if (item.type.startsWith('image/')) {
+
       e.preventDefault();
+
       const blob = item.getAsFile();
+
       const reader = new FileReader();
+
       reader.onload = () => {
+
         pendingImage = reader.result;
+
         const preview = document.getElementById('imagePreview');
+
         preview.innerHTML = '<img src="'+pendingImage+'" style="max-height:60px;border-radius:6px;border:2px solid var(--cinnabar);vertical-align:middle">';
+
         preview.style.display = 'inline-block';
+
       };
+
       reader.readAsDataURL(blob);
+
       return;
+
     }
+
   }
+
 });
 
-// ========== 面板控制 ==========
+
+
+// ========== 闈㈡澘鎺у埗 ==========
+
 const IS_MOBILE = window.matchMedia('(max-width: 768px)');
 
+
+
 function collapseLeft() {
+
   const sb = document.getElementById('leftSidebar');
+
   if (IS_MOBILE.matches) {
+
     sb.classList.remove('open');
+
     document.getElementById('overlay').classList.remove('show');
+
   } else {
+
     sb.classList.add('collapsed');
+
   }
+
 }
+
+
 
 function toggleLeft() {
+
   const sb = document.getElementById('leftSidebar');
+
+  const toggleBtn = document.getElementById('sidebarToggleBtn');
+
   if (IS_MOBILE.matches) {
+
     sb.classList.toggle('open');
+
     document.getElementById('overlay').classList.toggle('show', sb.classList.contains('open'));
+
   } else {
+
     sb.classList.toggle('collapsed');
+
+    // 鏄剧ず/闅愯棌灞曞紑鎸夐挳
+
+    if (toggleBtn) toggleBtn.style.display = sb.classList.contains('collapsed') ? 'flex' : 'none';
+
   }
-}
-function toggleSettings() {
-  const panel = document.getElementById('settingsPanel');
-  const overlay = document.getElementById('settingsOverlay');
-  const isOpen = !panel.classList.contains('open');
-  if (isOpen) {
-    panel.classList.add('open');
-    overlay.classList.add('show');
-    loadModels();
-  } else {
-    panel.classList.remove('open');
-    overlay.classList.remove('show');
-  }
-}
-function closeAllPanels() {
-  document.getElementById('overlay').classList.remove('show');
-  document.getElementById('leftSidebar').classList.remove('open');
-  document.getElementById('settingsPanel').classList.remove('open');
-  document.getElementById('settingsOverlay').classList.remove('show');
-  closeMoreMenu();
-  closeAvatarDrawer();
+
 }
 
-// ========== Hash 路由 ==========
-function navigateTo(hash) {
-  if (window.location.hash === hash) {
-    document.querySelectorAll('.sidebar-nav-item, .bottom-nav-item').forEach(el => {
-      el.classList.add('nav-pulse');
-      setTimeout(() => el.classList.remove('nav-pulse'), 400);
-    });
-    return;
+function toggleSettings() {
+
+  const panel = document.getElementById('settingsPanel');
+
+  const overlay = document.getElementById('settingsOverlay');
+
+  const isOpen = !panel.classList.contains('open');
+
+  if (isOpen) {
+
+    panel.classList.add('open');
+
+    overlay.classList.add('show');
+
+    loadModels();
+
+  } else {
+
+    panel.classList.remove('open');
+
+    overlay.classList.remove('show');
+
   }
-  if (IS_MOBILE.matches) closeAllPanels();
-  window.location.hash = hash;
+
 }
+
+function closeAllPanels() {
+
+  document.getElementById('overlay').classList.remove('show');
+
+  document.getElementById('leftSidebar').classList.remove('open');
+
+  document.getElementById('settingsPanel').classList.remove('open');
+
+  document.getElementById('settingsOverlay').classList.remove('show');
+
+  closeMoreMenu();
+
+  closeAvatarDrawer();
+
+}
+
+
+
+// ========== Hash 璺敱 ==========
+
+function navigateTo(hash) {
+
+  if (window.location.hash === hash) {
+
+    document.querySelectorAll('.sidebar-nav-item, .bottom-nav-item').forEach(el => {
+
+      el.classList.add('nav-pulse');
+
+      setTimeout(() => el.classList.remove('nav-pulse'), 400);
+
+    });
+
+    return;
+
+  }
+
+  if (IS_MOBILE.matches) closeAllPanels();
+
+  window.location.hash = hash;
+
+}
+
 function onHashChange() {
+
   const hash = window.location.hash || '#chat';
 
-  // 关闭设置面板（非 #settings 时）
+  const sb = document.getElementById('leftSidebar');
+
+  const toggleBtn = document.getElementById('sidebarToggleBtn');
+
+
+
+  // 鍏抽棴璁剧疆闈㈡澘锛堥潪 #settings 鏃讹級
+
   if (hash !== '#settings') {
+
     document.getElementById('settingsPanel').classList.remove('open');
+
     document.getElementById('settingsOverlay').classList.remove('show');
+
   }
+
+
 
   document.querySelectorAll('.page-section').forEach(s => s.classList.remove('active'));
+
   const pageId = 'page-' + (hash === '#settings' ? 'chat' : hash.slice(1));
+
   const page = document.getElementById(pageId);
+
   if (page) page.classList.add('active');
+
   document.querySelectorAll('.sidebar-nav-item').forEach(a => {
+
     a.classList.toggle('active', a.getAttribute('href') === hash);
+
   });
+
   document.querySelectorAll('.bottom-nav-item').forEach((b, i) => {
+
     b.classList.toggle('active', ['#chat','#settings','#profile'][i] === hash);
+
   });
+
+  // 鍚屾灞曞紑鎸夐挳鏄剧ず鐘舵€?
+
+  if (toggleBtn && !IS_MOBILE.matches) {
+
+    toggleBtn.style.display = sb.classList.contains('collapsed') ? 'flex' : 'none';
+
+  }
+
   if (hash === '#profile') {
-    // 个人主页无需额外加载
+
+    // 涓汉涓婚〉鏃犻渶棰濆鍔犺浇
+
   }
+
   if (hash === '#settings') {
-    // 打开滑动设置面板
+
+    // 鎵撳紑婊戝姩璁剧疆闈㈡澘
+
     const panel = document.getElementById('settingsPanel');
+
     const overlay = document.getElementById('settingsOverlay');
+
     if (!panel.classList.contains('open')) {
+
       panel.classList.add('open');
+
       overlay.classList.add('show');
+
     }
+
     loadModels();
+
   }
-}
-window.addEventListener('hashchange', onHashChange);
-window.addEventListener('DOMContentLoaded', function() {
-  if (!window.location.hash) window.location.hash = '#chat';
-  onHashChange();
-  loadSidebarMemTree();
-  loadSkillMarket();
-  syncTTSButton();
-});
-function switchPanelTab(el, tab) {
-  document.querySelectorAll('.panel-tab').forEach(t => { t.classList.remove('active'); t.setAttribute('aria-selected', 'false'); });
-  el.classList.add('active');
-  el.setAttribute('aria-selected', 'true');
-  ['settings','theme','tools','workflow'].forEach(id => {
-    document.getElementById('tab-' + id).style.display = id === tab ? '' : 'none';
-  });
-  if (tab === 'workflow') { setTimeout(loadWorkflows, 100); }
+
 }
 
-// ========== 主题切换 ==========
-function setMode(mode) {
-  document.documentElement.setAttribute('data-mode', mode);
-  localStorage.setItem('marvis-mode', mode);
-  document.getElementById('modeDark').classList.toggle('active', mode === 'dark');
-  document.getElementById('modeLight').classList.toggle('active', mode === 'light');
-}
-function setAccent(accent) {
-  document.documentElement.setAttribute('data-accent', accent);
-  localStorage.setItem('marvis-accent', accent);
-  ['Cyber','Forest','Sakura','Leather'].forEach(a => {
-    document.getElementById('chip' + a).classList.toggle('active', a.toLowerCase() === accent);
+window.addEventListener('hashchange', onHashChange);
+
+window.addEventListener('DOMContentLoaded', function() {
+
+  if (!window.location.hash) window.location.hash = '#chat';
+
+  onHashChange();
+
+  loadSidebarMemTree();
+
+  loadSkillMarket();
+
+  syncTTSButton();
+
+});
+
+function switchPanelTab(el, tab) {
+
+  document.querySelectorAll('.panel-tab').forEach(t => { t.classList.remove('active'); t.setAttribute('aria-selected', 'false'); });
+
+  el.classList.add('active');
+
+  el.setAttribute('aria-selected', 'true');
+
+  ['settings','theme','tools','workflow'].forEach(id => {
+
+    document.getElementById('tab-' + id).style.display = id === tab ? '' : 'none';
+
   });
+
+  if (tab === 'workflow') { setTimeout(loadWorkflows, 100); }
+
 }
+
+
+
+// ========== 涓婚鍒囨崲 ==========
+
+function setMode(mode) {
+
+  document.documentElement.setAttribute('data-mode', mode);
+
+  localStorage.setItem('marvis-mode', mode);
+
+  document.getElementById('modeDark').classList.toggle('active', mode === 'dark');
+
+  document.getElementById('modeLight').classList.toggle('active', mode === 'light');
+
+}
+
+function setAccent(accent) {
+
+  document.documentElement.setAttribute('data-accent', accent);
+
+  localStorage.setItem('marvis-accent', accent);
+
+  ['Cyber','Forest','Sakura','Leather'].forEach(a => {
+
+    document.getElementById('chip' + a).classList.toggle('active', a.toLowerCase() === accent);
+
+  });
+
+}
+
 (function initTheme() {
+
   const savedMode = localStorage.getItem('marvis-mode') || 'dark';
+
   const savedAccent = localStorage.getItem('marvis-accent') || 'cyber';
+
   setMode(savedMode);
+
   setAccent(savedAccent);
+
 })();
 
-// ========== 连接状态 ==========
+
+
+// ========== 杩炴帴鐘舵€?==========
+
 function setStatus(state, label) {
+
   const dot = document.getElementById('statusDot');
+
   const labelEl = document.getElementById('statusLabel');
+
   const pDot = document.getElementById('panelStatusDot');
+
   const pLabel = document.getElementById('panelStatusLabel');
+
   dot.className = 'status-dot ' + state;
+
   labelEl.textContent = label;
+
   pDot.className = 'status-dot ' + state;
+
   pLabel.textContent = label;
+
 }
+
+
 
 // ========== API Key ==========
+
 async function applyKey() {
+
   let key = document.getElementById('keyInput').value.trim();
+
   if (!key) key = savedKey;
-  if (!key) { showToast('请输入 API Key'); return; }
+
+  if (!key) { showToast('璇疯緭鍏?API Key'); return; }
+
   if (currentModel === 'local') {
-    showToast('请先在模型列表中选择一个真实模型');
+
+    showToast('璇峰厛鍦ㄦā鍨嬪垪琛ㄤ腑閫夋嫨涓€涓湡瀹炴ā鍨?);
+
     return;
+
   }
-  setStatus('offline', '验证中…');
+
+  setStatus('offline', '楠岃瘉涓€?);
+
   try {
+
     const r = await fetch(API + '/set-key', {
+
       method: 'POST', headers: {'Content-Type':'application/json'},
+
       body: JSON.stringify({key, model: currentModel})
+
     });
+
     const d = await r.json();
+
     if (d.ok) {
+
       hasKey = true;
+
       savedKey = key;
-      setStatus('online', '已连接 ' + d.model);
-      showToast('已连接 ' + d.model);
+
+      setStatus('online', '宸茶繛鎺?' + d.model);
+
+      showToast('宸茶繛鎺?' + d.model);
+
       document.getElementById('keyInput').value = '';
+
       closeAllPanels();
+
       loadModels();
+
     } else {
-      setStatus('offline', d.error || '连接失败');
-      showToast('失败: ' + (d.error || '未知错误'));
+
+      setStatus('offline', d.error || '杩炴帴澶辫触');
+
+      showToast('澶辫触: ' + (d.error || '鏈煡閿欒'));
+
     }
+
   } catch(e) {
-    setStatus('offline', 'API 服务未启动');
-    showToast('API 服务未启动 (端口8900)');
+
+    setStatus('offline', 'API 鏈嶅姟鏈惎鍔?);
+
+    showToast('API 鏈嶅姟鏈惎鍔?(绔彛8900)');
+
   }
+
 }
+
+
 
 async function resetKey() {
+
   document.getElementById('keyInput').value = '';
+
   savedKey = '';
+
   hasKey = false;
+
   try {
+
     const r = await fetch(API + '/set-key', {
+
       method: 'POST', headers: {'Content-Type':'application/json'},
+
       body: JSON.stringify({key: '', model: 'local'})
+
     });
+
     const d = await r.json();
+
     if (d.local) currentModel = 'local';
+
   } catch(e) {}
-  setStatus('offline', '本地模拟模式');
-  showToast('已切换为本地模拟');
+
+  setStatus('offline', '鏈湴妯℃嫙妯″紡');
+
+  showToast('宸插垏鎹负鏈湴妯℃嫙');
+
   loadModels();
+
 }
+
+
 
 function onModelChange(val) {
+
   currentModel = val;
+
   document.getElementById('panelModel').textContent = val;
+
   buildModelChips();
+
   if (hasKey) applyKey();
+
 }
 
-// ========== 模型管理 ==========
+
+
+// ========== 妯″瀷绠＄悊 ==========
+
 let allModels = [];
+
 let allProviders = [];
+
 let modelKeyValues = {};
 
+
+
 async function loadModels() {
+
   try {
+
     const r = await fetch(API + '/models');
+
     const d = await r.json();
+
     allModels = d.models;
+
     allProviders = d.providers;
+
     if (d.current_model) currentModel = d.current_model;
+
     buildProviderFilter();
+
     filterModels();
+
     buildModelChips();
+
     loadKeyValues();
-  } catch(e) { console.log('加载模型列表失败'); }
+
+  } catch(e) { console.log('鍔犺浇妯″瀷鍒楄〃澶辫触'); }
+
 }
+
+
 
 async function loadKeyValues() {
+
   try {
+
     const r = await fetch(API + '/model-key/status');
+
     const d = await r.json();
+
     modelKeyValues = d.keys || {};
+
     filterModels();
+
   } catch(e) { modelKeyValues = {}; }
+
 }
+
+
 
 function buildProviderFilter() {
+
   const sel = document.getElementById('providerFilter');
-  sel.innerHTML = '<option value="">全部厂商</option>';
+
+  sel.innerHTML = '<option value="">鍏ㄩ儴鍘傚晢</option>';
+
   allProviders.forEach(p => {
+
     sel.innerHTML += '<option value="'+p+'">'+p+'</option>';
+
   });
+
 }
+
+
 
 function filterModels() {
+
   const search = (document.getElementById('modelSearch').value || '').toLowerCase();
+
   const provider = document.getElementById('providerFilter').value;
+
   let filtered = allModels;
+
   if (provider) filtered = filtered.filter(m => m.provider === provider);
+
   if (search) filtered = filtered.filter(m =>
+
     m.name.toLowerCase().includes(search) ||
+
     m.provider.toLowerCase().includes(search) ||
+
     m.model_id.toLowerCase().includes(search) ||
+
     (m.description||'').toLowerCase().includes(search)
+
   );
+
   renderModelList(filtered);
+
 }
+
+
 
 function renderModelList(models) {
+
   const list = document.getElementById('modelList');
-  if (!models.length) { list.innerHTML = '<div style="padding:12px;color:var(--text-muted);text-align:center;font-size:13px">无匹配模型</div>'; return; }
+
+  if (!models.length) { list.innerHTML = '<div style="padding:12px;color:var(--text-muted);text-align:center;font-size:13px">鏃犲尮閰嶆ā鍨?/div>'; return; }
+
   const groups = {};
+
   models.forEach(m => {
+
     if (!groups[m.provider]) groups[m.provider] = [];
+
     groups[m.provider].push(m);
+
   });
+
   let html = '';
+
   for (const [provider, items] of Object.entries(groups)) {
+
     const count = items.length;
+
     html += '<div style="display:flex;align-items:center;padding:10px 4px 4px;font-size:11px;color:var(--text-muted);font-weight:600;letter-spacing:0.5px;text-transform:uppercase">'+
-      provider+' <span style="font-weight:400;margin-left:4px">'+count+'个</span></div>';
+
+      provider+' <span style="font-weight:400;margin-left:4px">'+count+'涓?/span></div>';
+
     html += items.map(m => {
+
       const isActive = m.key === currentModel;
+
       const border = isActive ? 'var(--cinnabar)' : 'var(--rule)';
+
       const bg = isActive ? 'background:var(--cinnabar-smoke);' : '';
+
       const marker = isActive ? '<span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--cinnabar);margin-right:8px;flex-shrink:0"></span>'
+
         : '<span style="display:inline-block;width:7px;height:7px;margin-right:8px;flex-shrink:0"></span>';
+
       const desc = m.description ? ' <span style="color:var(--text-muted)">'+m.description+'</span>' : '';
-      const delBtn = m.custom ? '<button onclick="event.stopPropagation();delModel(\''+m.key+'\')" title="删除" style="background:none;border:none;color:var(--cinnabar);cursor:pointer;font-size:16px;padding:0 4px;line-height:1">&times;</button>' : '';
+
+      const delBtn = m.custom ? '<button onclick="event.stopPropagation();delModel(\''+m.key+'\')" title="鍒犻櫎" style="background:none;border:none;color:var(--cinnabar);cursor:pointer;font-size:16px;padding:0 4px;line-height:1">&times;</button>' : '';
+
       const areaId = 'k_' + m.key.replace(/[^a-zA-Z0-9]/g, '_');
+
       const esName = m.name.replace(/'/g,"\\'");
 
+
+
       if (m.has_key) {
+
         const keyVal = modelKeyValues[m.key] || '';
-        const masked = keyVal ? maskKeyText(keyVal) : '••••••••';
+
+        const masked = keyVal ? maskKeyText(keyVal) : '鈥⑩€⑩€⑩€⑩€⑩€⑩€⑩€?;
+
         return '<div onclick="pickModel(\''+m.key+'\',\''+esName+'\')" style="padding:10px 12px;border-radius:8px;border:1px solid '+border+';cursor:pointer;font-size:13px;transition:all var(--transition);'+bg+'">'+
+
           '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">'+
+
           '<div style="display:flex;align-items:center;flex:1;min-width:0">'+marker+
+
           '<span style="font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+m.name+'</span>'+desc+'</div>'+
+
           '<div style="display:flex;align-items:center;gap:6px;flex-shrink:0;margin-left:8px">'+
-          '<span style="font-size:10px;color:var(--success);background:var(--success-bg);padding:2px 8px;border-radius:10px;white-space:nowrap">已配置</span>'+delBtn+'</div></div>'+
+
+          '<span style="font-size:10px;color:var(--success);background:var(--success-bg);padding:2px 8px;border-radius:10px;white-space:nowrap">宸查厤缃?/span>'+delBtn+'</div></div>'+
+
           '<div style="display:flex;align-items:center;gap:6px;font-size:11px">'+
+
           '<code style="font-family:var(--mono);color:var(--text-muted);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+masked+'</code>'+
-          (keyVal ? '<button onclick="event.stopPropagation();copyModelKey(\''+m.key+'\')" title="复制Key" style="background:none;border:none;color:var(--cinnabar);cursor:pointer;font-size:12px;white-space:nowrap">复制</button>' : '')+
+
+          (keyVal ? '<button onclick="event.stopPropagation();copyModelKey(\''+m.key+'\')" title="澶嶅埗Key" style="background:none;border:none;color:var(--cinnabar);cursor:pointer;font-size:12px;white-space:nowrap">澶嶅埗</button>' : '')+
+
           '</div></div>';
+
       }
+
+
 
       const keyArea = '<div id="'+areaId+'" style="display:none;margin-top:10px;padding-top:10px;border-top:1px solid var(--rule)" onclick="event.stopPropagation()">'+
+
         '<div style="display:flex;gap:6px;align-items:flex-start">'+
+
         '<div style="position:relative;flex:1">'+
-        '<input id="'+areaId+'_inp" type="password" placeholder="输入 API Key" '+
+
+        '<input id="'+areaId+'_inp" type="password" placeholder="杈撳叆 API Key" '+
+
         'style="width:100%;padding:8px 34px 8px 12px;border-radius:6px;border:1px solid var(--rule);background:var(--ink-deep);color:var(--text-body);font-size:13px;font-family:var(--mono);transition:border-color var(--transition)" '+
+
         'onkeydown="if(event.key===\'Enter\'){applyInlineKey(\''+areaId+'\',\''+m.key+'\',\''+esName+'\')}" '+
+
         'oninput="clearKeyStatus(\''+areaId+'\')">'+
-        '<span onclick="toggleKeyVis(\''+areaId+'\')" title="显示/隐藏" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);cursor:pointer;color:var(--text-muted);font-size:14px;user-select:none">&#9673;</span>'+
+
+        '<span onclick="toggleKeyVis(\''+areaId+'\')" title="鏄剧ず/闅愯棌" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);cursor:pointer;color:var(--text-muted);font-size:14px;user-select:none">&#9673;</span>'+
+
         '</div>'+
+
         '<button onclick="applyInlineKey(\''+areaId+'\',\''+m.key+'\',\''+esName+'\')" id="'+areaId+'_btn" '+
-        'style="padding:8px 14px;border-radius:6px;border:none;background:var(--cinnabar);color:var(--text-paper);font-size:13px;cursor:pointer;white-space:nowrap;transition:opacity var(--transition)">验证连接</button>'+
+
+        'style="padding:8px 14px;border-radius:6px;border:none;background:var(--cinnabar);color:var(--text-paper);font-size:13px;cursor:pointer;white-space:nowrap;transition:opacity var(--transition)">楠岃瘉杩炴帴</button>'+
+
         '</div>'+
+
         '<div id="'+areaId+'_status" style="font-size:11px;margin-top:6px;min-height:18px"></div>'+
+
         '</div>';
+
+
 
       return '<div onclick="toggleInlineKey(\''+areaId+'\')" style="padding:10px 12px;border-radius:8px;border:1px solid '+border+';cursor:pointer;font-size:13px;transition:all var(--transition);'+bg+'">'+
+
         '<div style="display:flex;justify-content:space-between;align-items:center">'+
+
         '<div style="display:flex;align-items:center;flex:1;min-width:0">'+marker+
+
         '<div style="min-width:0"><div style="font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+m.name+desc+'</div>'+
+
         '<div style="color:var(--text-muted);font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+m.base_url+'</div></div></div>'+
+
         '<div style="display:flex;align-items:center;gap:6px;flex-shrink:0;margin-left:8px">'+
-        '<span style="color:var(--text-muted);font-size:12px;white-space:nowrap">未配置</span>'+delBtn+'</div></div>'+
+
+        '<span style="color:var(--text-muted);font-size:12px;white-space:nowrap">未配置/span>'+delBtn+'</div></div>'+
+
         keyArea+'</div>';
+
     }).join('');
+
   }
+
   list.innerHTML = html;
+
 }
+
+
 
 function pickModel(key, name) {
+
   currentModel = key;
+
   document.getElementById('panelModel').textContent = name;
+
   filterModels();
+
   buildModelChips();
+
   applyModelSwitch();
+
 }
 
-// 模型快速切换弹出菜单
+
+
+// 妯″瀷蹇€熷垏鎹㈠脊鍑鸿彍鍗?
+
 function showModelQuickPicker(e) {
+
   e.stopPropagation();
-  // 移除旧弹出
+
+  // 绉婚櫎鏃у脊鍑?
+
   const old = document.getElementById('modelQuickPicker');
+
   if (old) { old.remove(); return; }
 
+
+
   const btn = document.getElementById('pillModelBtn');
+
   const rect = btn.getBoundingClientRect();
 
+
+
   const picker = document.createElement('div');
+
   picker.id = 'modelQuickPicker';
+
   picker.className = 'model-quick-picker';
 
-  // 常用模型列表
+
+
+  // 甯哥敤妯″瀷鍒楄〃
+
   const quickModels = allModels.filter(m => m.has_key || m.key === currentModel).slice(0, 12);
+
   let html = '';
+
   quickModels.forEach(m => {
+
     const active = m.key === currentModel ? ' active' : '';
+
     html += '<div class="mqm-item' + active + '" onclick="switchChip(\'' + m.key + '\');document.getElementById(\'modelQuickPicker\').remove()">' +
+
       '<span class="mqm-name">' + m.name + '</span>' +
+
       '<span class="mqm-provider">' + m.provider + '</span>' +
+
     '</div>';
+
   });
-  if (!html) html = '<div class="mqm-empty">请先配置 API Key</div>';
-  html += '<div class="mqm-all" onclick="navigateTo(\'#settings\');document.getElementById(\'modelQuickPicker\').remove()">全部模型 →</div>';
+
+  if (!html) html = '<div class="mqm-empty">璇峰厛閰嶇疆 API Key</div>';
+
+  html += '<div class="mqm-all" onclick="navigateTo(\'#settings\');document.getElementById(\'modelQuickPicker\').remove()">鍏ㄩ儴妯″瀷 鈫?/div>';
+
   picker.innerHTML = html;
 
-  // 定位到按钮上方
+
+
+  // 瀹氫綅鍒版寜閽笂鏂?
+
   document.body.appendChild(picker);
+
   const pickerRect = picker.getBoundingClientRect();
+
   picker.style.position = 'fixed';
+
   picker.style.bottom = (window.innerHeight - rect.top + 8) + 'px';
+
   picker.style.left = (rect.left + rect.width / 2 - pickerRect.width / 2) + 'px';
 
-  // 点击外部关闭
+
+
+  // 鐐瑰嚮澶栭儴鍏抽棴
+
   setTimeout(() => {
+
     document.addEventListener('click', function closePicker() {
+
       const p = document.getElementById('modelQuickPicker');
+
       if (p) p.remove();
+
       document.removeEventListener('click', closePicker);
+
     }, { once: true });
+
   }, 50);
+
 }
+
+
 
 function buildModelChips() {
+
   const container = document.getElementById('modelChips');
+
   let chips = allModels.filter(m => m.has_key || m.key === currentModel || m.key === 'deepseek-v3');
+
   const seen = new Set();
+
   chips = chips.filter(m => { if (seen.has(m.key)) return false; seen.add(m.key); return true; });
+
   if (chips.length > 8) chips = chips.slice(0, 8);
 
+
+
   const cur = allModels.find(m => m.key === currentModel);
+
   const curName = cur ? cur.name : currentModel;
+
   const dotClass = cur && cur.has_key ? 'ok' : 'no';
 
+
+
   container.innerHTML =
+
     '<span style="font-size:11px;color:var(--text-muted);flex-shrink:0;margin-right:2px;display:flex;align-items:center;gap:4px">'+
+
     '<span class="chip-dot '+dotClass+'"></span> '+curName+
+
     '</span>' +
+
     chips.map(m => {
+
       const active = m.key === currentModel ? ' active' : '';
+
       const dot = m.has_key ? 'ok' : 'no';
-      const shortName = m.name.length > 10 ? m.name.slice(0, 9) + '…' : m.name;
-      return '<button class="model-chip'+active+'" onclick="switchChip(\''+m.key+'\')" title="'+(m.has_key?'已配Key':'未配Key')+' | '+m.provider+'">'+
+
+      const shortName = m.name.length > 10 ? m.name.slice(0, 9) + '鈥? : m.name;
+
+      return '<button class="model-chip'+active+'" onclick="switchChip(\''+m.key+'\')" title="'+(m.has_key?'宸查厤Key':'鏈厤Key')+' | '+m.provider+'">'+
+
         '<span class="chip-dot '+dot+'"></span>'+
+
         '<span>'+shortName+'</span>'+
+
         '</button>';
+
     }).join('');
+
 }
+
+
 
 function switchChip(key) {
+
   const m = allModels.find(x => x.key === key);
+
   if (!m) return;
+
   pickModel(key, m.name);
+
 }
+
+
 
 async function applyModelSwitch() {
+
   const m = allModels.find(x => x.key === currentModel);
+
   if (!m) {
+
     hasKey = false;
-    setStatus('offline', '离线');
+
+    setStatus('offline', '绂荤嚎');
+
     return;
+
   }
+
   try {
+
     const r = await fetch(API + '/switch-model', {
+
       method: 'POST', headers: {'Content-Type':'application/json'},
+
       body: JSON.stringify({model: currentModel})
+
     });
+
     const d = await r.json();
+
     if (d.ok) {
+
       hasKey = d.has_key || false;
-      setStatus(hasKey ? 'online' : 'offline', hasKey ? ('已连接 ' + m.name) : ('未配Key: ' + m.name));
+
+      setStatus(hasKey ? 'online' : 'offline', hasKey ? ('宸茶繛鎺?' + m.name) : ('鏈厤Key: ' + m.name));
+
     }
+
   } catch(e) {
+
     hasKey = false;
-    setStatus('offline', 'API 未启动');
+
+    setStatus('offline', 'API 鏈惎鍔?);
+
   }
+
 }
+
+
 
 function toggleInlineKey(areaId) {
+
   const area = document.getElementById(areaId);
+
   if (!area) return;
+
   const isHidden = area.style.display === 'none' || !area.style.display;
+
   area.style.display = isHidden ? '' : 'none';
+
   if (isHidden) {
+
     const inp = document.getElementById(areaId + '_inp');
+
     if (inp) setTimeout(() => inp.focus(), 100);
+
   }
+
 }
+
+
 
 async function applyInlineKey(areaId, modelKey, modelName) {
+
   const inp = document.getElementById(areaId + '_inp');
+
   const btn = document.getElementById(areaId + '_btn');
+
   const status = document.getElementById(areaId + '_status');
+
   if (!inp) return;
+
   const key = inp.value.trim();
-  if (!key) { showToast('请输入 API Key'); return; }
+
+  if (!key) { showToast('璇疯緭鍏?API Key'); return; }
+
   btn.disabled = true;
-  btn.textContent = '验证中…';
+
+  btn.textContent = '楠岃瘉涓€?;
+
   btn.style.opacity = '0.7';
-  status.innerHTML = '<span style="color:var(--warning)">正在验证连接…</span>';
+
+  status.innerHTML = '<span style="color:var(--warning)">姝ｅ湪楠岃瘉杩炴帴鈥?/span>';
+
   try {
+
     const r = await fetch(API + '/model-key', {
+
       method: 'POST', headers: {'Content-Type':'application/json'},
+
       body: JSON.stringify({model: modelKey, key: key})
+
     });
+
     const d = await r.json();
+
     if (d.ok) {
+
       currentModel = d.current_model || modelKey;
+
       hasKey = true;
-      setStatus('online', '已连接 ' + modelName);
-      status.innerHTML = '<span style="color:var(--success)">连接成功 — ' + modelName + '</span>';
+
+      setStatus('online', '宸茶繛鎺?' + modelName);
+
+      status.innerHTML = '<span style="color:var(--success)">杩炴帴鎴愬姛 鈥?' + modelName + '</span>';
+
       modelKeyValues[modelKey] = key;
+
       if (inp) { inp.style.borderColor = 'var(--success)'; inp.value = ''; }
+
       btn.style.display = 'none';
+
       setTimeout(() => loadModels(), 600);
+
     } else {
-      setStatus('offline', d.error || '配置失败');
-      status.innerHTML = '<span style="color:var(--cinnabar)">' + (d.error || '验证失败') + '</span>';
+
+      setStatus('offline', d.error || '閰嶇疆澶辫触');
+
+      status.innerHTML = '<span style="color:var(--cinnabar)">' + (d.error || '楠岃瘉澶辫触') + '</span>';
+
       if (inp) inp.style.borderColor = 'var(--cinnabar)';
+
       btn.disabled = false;
-      btn.textContent = '重试';
+
+      btn.textContent = '閲嶈瘯';
+
       btn.style.opacity = '1';
-      showToast('失败: ' + (d.error || '未知错误'));
+
+      showToast('澶辫触: ' + (d.error || '鏈煡閿欒'));
+
     }
+
   } catch(e) {
-    status.innerHTML = '<span style="color:var(--cinnabar)">网络错误 — API 服务未启动</span>';
+
+    status.innerHTML = '<span style="color:var(--cinnabar)">缃戠粶閿欒 鈥?API 鏈嶅姟鏈惎鍔?/span>';
+
     if (inp) inp.style.borderColor = 'var(--cinnabar)';
+
     btn.disabled = false;
-    btn.textContent = '重试';
+
+    btn.textContent = '閲嶈瘯';
+
     btn.style.opacity = '1';
+
   }
+
 }
+
+
 
 function maskKeyText(key) {
-  if (!key || key.length < 8) return '••••';
-  return key.slice(0, 6) + '•••' + key.slice(-4);
+
+  if (!key || key.length < 8) return '鈥⑩€⑩€⑩€?;
+
+  return key.slice(0, 6) + '鈥⑩€⑩€? + key.slice(-4);
+
 }
+
+
 
 function toggleKeyVis(areaId) {
+
   const inp = document.getElementById(areaId + '_inp');
+
   if (!inp) return;
+
   inp.type = inp.type === 'password' ? 'text' : 'password';
+
 }
+
+
 
 function clearKeyStatus(areaId) {
+
   const inp = document.getElementById(areaId + '_inp');
+
   const status = document.getElementById(areaId + '_status');
+
   if (inp) inp.style.borderColor = 'var(--rule)';
+
   if (status) status.innerHTML = '';
+
   const btn = document.getElementById(areaId + '_btn');
-  if (btn) { btn.textContent = '验证连接'; btn.disabled = false; btn.style.opacity = '1'; }
+
+  if (btn) { btn.textContent = '楠岃瘉杩炴帴'; btn.disabled = false; btn.style.opacity = '1'; }
+
 }
+
+
 
 async function copyModelKey(modelKey) {
+
   const val = modelKeyValues[modelKey];
-  if (!val) { showToast('Key 信息不可用'); return; }
+
+  if (!val) { showToast('Key 淇℃伅涓嶅彲鐢?); return; }
+
   try {
+
     await navigator.clipboard.writeText(val);
-    showToast('Key 已复制到剪贴板');
+
+    showToast('Key 宸插鍒跺埌鍓创鏉?);
+
   } catch(e) {
+
     const ta = document.createElement('textarea');
+
     ta.value = val; ta.style.position = 'fixed'; ta.style.left = '-9999px';
+
     document.body.appendChild(ta); ta.select();
+
     document.execCommand('copy'); document.body.removeChild(ta);
-    showToast('Key 已复制');
+
+    showToast('Key 宸插鍒?);
+
   }
+
 }
+
+
 
 async function clearAllModelKeys() {
-  if (!confirm('确定要清除所有模型的独立 Key 配置吗？此操作不可撤销。')) return;
+
+  if (!confirm('纭畾瑕佹竻闄ゆ墍鏈夋ā鍨嬬殑鐙珛 Key 閰嶇疆鍚楋紵姝ゆ搷浣滀笉鍙挙閿€銆?)) return;
+
   for (const m of allModels) {
+
     if (m.has_key) {
+
       await fetch(API + '/model-key', {
+
         method: 'POST', headers: {'Content-Type':'application/json'},
+
         body: JSON.stringify({model: m.key, key: ''})
+
       });
+
     }
+
   }
+
   hasKey = false;
-  setStatus('offline', '本地模拟模式');
-  showToast('已清除所有独立 Key');
+
+  setStatus('offline', '鏈湴妯℃嫙妯″紡');
+
+  showToast('宸叉竻闄ゆ墍鏈夌嫭绔?Key');
+
   loadModels();
+
 }
+
+
 
 function showCustomModel() {
+
   document.getElementById('showCustomBtn').style.display = 'none';
+
   const form = document.getElementById('customModelForm');
+
   form.style.display = '';
+
   document.getElementById('customName').value = '';
+
   document.getElementById('customUrl').value = '';
+
   document.getElementById('customModelId').value = '';
+
   document.getElementById('urlDetect').textContent = '';
+
   form.scrollIntoView({behavior:'smooth',block:'nearest'});
+
 }
+
+
 
 function hideCustomModel() {
+
   document.getElementById('customModelForm').style.display = 'none';
+
   document.getElementById('showCustomBtn').style.display = '';
+
 }
+
+
 
 function autoDetectUrl() {
+
   const url = document.getElementById('customUrl').value.trim();
+
   if (!url) { document.getElementById('urlDetect').textContent = ''; return; }
+
   const map = {
+
     'api.openai.com': 'OpenAI', 'api.anthropic.com': 'Anthropic',
+
     'generativelanguage.googleapis.com': 'Google', 'api.deepseek.com': 'DeepSeek',
-    'dashscope.aliyuncs.com': '阿里通义', 'open.bigmodel.cn': '智谱',
-    'api.moonshot.cn': '月之暗面', 'ark.cn-beijing.volces.com': '字节豆包',
-    'api.baichuan-ai.com': '百川', 'api.minimax.chat': 'Minimax',
-    'api.lingyiwanwu.com': '零一万物', 'spark-api': '讯飞星火',
-    'hunyuan': '腾讯混元', 'api.mistral.ai': 'Mistral',
+
+    'dashscope.aliyuncs.com': '闃块噷閫氫箟', 'open.bigmodel.cn': '鏅鸿氨',
+
+    'api.moonshot.cn': '鏈堜箣鏆楅潰', 'ark.cn-beijing.volces.com': '瀛楄妭璞嗗寘',
+
+    'api.baichuan-ai.com': '鐧惧窛', 'api.minimax.chat': 'Minimax',
+
+    'api.lingyiwanwu.com': '闆朵竴涓囩墿', 'spark-api': '璁鏄熺伀',
+
+    'hunyuan': '鑵捐娣峰厓', 'api.mistral.ai': 'Mistral',
+
     'api.llama.com': 'Meta', 'api.x.ai': 'xAI', 'api.cohere.ai': 'Cohere',
+
     'api.siliconflow.cn': 'SiliconFlow', 'openrouter.ai': 'OpenRouter',
+
     'api.together.xyz': 'Together AI', 'integrate.api.nvidia.com': 'NVIDIA',
+
     'ai.api.nvidia.com': 'NVIDIA',
+
   };
+
   for (const [host, name] of Object.entries(map)) {
+
     if (url.includes(host)) {
-      document.getElementById('urlDetect').textContent = '检测到: ' + name;
+
+      document.getElementById('urlDetect').textContent = '妫€娴嬪埌: ' + name;
+
       if (!document.getElementById('customName').value)
-        document.getElementById('customName').placeholder = '如: ' + name + '-custom';
+
+        document.getElementById('customName').placeholder = '濡? ' + name + '-custom';
+
       return;
+
     }
+
   }
-  document.getElementById('urlDetect').textContent = '未识别的API地址，将作为通用配置';
+
+  document.getElementById('urlDetect').textContent = '鏈瘑鍒殑API鍦板潃锛屽皢浣滀负閫氱敤閰嶇疆';
+
 }
+
+
 
 async function addCustomModel() {
+
   const name = document.getElementById('customName').value.trim();
+
   const base_url = document.getElementById('customUrl').value.trim();
+
   const model_id = document.getElementById('customModelId').value.trim();
-  if (!name || !base_url) { showToast('名称和API地址不能为空'); return; }
+
+  if (!name || !base_url) { showToast('鍚嶇О鍜孉PI鍦板潃涓嶈兘涓虹┖'); return; }
+
   try {
+
     const r = await fetch(API + '/models', {
+
       method: 'POST', headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({name, model_id: model_id||name, base_url, provider:'自定义'})
+
+      body: JSON.stringify({name, model_id: model_id||name, base_url, provider:'鑷畾涔?})
+
     });
+
     const d = await r.json();
+
     if (d.ok) {
+
       currentModel = d.model.key;
+
       hideCustomModel();
-      showToast('已添加: ' + name);
+
+      showToast('宸叉坊鍔? ' + name);
+
       await loadModels();
+
     } else {
-      showToast('添加失败: ' + (d.error||'错误'));
+
+      showToast('娣诲姞澶辫触: ' + (d.error||'閿欒'));
+
     }
-  } catch(e) { showToast('添加失败: ' + (e.message||'网络错误')); console.error(e); }
+
+  } catch(e) { showToast('娣诲姞澶辫触: ' + (e.message||'缃戠粶閿欒')); console.error(e); }
+
 }
+
+
 
 async function delModel(key) {
+
   try {
+
     const r = await fetch(API + '/models/' + key, { method: 'DELETE' });
+
     const d = await r.json();
-    if (!d.ok) { showToast(d.error || '删除失败'); return; }
+
+    if (!d.ok) { showToast(d.error || '鍒犻櫎澶辫触'); return; }
+
     if (currentModel === key) currentModel = 'local';
+
     await loadModels();
-    showToast('已删除');
-  } catch(e) { showToast('删除失败: ' + (e.message||'网络错误')); }
+
+    showToast('宸插垹闄?);
+
+  } catch(e) { showToast('鍒犻櫎澶辫触: ' + (e.message||'缃戠粶閿欒')); }
+
 }
+
+
 
 loadModels();
+
 loadSidebarAvatar();
 
-// ========== 对话 ==========
-// ── 语音朗读 ──
+
+
+// ========== 瀵硅瘽 ==========
+
+// 鈹€鈹€ 璇煶朗读 鈹€鈹€
+
 let _ttsAudio = null;
+
 let _ttsEnabled = localStorage.getItem('xuanshu_tts') === 'on';
 
+
+
 function syncTTSButton() {
+
   const btn = document.getElementById('ttsToggleBtn');
+
   if (!btn) return;
+
   btn.classList.toggle('tts-on', _ttsEnabled);
-  btn.textContent = _ttsEnabled ? '🔉' : '🔊';
-  btn.title = _ttsEnabled ? '语音朗读：开' : '语音朗读：关';
+
+  btn.textContent = _ttsEnabled ? '馃攭' : '馃攰';
+
+  btn.title = _ttsEnabled ? '璇煶朗读锛氬紑' : '璇煶朗读锛氬叧';
+
 }
+
+
 
 function toggleTTS() {
+
   _ttsEnabled = !_ttsEnabled;
+
   localStorage.setItem('xuanshu_tts', _ttsEnabled ? 'on' : 'off');
+
   syncTTSButton();
+
   if (!_ttsEnabled && _ttsAudio) {
+
     _ttsAudio.pause();
+
     _ttsAudio = null;
+
   }
+
 }
+
+
 
 async function readAloud(btn) {
+
   const text = decodeURIComponent(btn.dataset.text || '');
+
   if (!text) return;
 
-  // 如果正在播放，先停止
+
+
+  // 濡傛灉姝ｅ湪鎾斁锛屽厛鍋滄
+
   if (_ttsAudio) {
+
     _ttsAudio.pause();
+
     _ttsAudio = null;
+
   }
+
+
 
   btn.style.opacity = '0.5';
+
   try {
+
     const r = await fetch(API + '/api/tts', {
+
       method: 'POST',
+
       headers: { 'Content-Type': 'application/json' },
+
       body: JSON.stringify({ text: text, speed: 1.0 })
+
     });
+
     if (!r.ok) throw new Error('TTS failed');
+
     const blob = await r.blob();
+
     const url = URL.createObjectURL(blob);
+
     _ttsAudio = new Audio(url);
+
     _ttsAudio.onended = () => {
+
       URL.revokeObjectURL(url);
+
       _ttsAudio = null;
+
       btn.style.opacity = '';
+
     };
+
     _ttsAudio.onerror = () => {
+
       URL.revokeObjectURL(url);
+
       _ttsAudio = null;
+
       btn.style.opacity = '';
+
     };
+
     await _ttsAudio.play();
+
   } catch (e) {
-    console.error('朗读失败:', e);
+
+    console.error('朗读澶辫触:', e);
+
     btn.style.opacity = '';
+
     if (_ttsAudio) { _ttsAudio = null; }
+
   }
+
 }
+
+
 
 async function send() {
+
   const text = inp.value.trim();
+
   const btn = document.querySelector('.pill-send');
+
   if (!text) return;
+
   inp.value = '';
+
   addBubble('user', text);
+
   if (!hasKey) {
+
     addBubble('system', '未配置 API Key，请先在设置面板中填写 Key');
+
     return;
+
   }
+
   btn.disabled = true;
+
   const body = {msg: text};
+
   const img = pendingImage;
+
   if (img) { body.image = img; pendingImage = null; document.getElementById('imagePreview').style.display = 'none'; }
+
   const typingEl = addTyping();
+
   try {
-    const r = await fetch(API + '/chat', {
-      method: 'POST', headers: {'Content-Type':'application/json'},
-      body: JSON.stringify(body)
-    });
-    const d = await r.json();
-    typingEl.remove();
 
-    if (d.reply && d.reply.startsWith('[PERM:')) {
-      const m = d.reply.match(/^\[PERM:(\w+)\]([\s\S]*)/);
-      if (m) { showPermission(m[1], m[2].trim()); }
-      btn.disabled = false; inp.focus();
-      return;
-    }
+    const agentLabel = '玄姝';
 
-    const thinkings = d.thinking || [];
-    if (d.cmd) {
-      addBubble('system', d.reply);
-    } else {
-      // 群聊模式：显示玄姝 → @副手
-      const mainAgent = '玄姝';
-      const subAgent = d.agent || d.dispatched_to || '';
-      const agentLabel = subAgent ? mainAgent + ' → @' + subAgent : mainAgent;
-      addBubble('agent', d.reply, agentLabel, thinkings);
-      // 语音朗读开关开启时自动朗读
-      if (_ttsEnabled && d.reply) {
-        const lastBubble = conv.lastElementChild;
-        const btn = lastBubble.querySelector('.btn-tts-read');
-        if (btn) readAloud(btn);
+    const el = createStreamBubble(agentLabel);
+
+    const evtSource = new EventSource(API + '/chat/stream?msg=' + encodeURIComponent(text));
+
+    let replyText = '';
+
+    evtSource.onmessage = function(e) {
+
+      try {
+
+        const data = JSON.parse(e.data);
+
+        if (data.type === 'thinking') {
+
+          addThinkingStep(el, data);
+
+        } else {
+
+          replyText += e.data;
+
+          const replyEl = document.getElementById('replyStream');
+
+          if (replyEl) replyEl.innerHTML = renderMarkdown(replyText);
+
+        }
+
+      } catch(err) {
+
+        replyText += e.data;
+
+        const replyEl = document.getElementById('replyStream');
+
+        if (replyEl) replyEl.innerHTML = renderMarkdown(replyText);
+
       }
-    }
-    if (d.model) {
-      currentModel = d.model;
-      buildModelChips();
-    }
-    totalTokens += text.length + (d.reply ? d.reply.length : 0);
+
+    };
+
+    evtSource.onerror = function() { evtSource.close(); };
+
+    // 等待完成
+
+    await new Promise((resolve, reject) => {
+
+      const timeout = setTimeout(() => reject(new Error('超时')), 120000);
+
+      const checkDone = setInterval(() => {
+
+        if (replyText.length > 0 && !el.classList.contains('streaming')) {
+
+          clearInterval(checkDone);
+
+          clearTimeout(timeout);
+
+          resolve();
+
+        }
+
+      }, 100);
+
+      // 简单超时处理
+
+      setTimeout(() => { clearInterval(checkDone); clearTimeout(timeout); evtSource.close(); resolve(); }, 60000);
+
+    });
+
+    finishStreamBubble(el, replyText, agentLabel);
+
+    totalTokens += text.length + replyText.length;
+
     updateTokenBadge();
+
   } catch(e) {
+
     typingEl.remove();
+
     addBubble('system', '请求失败 — 请检查 API Key 或当前模型');
+
   }
+
   btn.disabled = false;
+
   inp.focus();
+
 }
+
+
+
+function createStreamBubble(agentLabel) {
+
+  const d = document.createElement('div');
+
+  d.className = 'bubble agent';
+
+  d.innerHTML = '<div class="agent-label"><span class="agent-name">' + agentLabel + '</span><button class="btn-tts-read" title="朗读" onclick="readAloud(this)" data-text=""></button></div><div class="agent-body"><div class="thinking-live" id="thinkingLive" style="display:none"><div class="tc-live-header"><span class="tc-live-dot"></span><span>思考中...</span></div><div class="thinking-timeline" id="thinkingTimeline"></div></div><div class="reply-stream" id="replyStream"></div></div>';
+
+  conv.appendChild(d);
+
+  d.scrollIntoView({behavior:'smooth'});
+
+  return d;
+
+}
+
+
+
+function addThinkingStep(el, step) {
+
+  const thinkingLive = document.getElementById('thinkingLive');
+
+  const timeline = document.getElementById('thinkingTimeline');
+
+  if (thinkingLive.style.display === 'none') {
+
+    thinkingLive.style.display = 'block';
+
+  }
+
+  const toolMeta = {
+
+    'anysearch': { icon: '\xf0\x9f\x94\x8d', tag: 'search', cls: 'tc-tag-search' },
+
+    'web_search': { icon: '\xf0\x9f\x8c\x90', tag: 'search', cls: 'tc-tag-search' },
+
+    'browser_navigate': { icon: '\xf0\x9f\xa7\xad', tag: 'browser', cls: 'tc-tag-browser' },
+
+    'run_code': { icon: '\xe2\x9a\xa1', tag: 'code', cls: 'tc-tag-code' },
+
+    'read_file': { icon: '\xf0\x9f\x93\x84', tag: 'file', cls: 'tc-tag-file' },
+
+    'sys_info': { icon: '\xf0\x9f\x96\xa5\xef\xb8\x8f', tag: 'system', cls: 'tc-tag-system' },
+
+    'memdir_read': { icon: '\xf0\x9f\xa7\xa0', tag: 'memory', cls: 'tc-tag-memory' },
+
+  };
+
+  const defaultMeta = { icon: '\xf0\x9f\x94\xa7', tag: 'tool', cls: 'tc-tag-code' };
+
+  const tools = (step.tool || '').split(',').filter(Boolean).map(s => s.trim());
+
+  let toolBadges = tools.map(tn => {
+
+    const m = toolMeta[tn] || defaultMeta;
+
+    return '<span class="tc-tool-icon">' + m.icon + '</span><span class="tc-tool-name">' + tn + '</span><span class="tc-tool-tag ' + m.cls + '">' + m.tag + '</span>';
+
+  }).join('');
+
+  const thoughtText = (step.thought || '').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+  timeline.insertAdjacentHTML('beforeend', '<div class="tc-step"><div class="tc-tool-bar"><span class="tc-round">#' + step.round + '</span>' + toolBadges + '</div><div class="tc-thought">' + thoughtText + '</div></div>');
+
+  timeline.scrollTop = timeline.scrollHeight;
+
+}
+
+
+
+function finishStreamBubble(el, reply, agentLabel) {
+
+  const replyStream = document.getElementById('replyStream');
+
+  if (replyStream) {
+
+    replyStream.innerHTML = renderMarkdown(reply);
+
+  }
+
+  const thinkingLive = document.getElementById('thinkingLive');
+
+  if (thinkingLive) {
+
+    thinkingLive.innerHTML = '<div class="tc-live-header"><span>鉁?鎬濊€冮摼瀹屾垚</span><span style="margin-left:auto;font-size:11px;color:var(--text-dim)">&#10003;</span></div>';
+
+  }
+
+  el.innerHTML = '<div class="agent-label"><span class="agent-name">' + agentLabel + '</span><button class="btn-tts-read" title="朗读" onclick="readAloud(this)" data-text="' + encodeURIComponent(reply) + '">&#x1f50a;</button></div><div class="agent-body">' + (el.querySelector('.thinking-live') ? el.querySelector('.thinking-live').outerHTML : '') + replyStream.innerHTML + '</div>';
+
+  if (_ttsEnabled && reply) {
+
+    const btn = el.querySelector('.btn-tts-read');
+
+    if (btn) readAloud(btn);
+
+  }
+
+  saveConv();
+
+}
+
+
 
 function addBubble(role, content, agentName, thinkings) {
+
   const welcome = document.getElementById('welcome');
+
   if (welcome) welcome.style.display = 'none';
 
+
+
   const d = document.createElement('div');
+
   d.className = 'bubble ' + role;
+
   let html = renderMarkdown(content);
+
   if (agentName) {
+
     let thinkingHtml = '';
+
     if (thinkings && thinkings.length > 0) {
+
       const toolMeta = {
-        'anysearch':    { icon: '🔍', tag: '搜索', cls: 'tc-tag-search' },
-        'web_search':   { icon: '🌐', tag: '搜索', cls: 'tc-tag-search' },
-        'search_wikipedia': { icon: '📖', tag: '百科', cls: 'tc-tag-search' },
-        'web_fetch':    { icon: '🕷️', tag: '抓取', cls: 'tc-tag-search' },
-        'get_weather':  { icon: '🌤️', tag: '天气', cls: 'tc-tag-search' },
-        'run_code':     { icon: '⚡', tag: '代码', cls: 'tc-tag-code' },
-        'read_file':    { icon: '📄', tag: '文件', cls: 'tc-tag-file' },
-        'list_files':   { icon: '📂', tag: '文件', cls: 'tc-tag-file' },
-        'write_file':   { icon: '✏️', tag: '文件', cls: 'tc-tag-file' },
-        'edit_file':    { icon: '✏️', tag: '文件', cls: 'tc-tag-file' },
-        'decompile':    { icon: '🔬', tag: '逆向', cls: 'tc-tag-code' },
-        'decompile_detect': { icon: '🔬', tag: '逆向', cls: 'tc-tag-code' },
-        'browser_navigate': { icon: '🧭', tag: '浏览器', cls: 'tc-tag-browser' },
-        'browser_extract':  { icon: '📑', tag: '浏览器', cls: 'tc-tag-browser' },
-        'browser_click':    { icon: '👆', tag: '浏览器', cls: 'tc-tag-browser' },
-        'browser_type':     { icon: '⌨️', tag: '浏览器', cls: 'tc-tag-browser' },
-        'browser_screenshot': { icon: '📸', tag: '浏览器', cls: 'tc-tag-browser' },
-        'browser_scroll':   { icon: '🔄', tag: '浏览器', cls: 'tc-tag-browser' },
-        'browser_get_state': { icon: '📋', tag: '浏览器', cls: 'tc-tag-browser' },
-        'browser_wait':     { icon: '⏳', tag: '浏览器', cls: 'tc-tag-browser' },
-        'sys_info':     { icon: '🖥️', tag: '系统', cls: 'tc-tag-system' },
-        'process_list': { icon: '📊', tag: '进程', cls: 'tc-tag-system' },
-        'process_kill': { icon: '💀', tag: '进程', cls: 'tc-tag-system' },
-        'disk_usage':   { icon: '💾', tag: '磁盘', cls: 'tc-tag-system' },
-        'memory_usage': { icon: '🧠', tag: '内存', cls: 'tc-tag-system' },
-        'cpu_info':     { icon: '⚙️', tag: 'CPU', cls: 'tc-tag-system' },
-        'network_info': { icon: '🌐', tag: '网络', cls: 'tc-tag-system' },
-        'pkg_install':  { icon: '📦', tag: '包管理', cls: 'tc-tag-system' },
-        'pkg_search':   { icon: '🔎', tag: '包管理', cls: 'tc-tag-system' },
-        'pkg_remove':   { icon: '🗑️', tag: '包管理', cls: 'tc-tag-system' },
-        'adb_check':    { icon: '📱', tag: 'ADB', cls: 'tc-tag-system' },
-        'adb_screenshot': { icon: '📸', tag: 'ADB', cls: 'tc-tag-system' },
-        'adb_tap':      { icon: '👆', tag: 'ADB', cls: 'tc-tag-system' },
-        'adb_swipe':    { icon: '👉', tag: 'ADB', cls: 'tc-tag-system' },
-        'adb_type':     { icon: '⌨️', tag: 'ADB', cls: 'tc-tag-system' },
-        'git_log':      { icon: '📜', tag: 'Git', cls: 'tc-tag-file' },
-        'git_revert':   { icon: '⏪', tag: 'Git', cls: 'tc-tag-file' },
-        'git_status':   { icon: '📋', tag: 'Git', cls: 'tc-tag-file' },
-        'memdir_read':  { icon: '🧠', tag: '记忆', cls: 'tc-tag-memory' },
-        'memdir_write': { icon: '💾', tag: '记忆', cls: 'tc-tag-memory' },
-        'memdir_search': { icon: '🔍', tag: '记忆', cls: 'tc-tag-memory' },
+
+        'anysearch':    { icon: '馃攳', tag: '鎼滅储', cls: 'tc-tag-search' },
+
+        'web_search':   { icon: '馃寪', tag: '鎼滅储', cls: 'tc-tag-search' },
+
+        'search_wikipedia': { icon: '馃摉', tag: '鐧剧', cls: 'tc-tag-search' },
+
+        'web_fetch':    { icon: '馃暦锔?, tag: '鎶撳彇', cls: 'tc-tag-search' },
+
+        'get_weather':  { icon: '馃尋锔?, tag: '澶╂皵', cls: 'tc-tag-search' },
+
+        'run_code':     { icon: '鈿?, tag: '浠ｇ爜', cls: 'tc-tag-code' },
+
+        'read_file':    { icon: '馃搫', tag: '鏂囦欢', cls: 'tc-tag-file' },
+
+        'list_files':   { icon: '馃搨', tag: '鏂囦欢', cls: 'tc-tag-file' },
+
+        'write_file':   { icon: '鉁忥笍', tag: '鏂囦欢', cls: 'tc-tag-file' },
+
+        'edit_file':    { icon: '鉁忥笍', tag: '鏂囦欢', cls: 'tc-tag-file' },
+
+        'decompile':    { icon: '馃敩', tag: '閫嗗悜', cls: 'tc-tag-code' },
+
+        'decompile_detect': { icon: '馃敩', tag: '閫嗗悜', cls: 'tc-tag-code' },
+
+        'browser_navigate': { icon: '馃Л', tag: '娴忚鍣?, cls: 'tc-tag-browser' },
+
+        'browser_extract':  { icon: '馃搼', tag: '娴忚鍣?, cls: 'tc-tag-browser' },
+
+        'browser_click':    { icon: '馃憜', tag: '娴忚鍣?, cls: 'tc-tag-browser' },
+
+        'browser_type':     { icon: '鈱笍', tag: '娴忚鍣?, cls: 'tc-tag-browser' },
+
+        'browser_screenshot': { icon: '馃摳', tag: '娴忚鍣?, cls: 'tc-tag-browser' },
+
+        'browser_scroll':   { icon: '馃攧', tag: '娴忚鍣?, cls: 'tc-tag-browser' },
+
+        'browser_get_state': { icon: '馃搵', tag: '娴忚鍣?, cls: 'tc-tag-browser' },
+
+        'browser_wait':     { icon: '鈴?, tag: '娴忚鍣?, cls: 'tc-tag-browser' },
+
+        'sys_info':     { icon: '馃枼锔?, tag: '绯荤粺', cls: 'tc-tag-system' },
+
+        'process_list': { icon: '馃搳', tag: '杩涚▼', cls: 'tc-tag-system' },
+
+        'process_kill': { icon: '馃拃', tag: '杩涚▼', cls: 'tc-tag-system' },
+
+        'disk_usage':   { icon: '馃捑', tag: '纾佺洏', cls: 'tc-tag-system' },
+
+        'memory_usage': { icon: '馃', tag: '鍐呭瓨', cls: 'tc-tag-system' },
+
+        'cpu_info':     { icon: '鈿欙笍', tag: 'CPU', cls: 'tc-tag-system' },
+
+        'network_info': { icon: '馃寪', tag: '缃戠粶', cls: 'tc-tag-system' },
+
+        'pkg_install':  { icon: '馃摝', tag: '鍖呯鐞?, cls: 'tc-tag-system' },
+
+        'pkg_search':   { icon: '馃攷', tag: '鍖呯鐞?, cls: 'tc-tag-system' },
+
+        'pkg_remove':   { icon: '馃棏锔?, tag: '鍖呯鐞?, cls: 'tc-tag-system' },
+
+        'adb_check':    { icon: '馃摫', tag: 'ADB', cls: 'tc-tag-system' },
+
+        'adb_screenshot': { icon: '馃摳', tag: 'ADB', cls: 'tc-tag-system' },
+
+        'adb_tap':      { icon: '馃憜', tag: 'ADB', cls: 'tc-tag-system' },
+
+        'adb_swipe':    { icon: '馃憠', tag: 'ADB', cls: 'tc-tag-system' },
+
+        'adb_type':     { icon: '鈱笍', tag: 'ADB', cls: 'tc-tag-system' },
+
+        'git_log':      { icon: '馃摐', tag: 'Git', cls: 'tc-tag-file' },
+
+        'git_revert':   { icon: '鈴?, tag: 'Git', cls: 'tc-tag-file' },
+
+        'git_status':   { icon: '馃搵', tag: 'Git', cls: 'tc-tag-file' },
+
+        'memdir_read':  { icon: '馃', tag: '璁板繂', cls: 'tc-tag-memory' },
+
+        'memdir_write': { icon: '馃捑', tag: '璁板繂', cls: 'tc-tag-memory' },
+
+        'memdir_search': { icon: '馃攳', tag: '璁板繂', cls: 'tc-tag-memory' },
+
       };
-      const defaultMeta = { icon: '🔧', tag: '工具', cls: 'tc-tag-code' };
+
+      const defaultMeta = { icon: '馃敡', tag: '宸ュ叿', cls: 'tc-tag-code' };
+
+
 
       const steps = thinkings.map(t => {
+
         const tools = (t.tool || '').split(',').filter(Boolean).map(s => s.trim());
+
         const toolBadges = tools.map(tn => {
+
           const m = toolMeta[tn] || defaultMeta;
+
           return '<span class="tc-tool-icon">'+m.icon+'</span><span class="tc-tool-name">'+tn+'</span><span class="tc-tool-tag '+m.cls+'">'+m.tag+'</span>';
+
         }).join('');
+
         const thoughtText = (t.thought || '').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
         return '<div class="tc-step">'+
+
           '<div class="tc-tool-bar">'+
+
             '<span class="tc-round">#'+t.round+'</span>'+
+
             toolBadges+
+
           '</div>'+
+
           '<div class="tc-thought">'+thoughtText+'</div>'+
+
         '</div>';
+
       }).join('');
+
       thinkingHtml = '<details class="thinking-chain">'+
-        '<summary><span>✦ 思考链</span><span class="tc-badge">'+thinkings.length+' 步</span></summary>'+
+
+        '<summary><span>鉁?鎬濊€冮摼</span><span class="tc-badge">'+thinkings.length+' 姝?/span></summary>'+
+
         '<div class="thinking-timeline">'+steps+'</div>'+
+
       '</details>';
-      // 思考完成后延迟折叠：先短暂展示再收起
+
+      // 鎬濊€冨畬鎴愬悗寤惰繜鎶樺彔锛氬厛鐭殏灞曠ず鍐嶆敹璧?
+
       setTimeout(() => {
+
         const details = d.querySelector('details.thinking-chain');
+
         if (details && details.open) details.open = false;
+
       }, 2500);
+
     }
+
     d.innerHTML = '<div class="agent-label"><span class="agent-name">'+agentName+'</span><button class="btn-tts-read" title="朗读" onclick="readAloud(this)" data-text="'+encodeURIComponent(content)+'">&#x1f50a;</button></div><div class="agent-body">'+thinkingHtml+html+'</div>';
+
   } else if (role==='system') {
+
     d.innerHTML = '<div style="text-align:center;color:var(--text-muted)">'+html+'</div>';
+
   } else {
+
     d.innerHTML = html;
+
   }
+
   conv.appendChild(d);
+
   d.scrollIntoView({behavior:'smooth'});
+
   saveConv();
+
 }
+
+
 
 function renderMarkdown(text) {
+
   let html = text
+
     .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
   html = html.replace(/```(\w*)\n([\s\S]*?)```/g, function(_, lang, code) {
+
     return '<pre class="code-block"><code>' + code.replace(/\n$/, '') + '</code></pre>';
+
   });
+
   html = html.replace(/`([^`]+)`/g, '<code class="inline-code">$1</code>');
+
   html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+
   html = html.replace(/^### (.+)$/gm, '<h3 class="md-h3">$1</h3>');
+
   html = html.replace(/^## (.+)$/gm, '<h2 class="md-h2">$1</h2>');
+
   html = html.replace(/^[*-] (.+)$/gm, '<li>$1</li>');
+
   html = html.replace(/(<li>[\s\S]*?<\/li>)/g, function(m) {
+
     return '<ul class="md-ul">' + m + '</ul>';
+
   });
+
   html = html.replace(/<\/ul>\n<ul class="md-ul">/g, '\n');
+
   html = html.replace(/^---$/gm, '<hr class="md-hr">');
+
   html = html.replace(/\n/g, '<br>');
+
   return html;
+
 }
+
+
 
 function addTyping() {
+
   const d = document.createElement('div');
+
   d.className = 'typing';
+
   d.innerHTML = '<span></span><span></span><span></span>';
+
   conv.appendChild(d);
+
   d.scrollIntoView({behavior:'smooth'});
+
   return d;
+
 }
+
+
 
 function updateTokenBadge() {
+
   const k = (totalTokens / 1000).toFixed(1);
+
   document.getElementById('tokenBadge').textContent = k + 'k tk';
+
   const tc = document.getElementById('tokenCount');
+
   if (tc) tc.textContent = k + 'k tk';
+
 }
 
-// ========== 输入框文件上传 ==========
+
+
+// ========== 杈撳叆妗嗘枃浠朵笂浼?==========
+
 async function uploadFiles() {
+
   const input = document.getElementById('fileInput');
+
   const files = input.files;
+
   if (!files.length) return;
+
   const formData = new FormData();
+
   for (const f of files) { formData.append('files', f); }
+
   try {
+
     const r = await fetch(API + '/workspace/upload-batch', { method: 'POST', body: formData });
+
     const d = await r.json();
-    if (!d.ok) { showToast('上传失败: ' + (d.error || '未知错误')); return; }
-    showToast('已上传 ' + d.uploaded.length + ' 个文件');
-    // 刷新侧栏文件树
+
+    if (!d.ok) { showToast('涓婁紶澶辫触: ' + (d.error || '鏈煡閿欒')); return; }
+
+    showToast('宸蹭笂浼?' + d.uploaded.length + ' 涓枃浠?);
+
+    // 鍒锋柊渚ф爮鏂囦欢鏍?
+
     loadWorkspaceFiles();
-    // 把文件路径填入输入框
+
+    // 鎶婃枃浠惰矾寰勫～鍏ヨ緭鍏ユ
+
     const paths = d.uploaded.map(u => u.path).join('\n');
+
     document.getElementById('msg-input').value = (document.getElementById('msg-input').value + '\n' + paths).trim();
+
   } catch(e) {
-    showToast('上传失败: 服务未启动');
+
+    showToast('涓婁紶澶辫触: 鏈嶅姟鏈惎鍔?);
+
   }
+
   input.value = '';
+
 }
+
+
 
 document.addEventListener('DOMContentLoaded', function() {
+
   setTimeout(refreshSkills, 800);
+
 });
 
+
+
 function formatSize(bytes) {
+
   if (bytes < 1024) return bytes + ' B';
+
   if (bytes < 1024*1024) return (bytes/1024).toFixed(1) + ' KB';
+
   return (bytes/(1024*1024)).toFixed(1) + ' MB';
+
 }
 
-// ========== 侧栏个人主页 ==========
+
+
+// ========== 渚ф爮涓汉涓婚〉 ==========
+
 function loadSidebarAvatar() {
+
   const base64 = localStorage.getItem('avatar');
+
   const profileEl = document.getElementById('profileAvatar');
+
   const toolbarEl = document.getElementById('toolbarAvatar');
+
   if (base64) {
+
     if (profileEl) { profileEl.style.backgroundImage = 'url(' + base64 + ')'; profileEl.textContent = ''; }
+
     toolbarEl.style.backgroundImage = 'url(' + base64 + ')';
+
     toolbarEl.textContent = '';
+
   } else {
-    if (profileEl) { profileEl.style.backgroundImage = ''; profileEl.textContent = '玄'; }
+
+    if (profileEl) { profileEl.style.backgroundImage = ''; profileEl.textContent = '鐜?; }
+
     toolbarEl.style.backgroundImage = '';
-    toolbarEl.textContent = '玄';
+
+    toolbarEl.textContent = '鐜?;
+
   }
+
 }
+
+
 
 function uploadProfileAvatar() {
+
   const file = document.getElementById('profileAvatarUpload').files[0];
+
   if (!file) return;
+
   const reader = new FileReader();
+
   reader.onload = function(e) {
+
     const img = new Image();
+
     img.onload = function() {
+
       const canvas = document.createElement('canvas');
+
       canvas.width = canvas.height = 200;
+
       const ctx = canvas.getContext('2d');
+
       const minDim = Math.min(img.width, img.height);
+
       ctx.drawImage(img, (img.width-minDim)/2, (img.height-minDim)/2, minDim, minDim, 0, 0, 200, 200);
+
       const base64 = canvas.toDataURL('image/jpeg', 0.85);
+
       localStorage.setItem('avatar', base64);
+
       loadSidebarAvatar();
-      showToast('头像已更新');
+
+      showToast('澶村儚宸叉洿鏂?);
+
     };
+
     img.src = e.target.result;
+
   };
+
   reader.readAsDataURL(file);
+
 }
 
-// refreshSidebarMemdir 已废弃，由 loadSidebarMemTree + loadDrawerMemList 替代
+
+
+// refreshSidebarMemdir 宸插簾寮冿紝鐢?loadSidebarMemTree + loadDrawerMemList 鏇夸唬
+
+
 
 async function readSidebarMemdir(rel) {
+
   try {
+
     const r = await fetch(API + '/memory/read', {
+
       method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({rel})
+
     });
+
     const d = await r.json();
+
     if (!d.ok) { showToast(d.error); return; }
-    showToast(rel + ' 已复制到剪贴板');
+
+    showToast(rel + ' 宸插鍒跺埌鍓创鏉?);
+
     try { await navigator.clipboard.writeText(d.content); } catch(_) {}
-  } catch(e) { showToast('读取失败'); }
+
+  } catch(e) { showToast('璇诲彇澶辫触'); }
+
 }
+
+
 
 async function deleteSidebarMemdir(rel) {
-  if (!confirm('删除 ' + rel + ' ？')) return;
+
+  if (!confirm('鍒犻櫎 ' + rel + ' 锛?)) return;
+
   try {
+
     const r = await fetch(API + '/memory/delete', {
+
       method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({rel})
+
     });
+
     const d = await r.json();
-    if (d.ok) { showToast('已删除'); refreshSidebarMemdir(); }
-    else { showToast('失败'); }
-  } catch(e) { showToast('删除失败'); }
+
+    if (d.ok) { showToast('宸插垹闄?); refreshSidebarMemdir(); }
+
+    else { showToast('澶辫触'); }
+
+  } catch(e) { showToast('鍒犻櫎澶辫触'); }
+
 }
 
-// ========== 侧边栏记忆文件树（只读 — 用户可看不可改）==========
+
+
+// ========== 渚ц竟鏍忚蹇嗘枃浠舵爲锛堝彧璇?鈥?鐢ㄦ埛鍙湅涓嶅彲鏀癸級==========
+
 async function loadSidebarMemTree() {
+
   const el = document.getElementById('sidebarMemTree');
+
   try {
+
     const r = await fetch(API + '/memory/list');
+
     const d = await r.json();
+
     if (!d.ok || !d.entries.length) {
-      el.innerHTML = '<div class="file-tree-loading">暂无记忆文件</div>';
+
+      el.innerHTML = '<div class="file-tree-loading">鏆傛棤璁板繂鏂囦欢</div>';
+
       return;
+
     }
+
     let html = '';
+
     d.entries.forEach(e => {
+
       const name = e.rel.split('/').pop();
+
       const ext = name.split('.').pop().toLowerCase();
-      const icon = ext === 'md' ? '📝' : ext === 'json' ? '📋' : ext === 'txt' ? '📄' : '🗂️';
+
+      const icon = ext === 'md' ? '馃摑' : ext === 'json' ? '馃搵' : ext === 'txt' ? '馃搫' : '馃梻锔?;
+
       html += '<div class="mem-tree-item" onclick="viewMemFile(\'' + e.rel.replace(/'/g, "\\'") + '\')">' +
+
         '<span class="mem-tree-icon">' + icon + '</span>' +
+
         '<span class="mem-tree-name" title="' + e.rel + '">' + name + '</span>' +
+
         '<span class="mem-tree-size">' + formatSize(e.size) + '</span>' +
+
       '</div>';
+
     });
+
     el.innerHTML = html;
+
   } catch(e) {
-    el.innerHTML = '<div class="file-tree-loading">加载失败</div>';
+
+    el.innerHTML = '<div class="file-tree-loading">鍔犺浇澶辫触</div>';
+
   }
+
 }
+
+
 
 async function viewMemFile(rel) {
+
   try {
+
     const r = await fetch(API + '/memory/read', {
+
       method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({rel})
+
     });
+
     const d = await r.json();
+
     if (!d.ok) { showToast(d.error); return; }
-    // 在文件查看器中显示（只读）
+
+    // 鍦ㄦ枃浠舵煡鐪嬪櫒涓樉绀猴紙鍙锛?
+
     showFileContent(rel, d.content, 'text');
-  } catch(e) { showToast('读取失败'); }
+
+  } catch(e) { showToast('璇诲彇澶辫触'); }
+
 }
+
+
 
 function showFileContent(name, content, type) {
+
   const panel = document.getElementById('fileViewerPanel');
+
   document.getElementById('fvPath').textContent = name;
-  document.getElementById('fvMeta').textContent = content.length + ' 字符 · 只读';
+
+  document.getElementById('fvMeta').textContent = content.length + ' 瀛楃 路 鍙';
+
   const fvContent = document.getElementById('fvContent');
+
   if (type === 'text') {
+
     fvContent.textContent = content;
+
     fvContent.style.whiteSpace = 'pre-wrap';
+
     fvContent.style.fontFamily = 'var(--mono)';
+
     fvContent.style.fontSize = '13px';
+
   }
+
   panel.style.display = 'flex';
+
 }
 
-// ========== 头像抽屉 ==========
+
+
+// ========== 澶村儚鎶藉眽 ==========
+
 function openAvatarDrawer() {
+
   document.getElementById('avatarDrawer').classList.add('open');
+
   document.getElementById('avatarDrawerOverlay').classList.add('show');
+
   loadDrawerMemList();
-  // 同步头像
+
+  // 鍚屾澶村儚
+
   const mainAvatar = document.getElementById('toolbarAvatar').textContent;
-  document.getElementById('drawerAvatar').textContent = mainAvatar || '玄';
-  // 同步手机号
-  const phone = localStorage.getItem('xuanshu_phone') || '—';
+
+  document.getElementById('drawerAvatar').textContent = mainAvatar || '鐜?;
+
+  // 鍚屾鎵嬫満鍙?
+
+  const phone = localStorage.getItem('xuanshu_phone') || '鈥?;
+
   document.getElementById('drawerPhone').textContent = phone;
+
   document.getElementById('drawerTokens').textContent = totalTokens + ' tk';
+
 }
+
+
 
 function closeAvatarDrawer() {
+
   document.getElementById('avatarDrawer').classList.remove('open');
+
   document.getElementById('avatarDrawerOverlay').classList.remove('show');
+
 }
+
+
 
 async function loadDrawerMemList() {
+
   const el = document.getElementById('drawerMemList');
+
   try {
+
     const r = await fetch(API + '/memory/list');
+
     const d = await r.json();
+
     if (!d.ok || !d.entries.length) {
-      el.innerHTML = '<div class="file-tree-loading">暂无记忆文件</div>';
+
+      el.innerHTML = '<div class="file-tree-loading">鏆傛棤璁板繂鏂囦欢</div>';
+
       return;
+
     }
+
     let html = '';
+
     d.entries.forEach(e => {
+
       const name = e.rel.split('/').pop();
+
       const ext = name.split('.').pop().toLowerCase();
-      const icon = ext === 'md' ? '📝' : ext === 'json' ? '📋' : ext === 'txt' ? '📄' : '🗂️';
+
+      const icon = ext === 'md' ? '馃摑' : ext === 'json' ? '馃搵' : ext === 'txt' ? '馃搫' : '馃梻锔?;
+
       html += '<div class="drawer-mem-item" onclick="viewMemFile(\'' + e.rel.replace(/'/g, "\\'") + '\')">' +
+
         '<span class="mem-tree-icon">' + icon + '</span>' +
+
         '<span class="mem-tree-name">' + name + '</span>' +
+
         '<span class="mem-tree-size">' + formatSize(e.size) + '</span>' +
+
       '</div>';
+
     });
+
     el.innerHTML = html;
+
   } catch(e) {
-    el.innerHTML = '<div class="file-tree-loading">加载失败</div>';
+
+    el.innerHTML = '<div class="file-tree-loading">鍔犺浇澶辫触</div>';
+
   }
+
 }
+
+
 
 async function uploadAvatarFromFile(input) {
+
   const file = input.files[0];
+
   if (!file) return;
-  // 读取为 base64 data URL
+
+  // 璇诲彇涓?base64 data URL
+
   const reader = new FileReader();
+
   reader.onload = function(e) {
+
     const dataUrl = e.target.result;
-    // 更新所有头像显示
+
+    // 鏇存柊鎵€鏈夊ご鍍忔樉绀?
+
     const initial = file.name.charAt(0).toUpperCase();
+
     document.getElementById('toolbarAvatar').textContent = initial;
+
     document.getElementById('drawerAvatar').textContent = initial;
+
     document.getElementById('profileAvatar').textContent = initial;
+
     document.getElementById('sidebarAvatar').textContent = initial;
-    // 存储到 localStorage
+
+    // 瀛樺偍鍒?localStorage
+
     localStorage.setItem('xuanshu_avatar', dataUrl);
-    // 如果图片不大，用 CSS background 显示
+
+    // 濡傛灉鍥剧墖涓嶅ぇ锛岀敤 CSS background 鏄剧ず
+
     const avatars = ['toolbarAvatar', 'drawerAvatar', 'profileAvatar', 'sidebarAvatar'];
+
     avatars.forEach(id => {
+
       const el = document.getElementById(id);
+
       if (el) {
+
         el.style.backgroundImage = 'url(' + dataUrl + ')';
+
         el.style.backgroundSize = 'cover';
+
         el.style.backgroundPosition = 'center';
+
         el.style.color = 'transparent';
+
         el.style.fontSize = '0';
+
       }
+
     });
-    showToast('头像已更新');
+
+    showToast('澶村儚宸叉洿鏂?);
+
   };
+
   reader.readAsDataURL(file);
+
   input.value = '';
+
 }
 
-// 页面加载时恢复头像
+
+
+// 椤甸潰鍔犺浇鏃舵仮澶嶅ご鍍?
+
 (function restoreAvatar() {
+
   const saved = localStorage.getItem('xuanshu_avatar');
+
   if (saved) {
+
     ['toolbarAvatar', 'drawerAvatar', 'profileAvatar', 'sidebarAvatar'].forEach(id => {
+
       const el = document.getElementById(id);
+
       if (el) {
+
         el.style.backgroundImage = 'url(' + saved + ')';
+
         el.style.backgroundSize = 'cover';
+
         el.style.backgroundPosition = 'center';
+
         el.style.color = 'transparent';
+
         el.style.fontSize = '0';
+
       }
+
     });
+
   }
+
 })();
 
-// ========== 技能市场 ==========
+
+
+// ========== 鎶€鑳藉競鍦?==========
+
 async function loadSkillMarket() {
+
   const el = document.getElementById('sidebarSkillMarket');
+
   try {
-    // 获取所有 Agent 的技能
+
+    // 鑾峰彇鎵€鏈?Agent 鐨勬妧鑳?
+
     const r = await fetch(API + '/skills/list', {
+
       method: 'POST', headers: {'Content-Type':'application/json'},
+
       body: JSON.stringify({})
+
     });
+
     const d = await r.json();
+
     const skills = d.skills || [];
 
+
+
     let html = '';
-    // 内置技能模板
+
+    // 鍐呯疆鎶€鑳芥ā鏉?
+
     const builtinSkills = [
-      { name: '联网搜索', desc: '使用搜索引擎获取实时信息', icon: '🔍', agent: '搜索Agent' },
-      { name: '代码执行', desc: '在沙箱中运行 Python 代码', icon: '⚡', agent: '代码Agent' },
-      { name: '文件管理', desc: '读写、编辑、删除文件', icon: '📂', agent: '文件Agent' },
-      { name: '浏览器操控', desc: '打开网页、点击、输入、截图', icon: '🧭', agent: '浏览器Agent' },
-      { name: '系统管理', desc: '进程、磁盘、网络、包管理', icon: '🖥️', agent: '电脑Agent' },
-      { name: '手机控制', desc: 'ADB 操控 Android 设备', icon: '📱', agent: '手机Agent' },
-      { name: '记忆管理', desc: '读写 Agent 长期记忆文件', icon: '🧠', agent: '全部' },
-      { name: 'Git 版本', desc: '查看提交、回滚、恢复', icon: '📜', agent: '代码Agent' },
+
+      { name: '鑱旂綉鎼滅储', desc: '浣跨敤鎼滅储寮曟搸鑾峰彇瀹炴椂淇℃伅', icon: '馃攳', agent: '鎼滅储Agent' },
+
+      { name: '浠ｇ爜鎵ц', desc: '鍦ㄦ矙绠变腑杩愯 Python 浠ｇ爜', icon: '鈿?, agent: '浠ｇ爜Agent' },
+
+      { name: '鏂囦欢绠＄悊', desc: '璇诲啓銆佺紪杈戙€佸垹闄ゆ枃浠?, icon: '馃搨', agent: '鏂囦欢Agent' },
+
+      { name: '娴忚鍣ㄦ搷鎺?, desc: '鎵撳紑缃戦〉銆佺偣鍑汇€佽緭鍏ャ€佹埅鍥?, icon: '馃Л', agent: '娴忚鍣ˋgent' },
+
+      { name: '绯荤粺绠＄悊', desc: '杩涚▼銆佺鐩樸€佺綉缁溿€佸寘绠＄悊', icon: '馃枼锔?, agent: '鐢佃剳Agent' },
+
+      { name: '鎵嬫満鎺у埗', desc: 'ADB 鎿嶆帶 Android 璁惧', icon: '馃摫', agent: '鎵嬫満Agent' },
+
+      { name: '璁板繂绠＄悊', desc: '璇诲啓 Agent 闀挎湡璁板繂鏂囦欢', icon: '馃', agent: '鍏ㄩ儴' },
+
+      { name: 'Git 鐗堟湰', desc: '鏌ョ湅鎻愪氦銆佸洖婊氥€佹仮澶?, icon: '馃摐', agent: '浠ｇ爜Agent' },
+
     ];
 
-    // 内置技能
-    html += '<div class="skill-market-section"><div class="skill-market-label">内置技能</div>';
+
+
+    // 鍐呯疆鎶€鑳?
+
+    html += '<div class="skill-market-section"><div class="skill-market-label">鍐呯疆鎶€鑳?/div>';
+
     builtinSkills.forEach(s => {
+
       html += '<div class="skill-market-item">' +
+
         '<span class="skill-market-icon">' + s.icon + '</span>' +
+
         '<div class="skill-market-info">' +
+
           '<div class="skill-market-name">' + s.name + '</div>' +
+
           '<div class="skill-market-desc">' + s.desc + '</div>' +
+
         '</div>' +
+
         '<span class="skill-market-badge">' + s.agent + '</span>' +
+
       '</div>';
+
     });
+
     html += '</div>';
 
-    // 已学习的技能
+
+
+    // 宸插涔犵殑鎶€鑳?
+
     if (skills.length) {
-      html += '<div class="skill-market-section"><div class="skill-market-label">已学习 (' + skills.length + ')</div>';
+
+      html += '<div class="skill-market-section"><div class="skill-market-label">宸插涔?(' + skills.length + ')</div>';
+
       skills.forEach(s => {
+
         html += '<div class="skill-market-item learned" onclick="viewLearnedSkill(\'' + s.agent + '\',\'' + s.id + '\')">' +
-          '<span class="skill-market-icon">📖</span>' +
+
+          '<span class="skill-market-icon">馃摉</span>' +
+
           '<div class="skill-market-info">' +
+
             '<div class="skill-market-name">' + escapeHtml(s.name) + '</div>' +
+
             '<div class="skill-market-desc">' + s.agent + '</div>' +
+
           '</div>' +
+
         '</div>';
+
       });
+
       html += '</div>';
+
     }
 
-    // 新建技能按钮
-    html += '<div class="skill-market-add" onclick="showNewSkillDialog()">+ 自定义技能</div>';
+
+
+    // 鏂板缓鎶€鑳芥寜閽?
+
+    html += '<div class="skill-market-add" onclick="showNewSkillDialog()">+ 鑷畾涔夋妧鑳?/div>';
+
+
 
     el.innerHTML = html;
+
   } catch(e) {
-    el.innerHTML = '<div class="file-tree-loading">加载失败</div>';
+
+    el.innerHTML = '<div class="file-tree-loading">鍔犺浇澶辫触</div>';
+
   }
+
 }
+
+
 
 function showNewSkillDialog() {
-  const name = prompt('技能名称:');
+
+  const name = prompt('鎶€鑳藉悕绉?');
+
   if (!name) return;
-  const agent = prompt('绑定 Agent (搜索Agent/代码Agent/文件Agent/浏览器Agent/电脑Agent/手机Agent):', '代码Agent');
+
+  const agent = prompt('缁戝畾 Agent (鎼滅储Agent/浠ｇ爜Agent/鏂囦欢Agent/娴忚鍣ˋgent/鐢佃剳Agent/鎵嬫満Agent):', '浠ｇ爜Agent');
+
   if (!agent) return;
-  const content = prompt('技能描述 (Markdown):', '# ' + name + '\n\n## 使用方法\n\n1. ...');
+
+  const content = prompt('鎶€鑳芥弿杩?(Markdown):', '# ' + name + '\n\n## 浣跨敤鏂规硶\n\n1. ...');
+
   if (!content) return;
+
   createSkill(agent, name, content);
+
 }
+
+
 
 async function createSkill(agent, name, content) {
+
   try {
+
     const r = await fetch(API + '/skills/create', {
+
       method: 'POST', headers: {'Content-Type':'application/json'},
+
       body: JSON.stringify({ agent, name, content })
+
     });
+
     const d = await r.json();
+
     if (d.ok) {
-      showToast('技能已创建');
+
+      showToast('鎶€鑳藉凡鍒涘缓');
+
       loadSkillMarket();
+
     } else {
-      showToast(d.error || '创建失败');
+
+      showToast(d.error || '鍒涘缓澶辫触');
+
     }
-  } catch(e) { showToast('创建失败'); }
+
+  } catch(e) { showToast('鍒涘缓澶辫触'); }
+
 }
+
+
 
 async function viewLearnedSkill(agent, id) {
+
   try {
+
     const r = await fetch(API + '/skills/read', {
+
       method: 'POST', headers: {'Content-Type':'application/json'},
+
       body: JSON.stringify({ agent, id })
+
     });
+
     const d = await r.json();
+
     if (d.error) { showToast(d.error); return; }
-    showFileContent(d.name || '技能', d.content || JSON.stringify(d, null, 2), 'text');
-  } catch(e) { showToast('读取失败'); }
+
+    showFileContent(d.name || '鎶€鑳?, d.content || JSON.stringify(d, null, 2), 'text');
+
+  } catch(e) { showToast('璇诲彇澶辫触'); }
+
 }
 
-// ========== 快照导入导出 ==========
+
+
+// ========== 蹇収瀵煎叆瀵煎嚭 ==========
+
 async function exportAll() {
+
   try {
+
     const r = await fetch(API + '/snapshots/export', { method: 'POST' });
+
     const d = await r.json();
-    showToast(d.ok ? '快照已导出' : '导出失败');
-  } catch(e) { showToast('导出失败'); }
+
+    showToast(d.ok ? '蹇収宸插鍑? : '瀵煎嚭澶辫触');
+
+  } catch(e) { showToast('瀵煎嚭澶辫触'); }
+
 }
+
+
 
 async function importAll() {
+
   try {
+
     const r = await fetch(API + '/snapshots/import', { method: 'POST' });
+
     const d = await r.json();
-    showToast(d.ok ? '快照已导入 (+' + (d.imported || 0) + '条)' : '导入失败');
+
+    showToast(d.ok ? '蹇収宸插鍏?(+' + (d.imported || 0) + '鏉?' : '瀵煎叆澶辫触');
+
     loadSidebarMemTree();
-  } catch(e) { showToast('导入失败'); }
+
+  } catch(e) { showToast('瀵煎叆澶辫触'); }
+
 }
+
+
 
 function doLogout() {
-  if (!confirm('确定退出登录？')) return;
+
+  if (!confirm('纭畾閫€鍑虹櫥褰曪紵')) return;
+
   localStorage.removeItem('xuanshu_token');
+
   localStorage.removeItem('xuanshu_phone');
+
   location.reload();
+
 }
 
-// ========== 技能管理 ==========
+
+
+// ========== 鎶€鑳界鐞?==========
+
 function escapeHtml(s) {
+
   const d = document.createElement('div');
+
   d.textContent = s;
+
   return d.innerHTML;
+
 }
+
+
 
 async function refreshSkills(agent) {
+
   const res = await fetch(API + '/skills/list', {
+
     method: 'POST', headers: {'Content-Type':'application/json'},
+
     body: JSON.stringify({ agent: agent || '', query: '' })
+
   });
+
   const d = await res.json();
+
   const list = document.getElementById('sidebarSkillList');
-  if (!list) return; // 元素不存在时静默跳过
+
+  if (!list) return; // 鍏冪礌涓嶅瓨鍦ㄦ椂闈欓粯璺宠繃
+
   if (!d.ok || !d.skills || !d.skills.length) {
-    list.innerHTML = '<div style="font-size:13px;color:var(--text-muted);text-align:center;padding:12px">暂无技能</div>';
+
+    list.innerHTML = '<div style="font-size:13px;color:var(--text-muted);text-align:center;padding:12px">鏆傛棤鎶€鑳?/div>';
+
     return;
+
   }
+
   list.innerHTML = d.skills.map(s => {
+
     const ag = s.agent || d.agent || '';
+
     return '<div class="profile-item" onclick="readSkill('+s.id+',\''+ag+'\')">'+
+
       '<span class="pf-dot"></span>'+
+
       '<span class="skill-agent-badge" style="font-size:10px;background:var(--ink-hover);padding:1px 6px;border-radius:99px;color:var(--text-muted);flex-shrink:0">'+ag+'</span>'+
+
       '<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0">'+s.name+'</span>'+
+
       '<button class="pf-actions" onclick="event.stopPropagation();deleteSkill('+s.id+',\''+ag+'\')" style="background:none;border:none;color:var(--cinnabar);cursor:pointer;font-size:14px;padding:0 4px">&times;</button></div>';
+
   }).join('');
+
 }
+
+
 
 async function readSkill(id, agent) {
+
   const res = await fetch(API + '/skills/read', {
+
     method: 'POST', headers: {'Content-Type':'application/json'},
+
     body: JSON.stringify({ agent, id })
+
   });
+
   const d = await res.json();
-  if (!d.ok) { showToast('读取失败'); return; }
+
+  if (!d.ok) { showToast('璇诲彇澶辫触'); return; }
+
   const s = d.skill;
+
   const overlay = document.createElement('div');
+
   overlay.className = 'skill-viewer-overlay';
+
   overlay.onclick = function(e) { if (e.target === overlay) overlay.remove(); };
+
   overlay.innerHTML = '<div class="skill-viewer-panel"><button class="skill-viewer-close" onclick="this.closest(\'.skill-viewer-overlay\').remove()">&times;</button>'+
+
     '<h2>'+s.name+' <span class="skill-agent-badge" style="font-size:11px;background:var(--ink-hover);padding:2px 8px;border-radius:99px;color:var(--text-muted)">'+agent+'</span></h2>'+
+
     '<p>'+escapeHtml(s.content)+'</p></div>';
+
   document.body.appendChild(overlay);
+
 }
+
+
 
 async function deleteSkill(id, agent) {
-  if (!confirm('删除此技能？')) return;
+
+  if (!confirm('鍒犻櫎姝ゆ妧鑳斤紵')) return;
+
   const res = await fetch(API + '/skills/delete', {
+
     method: 'POST', headers: {'Content-Type':'application/json'},
+
     body: JSON.stringify({ agent, id })
+
   });
+
   const d = await res.json();
-  if (d.ok) { showToast('已删除'); refreshSkills(); }
-  else { showToast('删除失败'); }
+
+  if (d.ok) { showToast('宸插垹闄?); refreshSkills(); }
+
+  else { showToast('鍒犻櫎澶辫触'); }
+
 }
+
+
 
 function newSkill() {
+
   const overlay = document.createElement('div');
+
   overlay.className = 'skill-form-overlay';
+
   overlay.onclick = function(e) { if (e.target === overlay) overlay.remove(); };
+
   const agentNames = [];
+
   document.querySelectorAll('.skill-agent-badge').forEach(b => {
+
     const n = b.textContent.trim();
+
     if (n && !agentNames.includes(n)) agentNames.push(n);
+
   });
+
   overlay.innerHTML = '<div class="skill-form-panel">'+
-    '<h2 style="font-family:var(--serif);font-size:20px;color:var(--text-paper);margin-bottom:20px">新建技能</h2>'+
+
+    '<h2 style="font-family:var(--serif);font-size:20px;color:var(--text-paper);margin-bottom:20px">鏂板缓鎶€鑳?/h2>'+
+
     '<div class="form-group"><label class="form-label">Agent</label>'+
+
     '<select id="skillFormAgent" class="form-input">'+
-    (agentNames.map(n => '<option value="'+n+'">'+n+'</option>').join('') || '<option value="搜索Agent">搜索Agent</option>')+
+
+    (agentNames.map(n => '<option value="'+n+'">'+n+'</option>').join('') || '<option value="鎼滅储Agent">鎼滅储Agent</option>')+
+
     '</select></div>'+
-    '<div class="form-group"><label class="form-label">技能名称</label>'+
-    '<input id="skillFormName" class="form-input" placeholder="如: flask-perf、excel-layout"></div>'+
-    '<div class="form-group"><label class="form-label">技能内容 (Markdown)</label>'+
-    '<textarea id="skillFormContent" class="form-input" placeholder="描述经验/规则/步骤…" style="min-height:120px"></textarea></div>'+
+
+    '<div class="form-group"><label class="form-label">鎶€鑳藉悕绉?/label>'+
+
+    '<input id="skillFormName" class="form-input" placeholder="濡? flask-perf銆乪xcel-layout"></div>'+
+
+    '<div class="form-group"><label class="form-label">鎶€鑳藉唴瀹?(Markdown)</label>'+
+
+    '<textarea id="skillFormContent" class="form-input" placeholder="鎻忚堪缁忛獙/瑙勫垯/姝ラ鈥? style="min-height:120px"></textarea></div>'+
+
     '<div style="display:flex;gap:8px;justify-content:flex-end">'+
-    '<button class="btn btn-ghost" onclick="this.closest(\'.skill-form-overlay\').remove()">取消</button>'+
-    '<button class="btn btn-primary" onclick="submitNewSkill()">创建</button></div></div>';
+
+    '<button class="btn btn-ghost" onclick="this.closest(\'.skill-form-overlay\').remove()">鍙栨秷</button>'+
+
+    '<button class="btn btn-primary" onclick="submitNewSkill()">鍒涘缓</button></div></div>';
+
   document.body.appendChild(overlay);
+
 }
+
+
 
 async function submitNewSkill() {
+
   const agent = document.getElementById('skillFormAgent')?.value?.trim();
+
   const name = document.getElementById('skillFormName')?.value?.trim();
+
   const content = document.getElementById('skillFormContent')?.value?.trim();
-  if (!agent || !name || !content) { showToast('请填写完整'); return; }
+
+  if (!agent || !name || !content) { showToast('璇峰～鍐欏畬鏁?); return; }
+
   const res = await fetch(API + '/skills/create', {
+
     method: 'POST', headers: {'Content-Type':'application/json'},
+
     body: JSON.stringify({ agent, name, content })
+
   });
+
   const d = await res.json();
+
   if (d.ok) {
-    showToast('技能已创建');
+
+    showToast('鎶€鑳藉凡鍒涘缓');
+
     document.querySelector('.skill-form-overlay')?.remove();
+
     refreshSkills();
+
   } else {
-    showToast(d.error || '创建失败');
+
+    showToast(d.error || '鍒涘缓澶辫触');
+
   }
+
 }
 
-// ========== 权限弹窗 ==========
+
+
+// ========== 鏉冮檺寮圭獥 ==========
+
 function showPermission(permType, desc) {
-  document.getElementById('permTitle').textContent = '权限请求: ' + permType;
+
+  document.getElementById('permTitle').textContent = '鏉冮檺璇锋眰: ' + permType;
+
   document.getElementById('permTypeVal').textContent = permType;
+
   const sep = desc.indexOf('||');
+
   const target = sep !== -1 ? desc.slice(0, sep).trim() : '&mdash;';
+
   const reason = sep !== -1 ? desc.slice(sep + 2).trim() : desc;
+
   document.getElementById('permTargetVal').textContent = target;
+
   document.getElementById('permReason').textContent = reason;
+
   document.getElementById('permOverlay').setAttribute('data-perm', permType);
+
   document.getElementById('permOverlay').classList.add('show');
+
 }
+
 function hidePermission() { document.getElementById('permOverlay').classList.remove('show'); }
+
 function permitReply(action) {
+
   const permType = document.getElementById('permOverlay').getAttribute('data-perm') || 'screencap';
+
   hidePermission();
+
   const cmd = '/' + permType + ' ' + action;
+
   fetch(API + '/chat', {
+
     method: 'POST', headers: {'Content-Type':'application/json'},
+
     body: JSON.stringify({msg: cmd})
-  }).then(r => r.json()).then(d => addBubble('system', d.reply));
+
+    addBubble('system', '请求失败 — 请检查 API Key 或当前模型');
+
 }
+
+
 
 // ========== Toast ==========
+
 function showToast(msg) {
+
   const t = document.createElement('div');
+
   t.className = 'toast';
+
   t.textContent = msg;
+
   document.body.appendChild(t);
+
   setTimeout(() => t.remove(), 2500);
+
 }
 
-// ========== 工具适配层 ==========
+
+
+// ========== 宸ュ叿閫傞厤灞?==========
+
 let toolAdapterBase = '';
+
 let cachedTools = {};
+
 let activeToolId = '';
 
+
+
 async function checkToolEnv() {
+
   const status = document.getElementById('toolAdapterStatus');
+
   const result = document.getElementById('toolEnvResult');
+
   const grid = document.getElementById('toolGrid');
+
   const select = document.getElementById('customToolSelect');
+
   toolAdapterBase = document.getElementById('toolAdapterUrl').value.replace(/\/$/, '');
-  status.textContent = '扫描中…';
+
+  status.textContent = '鎵弿涓€?;
+
   status.style.color = 'var(--warning)';
+
   try {
+
     const resp = await fetch(toolAdapterBase + '/api/check_env');
+
     cachedTools = await resp.json();
+
     const available = Object.values(cachedTools).filter(t => t.available).length;
+
     const total = Object.keys(cachedTools).length;
-    status.textContent = '已连接 ('+available+'/'+total+')';
+
+    status.textContent = '宸茶繛鎺?('+available+'/'+total+')';
+
     status.style.color = 'var(--success)';
+
     result.innerHTML = '';
+
     for (const [tid, t] of Object.entries(cachedTools)) {
+
       result.innerHTML += '<div style="display:flex;align-items:center;gap:6px;margin-bottom:2px;font-size:12px">'+
+
         '<span style="color:'+(t.available?'var(--success)':'var(--text-muted)')+'">'+(t.available?'&#9679;':'&#9675;')+'</span>'+
+
         '<span>'+(t.available?'<b>'+tid+'</b>':tid)+' '+ (t.path||'') +'</span>'+
+
         (!t.available ? '<span style="font-size:11px;color:var(--text-muted)">'+(t.install_hint||'')+'</span>' : '')+'</div>';
+
     }
+
     buildToolGrid();
-    select.innerHTML = '<option value="">选择工具</option>';
+
+    select.innerHTML = '<option value="">閫夋嫨宸ュ叿</option>';
+
     for (const [tid, t] of Object.entries(cachedTools)) {
+
       select.innerHTML += '<option value="'+tid+'" '+(t.available?'':'disabled')+'>'+(t.available?'':'')+' '+tid+'</option>';
+
     }
+
   } catch (e) {
-    status.textContent = '连接失败';
+
+    status.textContent = '杩炴帴澶辫触';
+
     status.style.color = 'var(--cinnabar)';
-    result.innerHTML = '<span style="color:var(--cinnabar);font-size:12px">无法连接适配层，请确认服务已启动</span>';
+
+    result.innerHTML = '<span style="color:var(--cinnabar);font-size:12px">鏃犳硶杩炴帴閫傞厤灞傦紝璇风‘璁ゆ湇鍔″凡鍚姩</span>';
+
   }
+
 }
+
+
 
 function buildToolGrid() {
+
   const grid = document.getElementById('toolGrid');
+
   grid.innerHTML = '';
+
   for (const [tid, t] of Object.entries(cachedTools)) {
+
     grid.innerHTML += '<div class="tool-card" onclick="selectTool(\''+tid+'\')" style="'+
+
       (t.available?'':'opacity:0.5;')+
+
       'cursor:pointer;transition:all var(--transition)">'+
+
       '<div class="tool-card-header">'+
+
       '<span class="tool-card-status '+(t.available?'online':'offline')+'"></span>'+
+
       '<span class="tool-card-name">'+tid+'</span></div>'+
-      '<div class="tool-card-desc">'+(t.available ? '已就绪' : '未安装')+'</div></div>';
+
+      '<div class="tool-card-desc">'+(t.available ? '宸插氨缁? : '鏈畨瑁?)+'</div></div>';
+
   }
+
 }
+
+
 
 async function selectTool(toolId) {
+
   activeToolId = toolId;
+
   document.getElementById('customToolSelect').value = toolId;
+
   const presetSection = document.getElementById('presetSection');
+
   const presetTitle = document.getElementById('presetTitle');
+
   const presetList = document.getElementById('presetList');
+
   try {
+
     const resp = await fetch(toolAdapterBase + '/api/presets?tool=' + toolId);
+
     const presets = await resp.json();
+
     if (Object.keys(presets).length === 0) { presetSection.style.display = 'none'; return; }
+
     presetSection.style.display = 'block';
-    presetTitle.textContent = '预设操作 - ' + toolId;
+
+    presetTitle.textContent = '棰勮鎿嶄綔 - ' + toolId;
+
     presetList.innerHTML = '';
+
     for (const [pid, p] of Object.entries(presets)) {
+
       presetList.innerHTML += '<div class="preset-item" onclick="loadPreset(\''+toolId+'\', \''+pid+'\')" style="'+
+
         'padding:10px 12px;border-radius:8px;border:1px solid var(--rule);cursor:pointer;transition:all var(--transition);background:var(--ink-surface)">'+
+
         '<div style="font-size:13px;font-weight:600;color:var(--text-body)">'+p.label+'</div>'+
+
         '<div style="font-size:11px;color:var(--text-muted);margin-top:2px">'+p.desc+'</div></div>';
+
     }
+
   } catch (e) { presetSection.style.display = 'none'; }
+
 }
+
+
 
 let currentPreset = null;
+
 let currentPresetId = '';
 
+
+
 async function loadPreset(toolId, presetId) {
+
   try {
+
     const resp = await fetch(toolAdapterBase + '/api/presets?tool=' + toolId);
+
     const presets = await resp.json();
+
     currentPreset = presets[presetId];
+
     currentPresetId = presetId;
+
     if (!currentPreset || !currentPreset.params) return;
+
     const paramsDiv = document.getElementById('presetParams');
+
     paramsDiv.style.display = 'block';
+
     paramsDiv.innerHTML = '';
+
     for (const param of currentPreset.params) {
+
       paramsDiv.innerHTML += '<div class="form-group">'+
+
         '<label class="form-label">'+param.label+'</label>'+
+
         '<input class="preset-param form-input" data-key="'+param.key+'" placeholder="'+param.placeholder+'" style="font-family:var(--mono)"></div>';
+
     }
+
     paramsDiv.innerHTML += '<div style="display:flex;gap:8px;margin-top:12px">'+
-      '<button class="btn btn-primary" onclick="runPreset(\''+toolId+'\')" style="flex:1">执行</button>'+
-      '<button class="btn btn-ghost" onclick="previewCmd(\''+toolId+'\')">预览</button></div>';
+
+      '<button class="btn btn-primary" onclick="runPreset(\''+toolId+'\')" style="flex:1">鎵ц</button>'+
+
+      '<button class="btn btn-ghost" onclick="previewCmd(\''+toolId+'\')">棰勮</button></div>';
+
   } catch (e) {}
+
 }
+
+
 
 function buildCmd() {
+
   if (!currentPreset) return '';
+
   let cmd = currentPreset.template;
+
   document.querySelectorAll('.preset-param').forEach(el => {
+
     const val = el.value.trim() || el.placeholder;
+
     cmd = cmd.replace('{'+el.dataset.key+'}', val);
+
   });
+
   return cmd;
+
 }
 
-function previewCmd(toolId) { const cmd = buildCmd(); showOutput(cmd, '', '(预览)', 0); }
+
+
+function previewCmd(toolId) { const cmd = buildCmd(); showOutput(cmd, '', '(棰勮)', 0); }
+
 async function runPreset(toolId) { const cmd = buildCmd(); await runCommand(toolId, cmd); }
 
+
+
 async function runCustomCmd() {
+
   const toolId = document.getElementById('customToolSelect').value;
+
   const cmd = document.getElementById('customCmd').value.trim();
-  if (!toolId) { showToast('请先选择工具'); return; }
+
+  if (!toolId) { showToast('璇峰厛閫夋嫨宸ュ叿'); return; }
+
   if (!cmd) return;
+
   await runCommand(toolId, cmd);
+
 }
+
+
 
 async function runCommand(toolId, command) {
+
   const output = document.getElementById('toolOutput');
+
   const content = document.getElementById('toolOutputContent');
+
   const code = document.getElementById('toolExitCode');
+
   output.style.display = 'block';
-  content.textContent = '执行中…';
+
+  content.textContent = '鎵ц涓€?;
+
   code.textContent = '';
+
   try {
+
     const resp = await fetch(toolAdapterBase + '/api/run', {
+
       method: 'POST', headers: {'Content-Type': 'application/json'},
+
       body: JSON.stringify({tool: toolId, command: command})
+
     });
+
     const data = await resp.json();
+
     showOutput(data.stdout, data.stderr, data.command, data.returncode);
-  } catch (e) { content.textContent = '请求失败: ' + e.message; code.textContent = '(网络错误)'; }
+
+  } catch (e) { content.textContent = '璇锋眰澶辫触: ' + e.message; code.textContent = '(缃戠粶閿欒)'; }
+
 }
 
+
+
 function showOutput(stdout, stderr, cmd, code) {
+
   const output = document.getElementById('toolOutput');
+
   const content = document.getElementById('toolOutputContent');
+
   const exitCode = document.getElementById('toolExitCode');
+
   output.style.display = 'block';
+
   let text = '';
+
   if (cmd) text += '$ ' + cmd + '\n' + '\u2500'.repeat(40) + '\n';
+
   if (stdout) text += stdout;
+
   if (stderr) text += (stdout ? '\n' : '') + '\u2500\u2500 STDERR \u2500\u2500\n' + stderr;
-  if (!stdout && !stderr) text += '(无输出)';
+
+  if (!stdout && !stderr) text += '(鏃犺緭鍑?';
+
   content.textContent = text;
-  exitCode.textContent = code === 0 ? '(成功)' : '(退出码: ' + code + ')';
+
+  exitCode.textContent = code === 0 ? '(鎴愬姛)' : '(閫€鍑虹爜: ' + code + ')';
+
   exitCode.style.color = code === 0 ? 'var(--success)' : 'var(--warning)';
+
 }
+
+
 
 function updateCustomTool() { const toolId = document.getElementById('customToolSelect').value; if (toolId) selectTool(toolId); }
 
-// ========== 对话持久化 ==========
+
+
+// ========== 瀵硅瘽鎸佷箙鍖?==========
+
 const CONV_KEY = 'xuan_conv';
+
 const META_KEY = 'xuan_meta';
 
+
+
 function saveConv() {
+
   const bubbles = conv.querySelectorAll('.bubble');
+
   const msgs = [];
+
   bubbles.forEach(b => {
+
     if (b.classList.contains('user')) msgs.push({r:'user',c:b.innerHTML});
+
     else if (b.classList.contains('agent')) {
+
       const label = b.querySelector('.agent-label');
+
       const content = b.querySelector('div:last-child');
+
       msgs.push({r:'agent',a:label?label.textContent:'',c:content?content.innerHTML:''});
+
     }
+
     else if (b.classList.contains('system')) msgs.push({r:'system',c:b.innerHTML});
+
   });
+
   const meta = {model:currentModel, tokens:totalTokens, at:Date.now()};
+
   try { localStorage.setItem(CONV_KEY, JSON.stringify(msgs)); localStorage.setItem(META_KEY, JSON.stringify(meta)); } catch(e) {}
+
   fetch('/context/save', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(msgs.slice(-60))}).catch(()=>{});
+
 }
+
+
 
 function loadConv() {
+
   try {
+
     const raw = localStorage.getItem(CONV_KEY);
+
     if (!raw) return false;
+
     const msgs = JSON.parse(raw);
+
     msgs.forEach(m => renderRestoredMsg(m));
+
     const meta = JSON.parse(localStorage.getItem(META_KEY)||'{}');
+
     if (meta.model) currentModel = meta.model;
+
     if (meta.tokens) totalTokens = meta.tokens;
+
     updateTokenBadge(); buildModelChips();
+
     conv.lastElementChild?.scrollIntoView();
+
     return true;
+
   } catch(e) { localStorage.removeItem(CONV_KEY); return false; }
+
 }
+
+
 
 async function restoreFromServer() {
+
   try {
+
     const resp = await fetch('/context');
+
     const data = await resp.json();
+
     if (!data.ok || !data.shared_msgs || !data.shared_msgs.length) return false;
+
     const msgs = data.shared_msgs;
+
     msgs.forEach(m => {
+
       if (m.role === 'user') renderRestoredMsg({r:'user', c:m.content});
+
       else if (m.role === 'assistant') renderRestoredMsg({r:'agent', a:m.agent||'玄姝', c:m.content});
+
       else if (m.role === 'system') renderRestoredMsg({r:'system', c:m.content});
+
     });
+
     if (data.model) currentModel = data.model;
+
     if (data.context_summary) {
+
       const d = document.createElement('div');
+
       d.className = 'bubble system';
-      d.innerHTML = '记忆摘要：'+data.context_summary;
+
+      d.innerHTML = '璁板繂鎽樿锛?+data.context_summary;
+
       conv.appendChild(d);
+
     }
+
     updateTokenBadge(); buildModelChips();
+
     conv.lastElementChild?.scrollIntoView();
+
     saveConv();
+
     return true;
+
   } catch(e) { return false; }
+
 }
+
+
 
 function renderRestoredMsg(m) {
+
   const d = document.createElement('div');
+
   d.className = 'bubble ' + (m.r==='agent'?'agent system':m.r);
+
   if (m.r==='agent') {
+
     d.innerHTML = '<div class="agent-label">'+
+
       '<span class="agent-name">'+m.a+'</span>'+
+
       '<button class="btn-tts-read" title="朗读" onclick="readAloud(this)" data-text="'+encodeURIComponent(m.c)+'">&#x1f50a;</button></div>'+
+
       '<div style="line-height:1.7">'+m.c+'</div>';
+
   } else { d.innerHTML = m.c; }
+
   conv.appendChild(d);
+
 }
 
+
+
 function clearConv() {
+
   conv.innerHTML = '<div class="bubble system"></div>';
+
   localStorage.removeItem(CONV_KEY);
+
   localStorage.removeItem(META_KEY);
+
 }
+
+
 
 if (!loadConv()) { restoreFromServer(); }
 
+
+
 setTimeout(refreshSkills, 1200);
 
+
+
 setTimeout(() => {
+
   if (document.getElementById('tab-tools').offsetParent !== null ||
+
       sessionStorage.getItem('toolAdapterChecked')) {
+
     checkToolEnv();
+
     sessionStorage.setItem('toolAdapterChecked', '1');
+
   }
+
 }, 2000);
 
-// ========== 更多菜单 ==========
+
+
+// ========== 鏇村鑿滃崟 ==========
+
 let themePanelOpen = false;
+
 function toggleThemeQuickPanel(e) {
+
   if(e) e.stopPropagation();
+
   const panel = document.getElementById('themeQuickPanel');
+
   if (themePanelOpen) {
+
     panel.style.display = 'none';
+
     themePanelOpen = false;
+
   } else {
+
     panel.style.display = 'flex';
+
     themePanelOpen = true;
+
     // close more menu if open
+
     const mm = document.getElementById('moreMenu');
+
     if (mm) mm.style.display = 'none';
+
     moreMenuOpen = false;
+
     // highlight current accent
+
     const curAccent = document.documentElement.getAttribute('data-accent') || 'cyber';
+
     const curMode = document.documentElement.getAttribute('data-mode') || 'dark';
+
     document.querySelectorAll('.tqp-chip').forEach(c => {
+
       c.classList.toggle('active', c.dataset.accent === curAccent && c.dataset.mode === curMode);
+
     });
+
     setTimeout(() => { document.addEventListener('click', () => { panel.style.display = 'none'; themePanelOpen = false; }, { once: true }); }, 10);
+
   }
+
 }
+
 function applyQuick(accent, mode) {
+
   document.documentElement.setAttribute('data-accent', accent);
+
   document.documentElement.setAttribute('data-mode', mode);
+
   localStorage.setItem('marvis-theme-accent', accent);
+
   localStorage.setItem('marvis-theme-mode', mode);
+
   // update chips
+
   document.querySelectorAll('.tqp-chip').forEach(c => c.classList.toggle('active', c.dataset.accent === accent && c.dataset.mode === mode));
+
   // update settings page dropdowns if they exist
+
   const accSel = document.getElementById('themeAccent');
+
   const modeSel = document.getElementById('themeMode');
+
   if (accSel) accSel.value = accent;
+
   if (modeSel) modeSel.value = mode;
+
   // close panel after selection
+
   const panel = document.getElementById('themeQuickPanel');
+
   if (panel) { panel.style.display = 'none'; themePanelOpen = false; }
+
 }
+
+
 
 let moreMenuOpen = false;
+
 function toggleMoreMenu(e) {
+
   e.stopPropagation();
+
   const menu = document.getElementById('moreMenu');
+
   if (moreMenuOpen) {
+
     menu.style.display = 'none';
+
     moreMenuOpen = false;
+
   } else {
+
     menu.style.display = 'block';
+
     moreMenuOpen = true;
+
     // close quick panel if open
+
     const tp = document.getElementById('themeQuickPanel');
+
     if (tp) tp.style.display = 'none';
+
     themePanelOpen = false;
+
     setTimeout(() => { document.addEventListener('click', closeMoreMenu, { once: true }); }, 10);
+
   }
-}
-function closeMoreMenu() {
-  const menu = document.getElementById('moreMenu');
-  menu.style.display = 'none';
-  moreMenuOpen = false;
+
 }
 
-// ========== Agent 配置 ==========
-function loadAgentConfig() {
-  const config = {
-    name: '玄姝 Agent',
-    version: '1.0.0',
-    description: '多模型智能助手，支持文件管理、联网搜索、代码分析等',
-    permissions: { fileAccess: true, webSearch: true, toolExecution: true, download: false },
-    created: '2026-07-08', lastUpdated: '2026-07-08'
-  };
-  const blob = new Blob([JSON.stringify(config, null, 2)], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url; a.download = 'agent_config.json'; a.click();
-  URL.revokeObjectURL(url);
-  showToast('Agent 配置已下载');
+function closeMoreMenu() {
+
+  const menu = document.getElementById('moreMenu');
+
+  menu.style.display = 'none';
+
+  moreMenuOpen = false;
+
 }
+
+
+
+// ========== Agent 閰嶇疆 ==========
+
+function loadAgentConfig() {
+
+  const config = {
+
+    name: '玄姝 Agent',
+
+    version: '1.0.0',
+
+    description: '澶氭ā鍨嬫櫤鑳藉姪鎵嬶紝鏀寔鏂囦欢绠＄悊銆佽仈缃戞悳绱€佷唬鐮佸垎鏋愮瓑',
+
+    permissions: { fileAccess: true, webSearch: true, toolExecution: true, download: false },
+
+    created: '2026-07-08', lastUpdated: '2026-07-08'
+
+  };
+
+  const blob = new Blob([JSON.stringify(config, null, 2)], { type: 'application/json' });
+
+  const url = URL.createObjectURL(blob);
+
+  const a = document.createElement('a');
+
+  a.href = url; a.download = 'agent_config.json'; a.click();
+
+  URL.revokeObjectURL(url);
+
+  showToast('Agent 閰嶇疆宸蹭笅杞?);
+
+}
+
+
 
 function showDownloadPermInfo() {
+
   const overlay = document.createElement('div');
+
   overlay.className = 'permission-overlay show';
+
   overlay.innerHTML = '<div class="permission-dialog">'+
-    '<h3>下载权限</h3>'+
-    '<p>当前 Agent 仅拥有下载权限（仅可下载文件，不可上传或修改）。如需完整文件管理权限，请在设置中授权文件夹。</p>'+
+
+    '<h3>涓嬭浇鏉冮檺</h3>'+
+
+    '<p>褰撳墠 Agent 浠呮嫢鏈変笅杞芥潈闄愶紙浠呭彲涓嬭浇鏂囦欢锛屼笉鍙笂浼犳垨淇敼锛夈€傚闇€瀹屾暣鏂囦欢绠＄悊鏉冮檺锛岃鍦ㄨ缃腑鎺堟潈鏂囦欢澶广€?/p>'+
+
     '<div class="perm-detail">'+
-    '<div class="perm-row"><span class="perm-label">权限类型</span><span class="perm-value">下载</span></div>'+
-    '<div class="perm-row"><span class="perm-label">范围</span><span class="perm-value">仅限 Agent 生成的文件</span></div>'+
-    '<div class="perm-row"><span class="perm-label">状态</span><span class="perm-value">已启用</span></div></div>'+
-    '<div class="perm-actions"><button class="btn btn-primary" onclick="this.parentElement.parentElement.parentElement.remove()">知道了</button></div></div>';
+
+    '<div class="perm-row"><span class="perm-label">鏉冮檺绫诲瀷</span><span class="perm-value">涓嬭浇</span></div>'+
+
+    '<div class="perm-row"><span class="perm-label">鑼冨洿</span><span class="perm-value">浠呴檺 Agent 鐢熸垚鐨勬枃浠?/span></div>'+
+
+    '<div class="perm-row"><span class="perm-label">鐘舵€?/span><span class="perm-value">宸插惎鐢?/span></div></div>'+
+
+    '<div class="perm-actions"><button class="btn btn-primary" onclick="this.parentElement.parentElement.parentElement.remove()">鐭ラ亾浜?/button></div></div>';
+
   document.body.appendChild(overlay);
+
   overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
+
 }
+
+
 
 window.addEventListener('DOMContentLoaded', function() {
+
   checkAuth();
+
   const toolbarEl = document.getElementById('toolbarAvatar');
+
   if (toolbarEl) toolbarEl.onclick = () => navigateTo('#profile');
+
   setTimeout(loadWorkspaceFiles, 300);
+
   setTimeout(initParticles, 100);
+
 });
 
-// ========== 侧栏工作区文件树 ==========
+
+
+// ========== 渚ф爮宸ヤ綔鍖烘枃浠舵爲 ==========
+
 async function loadWorkspaceFiles() {
+
   try {
+
     const r = await fetch(API + '/workspace/list', {
+
       method: 'POST', headers: {'Content-Type':'application/json'},
+
       body: JSON.stringify({})
+
     });
+
     const d = await r.json();
+
     if (!d.ok) {
-      document.getElementById('sidebarFileTree').innerHTML = '<div class="file-tree-loading">文件服务未启动</div>';
+
+      document.getElementById('sidebarFileTree').innerHTML = '<div class="file-tree-loading">鏂囦欢鏈嶅姟鏈惎鍔?/div>';
+
       return;
+
     }
+
     let html = '';
+
     d.entries.forEach(e => {
+
       html += '<div class="ft-item ft-file" onclick="openFileInViewer(\'' + e.path.replace(/'/g, "\\'") + '\',\'' + e.name.replace(/'/g, "\\'") + '\')">' +
-        '📄 <span class="ft-name">' + e.name + '</span><span class="ft-size">' + formatSize(e.size) + '</span></div>';
+
+        '馃搫 <span class="ft-name">' + e.name + '</span><span class="ft-size">' + formatSize(e.size) + '</span></div>';
+
     });
-    document.getElementById('sidebarFileTree').innerHTML = html || '<div class="file-tree-loading">暂无上传文件，点击输入框旁的 + 上传</div>';
+
+    document.getElementById('sidebarFileTree').innerHTML = html || '<div class="file-tree-loading">鏆傛棤涓婁紶鏂囦欢锛岀偣鍑昏緭鍏ユ鏃佺殑 + 涓婁紶</div>';
+
   } catch(e) {
-    document.getElementById('sidebarFileTree').innerHTML = '<div class="file-tree-loading">文件服务未启动</div>';
+
+    document.getElementById('sidebarFileTree').innerHTML = '<div class="file-tree-loading">鏂囦欢鏈嶅姟鏈惎鍔?/div>';
+
   }
+
 }
 
-// ========== 文件查看器 ==========
+
+
+// ========== 鏂囦欢鏌ョ湅鍣?==========
+
 async function openFileInViewer(path, name) {
+
   const panel = document.getElementById('fileViewerPanel');
+
   document.getElementById('fvPath').textContent = path;
-  document.getElementById('fvMeta').textContent = '加载中…';
-  document.getElementById('fvContent').innerHTML = '<div style="padding:20px;color:var(--text-muted);text-align:center">加载中…</div>';
+
+  document.getElementById('fvMeta').textContent = '鍔犺浇涓€?;
+
+  document.getElementById('fvContent').innerHTML = '<div style="padding:20px;color:var(--text-muted);text-align:center">鍔犺浇涓€?/div>';
+
   panel.style.display = '';
 
+
+
   try {
+
     const r = await fetch(API + '/read-file', {
+
       method: 'POST', headers: {'Content-Type':'application/json'},
+
       body: JSON.stringify({path})
+
     });
+
     const d = await r.json();
+
     if (!d.ok) {
-      document.getElementById('fvMeta').textContent = '错误: ' + d.error;
+
+      document.getElementById('fvMeta').textContent = '閿欒: ' + d.error;
+
       document.getElementById('fvContent').innerHTML = '';
+
       return;
+
     }
-    document.getElementById('fvMeta').textContent = name + ' — ' + formatSize(d.size) + ' — ' + d.lines + ' 行';
+
+    document.getElementById('fvMeta').textContent = name + ' 鈥?' + formatSize(d.size) + ' 鈥?' + d.lines + ' 琛?;
+
     if (d.type === 'binary') {
-      document.getElementById('fvContent').innerHTML = '<div style="padding:20px;color:var(--text-muted);text-align:center">无法预览二进制文件 (' + d.ext + ')</div>';
+
+      document.getElementById('fvContent').innerHTML = '<div style="padding:20px;color:var(--text-muted);text-align:center">鏃犳硶棰勮浜岃繘鍒舵枃浠?(' + d.ext + ')</div>';
+
     } else {
+
       document.getElementById('fvContent').innerHTML = '<pre class="fv-code">' + escapeHtml(d.content) + '</pre>';
+
     }
+
     panel.scrollIntoView({behavior:'smooth'});
+
   } catch(e) {
-    document.getElementById('fvMeta').textContent = '加载失败: 服务未启动';
+
+    document.getElementById('fvMeta').textContent = '鍔犺浇澶辫触: 鏈嶅姟鏈惎鍔?;
+
     document.getElementById('fvContent').innerHTML = '';
+
   }
+
 }
 
+
+
 function closeFileViewer() {
+
   document.getElementById('fileViewerPanel').style.display = 'none';
+
 }
+
+
 
 function escapeHtml(str) { return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
-// ========== 粒子云画布 ==========
 
-// ========== 工作流（自动化规则）==========
+
+// ========== 绮掑瓙浜戠敾甯?==========
+
+
+
+// ========== 宸ヤ綔娴侊紙鑷姩鍖栬鍒欙級==========
+
 let wfEditingId = null;
+
 const WF_ACTIONS = [
-  { value: 'web_search', label: '联网搜索', color: '#3b82f6' },
-  { value: 'ai_summary', label: 'AI 总结',  color: '#8b5cf6' },
-  { value: 'write_file', label: '写文件',   color: '#10b981' },
-  { value: 'notify',     label: '通知',     color: '#f59e0b' },
+
+  { value: 'web_search', label: '鑱旂綉鎼滅储', color: '#3b82f6' },
+
+  { value: 'ai_summary', label: 'AI 鎬荤粨',  color: '#8b5cf6' },
+
+  { value: 'write_file', label: '鍐欐枃浠?,   color: '#10b981' },
+
+  { value: 'notify',     label: '閫氱煡',     color: '#f59e0b' },
+
 ];
 
-// ═══════════════════════ 工作流可视画布 ═══════════════════════
-let wfCanvasNodes = [];  // [{id, action, label, x, y, params:{...}}]
-let wfNodeIdSeq = 0;
-let wfDragNode = null;      // 画布内拖拽状态：{nodeId, offsetX, offsetY}
-let wfSelectedNode = null;  // 当前选中节点 id
-let wfEditTarget = null;    // 正在编辑参数的节点 id
 
-// ── 画布渲染 ──
+
+// 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺?宸ヤ綔娴佸彲瑙嗙敾甯?鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺?
+
+let wfCanvasNodes = [];  // [{id, action, label, x, y, params:{...}}]
+
+let wfNodeIdSeq = 0;
+
+let wfDragNode = null;      // 鐢诲竷鍐呮嫋鎷界姸鎬侊細{nodeId, offsetX, offsetY}
+
+let wfSelectedNode = null;  // 褰撳墠閫変腑鑺傜偣 id
+
+let wfEditTarget = null;    // 姝ｅ湪缂栬緫鍙傛暟鐨勮妭鐐?id
+
+
+
+// 鈹€鈹€ 鐢诲竷娓叉煋 鈹€鈹€
+
 function renderCanvas() {
+
   const svg = document.getElementById('wfCanvas');
-  // 保留 defs，清空其他
+
+  // 淇濈暀 defs锛屾竻绌哄叾浠?
+
   const defs = svg.querySelector('defs');
+
   svg.innerHTML = ''; svg.appendChild(defs);
+
+
 
   const NODE_W = 130, NODE_H = 48, PAD = 10;
 
-  // 画连接线
+
+
+  // 鐢昏繛鎺ョ嚎
+
   for (let i = 0; i < wfCanvasNodes.length - 1; i++) {
+
     const a = wfCanvasNodes[i], b = wfCanvasNodes[i+1];
+
     const x1 = a.x + NODE_W, y1 = a.y + NODE_H/2;
+
     const x2 = b.x, y2 = b.y + NODE_H/2;
+
     const cx1 = x1 + Math.abs(x2-x1)*0.4, cx2 = x2 - Math.abs(x2-x1)*0.4;
+
     const g = document.createElementNS('http://www.w3.org/2000/svg','g');
+
     g.setAttribute('class','wf-connector-group');
+
     const path = document.createElementNS('http://www.w3.org/2000/svg','path');
+
     path.setAttribute('d',`M ${x1},${y1} C ${cx1},${y1} ${cx2},${y2} ${x2},${y2}`);
+
     path.setAttribute('class','wf-connector-line');
+
     g.appendChild(path);
+
     svg.appendChild(g);
+
   }
 
-  // 画节点
+
+
+  // 鐢昏妭鐐?
+
   wfCanvasNodes.forEach((node, idx) => {
+
     const act = WF_ACTIONS.find(a=>a.value===node.action) || {};
+
     const g = document.createElementNS('http://www.w3.org/2000/svg','g');
+
     g.setAttribute('class','wf-canvas-node' + (node.id===wfSelectedNode?' selected':''));
+
     g.setAttribute('transform',`translate(${node.x},${node.y})`);
+
     g.setAttribute('data-id', node.id);
 
+
+
     // body
+
     const r = document.createElementNS('http://www.w3.org/2000/svg','rect');
+
     r.setAttribute('width', NODE_W); r.setAttribute('height', NODE_H);
+
     r.setAttribute('class','node-body');
+
     r.setAttribute('rx','6');
+
     g.appendChild(r);
 
+
+
     // color bar
+
     const bar = document.createElementNS('http://www.w3.org/2000/svg','rect');
+
     bar.setAttribute('x','0'); bar.setAttribute('y','0');
+
     bar.setAttribute('width','3'); bar.setAttribute('height',NODE_H);
+
     bar.setAttribute('fill', act.color||'#888');
+
     bar.setAttribute('rx','3');
+
     g.appendChild(bar);
 
+
+
     // label
+
     const t = document.createElementNS('http://www.w3.org/2000/svg','text');
+
     t.setAttribute('x','12'); t.setAttribute('y','20');
+
     t.setAttribute('class','node-label');
+
     t.textContent = node.label || act.label || node.action;
+
     g.appendChild(t);
 
+
+
     // sub
+
     const s = document.createElementNS('http://www.w3.org/2000/svg','text');
+
     s.setAttribute('x','12'); s.setAttribute('y','36');
+
     s.setAttribute('class','node-sub');
-    s.textContent = idx===0 ? '步骤 '+(idx+1) : '步骤 '+(idx+1);
+
+    s.textContent = idx===0 ? '姝ラ '+(idx+1) : '姝ラ '+(idx+1);
+
     g.appendChild(s);
 
+
+
     // output handle (right)
+
     if (idx < wfCanvasNodes.length - 1) {
+
       const h = document.createElementNS('http://www.w3.org/2000/svg','circle');
+
       h.setAttribute('cx', NODE_W); h.setAttribute('cy', NODE_H/2);
+
       h.setAttribute('r','4'); h.setAttribute('class','wf-canvas-handle');
+
       g.appendChild(h);
+
     }
 
+
+
     // events
+
     g.addEventListener('mousedown', (e) => onNodeMouseDown(e, node.id));
+
     g.addEventListener('dblclick', (e) => { e.stopPropagation(); openNodeEditor(node.id); });
 
+
+
     svg.appendChild(g);
+
   });
+
 }
+
+
 
 function refreshCanvas() {
+
   // re-layout: vertical stack with fixed spacing
+
   const NODE_W = 130, NODE_H = 48;
+
   const startX = 80, startY = 30, gapY = 80;
+
   wfCanvasNodes.forEach((n, i) => {
+
     n.x = startX;
+
     n.y = startY + i * (NODE_H + gapY);
+
   });
+
   renderCanvas();
+
 }
 
-// ── 画布交互 ──
+
+
+// 鈹€鈹€ 鐢诲竷浜や簰 鈹€鈹€
+
 function onNodeMouseDown(e, nodeId) {
+
   if (e.button !== 0) return;
+
   e.stopPropagation();
+
   const node = wfCanvasNodes.find(n=>n.id===nodeId);
+
   if (!node) return;
+
   wfSelectedNode = nodeId;
+
   const svgEl = document.getElementById('wfCanvas');
+
   const rect = svgEl.getBoundingClientRect();
+
   wfDragNode = { nodeId, offsetX: e.clientX - rect.left - node.x, offsetY: e.clientY - rect.top - node.y };
+
   renderCanvas();
+
   document.addEventListener('mousemove', onCanvasMouseMove);
+
   document.addEventListener('mouseup', onCanvasMouseUp);
+
 }
+
+
 
 function onCanvasMouseMove(e) {
+
   if (!wfDragNode) return;
+
   const svgEl = document.getElementById('wfCanvas');
+
   const rect = svgEl.getBoundingClientRect();
+
   const node = wfCanvasNodes.find(n=>n.id===wfDragNode.nodeId);
+
   if (!node) return;
+
   node.x = Math.max(0, e.clientX - rect.left - wfDragNode.offsetX);
+
   node.y = Math.max(0, e.clientY - rect.top - wfDragNode.offsetY);
+
   renderCanvas();
+
 }
+
+
 
 function onCanvasMouseUp() {
+
   wfDragNode = null;
+
   document.removeEventListener('mousemove', onCanvasMouseMove);
+
   document.removeEventListener('mouseup', onCanvasMouseUp);
+
 }
+
+
 
 function onCanvasClick(e) {
+
   if (e.target.closest('.wf-canvas-node')) return;
+
   wfSelectedNode = null;
+
   renderCanvas();
+
 }
 
-// ── 左侧面板拖入 ──
+
+
+// 鈹€鈹€ 宸︿晶闈㈡澘鎷栧叆 鈹€鈹€
+
 function onPaletteDrag(e) {
+
   e.dataTransfer.setData('action', e.target.closest('.wf-palette-node').getAttribute('data-action'));
+
 }
+
+
 
 function onCanvasDragOver(e) {
+
   e.preventDefault();
+
 }
+
+
 
 function onCanvasDrop(e) {
+
   e.preventDefault();
+
   const action = e.dataTransfer.getData('action');
+
   if (!action || !WF_ACTIONS.find(a=>a.value===action)) return;
+
   const act = WF_ACTIONS.find(a=>a.value===action);
+
   const svgEl = document.getElementById('wfCanvas');
+
   const rect = svgEl.getBoundingClientRect();
+
   wfNodeIdSeq++;
+
   const node = {
+
     id: 'node_'+wfNodeIdSeq,
+
     action: action,
+
     label: act.label,
+
     x: Math.max(0, e.clientX - rect.left - 65),
+
     y: Math.max(0, e.clientY - rect.top - 24),
+
     params: getDefaultParams(action)
+
   };
+
   wfCanvasNodes.push(node);
+
   // sort by Y to keep order logical
+
   wfCanvasNodes.sort((a,b)=>a.y-b.y);
+
   refreshCanvas();
+
 }
+
+
 
 function getDefaultParams(action) {
+
   switch (action) {
+
     case 'web_search': return { query: '{user_message}' };
-    case 'ai_summary': return { prompt: '帮我总结上面的内容' };
+
+    case 'ai_summary': return { prompt: '甯垜鎬荤粨涓婇潰鐨勫唴瀹? };
+
     case 'write_file': return { filename: 'output.txt', content: '{ai_output}' };
-    case 'notify':     return { message: '工作流执行完成' };
+
+    case 'notify':     return { message: '宸ヤ綔娴佹墽琛屽畬鎴? };
+
     default: return {};
+
   }
+
 }
 
-// ── 节点参数编辑浮层 ──
+
+
+// 鈹€鈹€ 鑺傜偣鍙傛暟缂栬緫娴眰 鈹€鈹€
+
 function openNodeEditor(nodeId) {
+
   const node = wfCanvasNodes.find(n=>n.id===nodeId);
+
   if (!node) return;
+
   wfEditTarget = nodeId;
+
   const act = WF_ACTIONS.find(a=>a.value===node.action);
-  document.getElementById('wfNodeEditorTitle').textContent = '编辑: ' + (act?.label || node.action);
+
+  document.getElementById('wfNodeEditorTitle').textContent = '缂栬緫: ' + (act?.label || node.action);
+
   const body = document.getElementById('wfNodeEditorBody');
+
   const params = node.params || getDefaultParams(node.action);
+
   let html = '';
+
   switch (node.action) {
+
     case 'web_search':
-      html = `<div class="form-group"><label class="form-label">搜索关键词</label><input id="wfEdit_query" class="form-input" value="${escapeHtml(params.query||'')}" placeholder="支持 {user_message} 变量"></div>`;
+
+      html = `<div class="form-group"><label class="form-label">鎼滅储鍏抽敭璇?/label><input id="wfEdit_query" class="form-input" value="${escapeHtml(params.query||'')}" placeholder="鏀寔 {user_message} 鍙橀噺"></div>`;
+
       break;
+
     case 'ai_summary':
-      html = `<div class="form-group"><label class="form-label">分析提示词</label><input id="wfEdit_prompt" class="form-input" value="${escapeHtml(params.prompt||'')}" placeholder="支持 {search_result} 等变量"></div>`;
+
+      html = `<div class="form-group"><label class="form-label">鍒嗘瀽鎻愮ず璇?/label><input id="wfEdit_prompt" class="form-input" value="${escapeHtml(params.prompt||'')}" placeholder="鏀寔 {search_result} 绛夊彉閲?></div>`;
+
       break;
+
     case 'write_file':
-      html = `<div class="form-group"><label class="form-label">文件名</label><input id="wfEdit_filename" class="form-input" value="${escapeHtml(params.filename||'')}"></div>
-        <div class="form-group"><label class="form-label" style="margin-top:4px">文件内容</label><input id="wfEdit_content" class="form-input" value="${escapeHtml(params.content||'')}" placeholder="支持 {ai_output} 变量"></div>`;
+
+      html = `<div class="form-group"><label class="form-label">鏂囦欢鍚?/label><input id="wfEdit_filename" class="form-input" value="${escapeHtml(params.filename||'')}"></div>
+
+        <div class="form-group"><label class="form-label" style="margin-top:4px">鏂囦欢鍐呭</label><input id="wfEdit_content" class="form-input" value="${escapeHtml(params.content||'')}" placeholder="鏀寔 {ai_output} 鍙橀噺"></div>`;
+
       break;
+
     case 'notify':
-      html = `<div class="form-group"><label class="form-label">通知内容</label><input id="wfEdit_message" class="form-input" value="${escapeHtml(params.message||'')}"></div>`;
+
+      html = `<div class="form-group"><label class="form-label">閫氱煡鍐呭</label><input id="wfEdit_message" class="form-input" value="${escapeHtml(params.message||'')}"></div>`;
+
       break;
+
   }
+
   body.innerHTML = html;
+
   document.getElementById('wfNodeEditor').style.display = 'block';
+
   document.getElementById('wfNodeOverlay').style.display = 'block';
+
 }
+
+
 
 function applyNodeEdit() {
+
   if (!wfEditTarget) return;
+
   const node = wfCanvasNodes.find(n=>n.id===wfEditTarget);
+
   if (!node) return;
+
   node.params = {};
+
   switch (node.action) {
+
     case 'web_search': node.params.query = document.getElementById('wfEdit_query')?.value || ''; break;
+
     case 'ai_summary': node.params.prompt = document.getElementById('wfEdit_prompt')?.value || ''; break;
+
     case 'write_file':
+
       node.params.filename = document.getElementById('wfEdit_filename')?.value || '';
+
       node.params.content = document.getElementById('wfEdit_content')?.value || '';
+
       break;
+
     case 'notify': node.params.message = document.getElementById('wfEdit_message')?.value || ''; break;
+
   }
+
   closeNodeEdit();
+
   renderCanvas();
+
 }
+
+
 
 function closeNodeEdit() {
+
   document.getElementById('wfNodeEditor').style.display = 'none';
+
   document.getElementById('wfNodeOverlay').style.display = 'none';
+
   wfEditTarget = null;
+
 }
 
-// ── 触发条件 UI ──
+
+
+// 鈹€鈹€ 瑙﹀彂鏉′欢 UI 鈹€鈹€
+
 function onCanvasTriggerChange() {
+
   const t = document.getElementById('wfCanvasTriggerType').value;
+
   const v = document.getElementById('wfCanvasTriggerVal');
+
   const m = document.getElementById('wfCanvasTriggerMode');
+
   if (t === 'keyword') {
-    v.placeholder = '关键词，逗号分隔'; v.value = '';
+
+    v.placeholder = '鍏抽敭璇嶏紝閫楀彿鍒嗛殧'; v.value = '';
+
     m.parentElement.style.display = '';
+
   } else if (t === 'prefix') {
-    v.placeholder = '前缀字符，如 /search'; v.value = '';
+
+    v.placeholder = '鍓嶇紑瀛楃锛屽 /search'; v.value = '';
+
     m.parentElement.style.display = 'none';
+
   } else {
-    v.placeholder = '正则表达式'; v.value = '';
+
+    v.placeholder = '姝ｅ垯琛ㄨ揪寮?; v.value = '';
+
     m.parentElement.style.display = 'none';
+
   }
+
 }
 
-// ── 构建 payload ──
+
+
+// 鈹€鈹€ 鏋勫缓 payload 鈹€鈹€
+
 function buildCanvasPayload() {
+
   const name = document.getElementById('wfCanvasName').value.trim();
+
   const triggerType = document.getElementById('wfCanvasTriggerType').value;
+
   const triggerVal = document.getElementById('wfCanvasTriggerVal').value.trim();
+
   const triggerMode = document.getElementById('wfCanvasTriggerMode').value;
+
   const enabled = document.getElementById('wfCanvasEnabled').checked;
 
+
+
   let trigger = { type: triggerType };
+
   if (triggerType === 'keyword') {
+
     trigger.keywords = triggerVal.split(',').map(s=>s.trim()).filter(Boolean);
+
     trigger.mode = triggerMode;
+
   } else if (triggerType === 'prefix') {
+
     trigger.prefix = triggerVal;
+
   } else if (triggerType === 'regex') {
+
     trigger.pattern = triggerVal;
+
   }
+
+
 
   const steps = wfCanvasNodes.map(n => ({ action: n.action, params: n.params || getDefaultParams(n.action) }));
 
+
+
   return { name, trigger, steps, enabled };
+
 }
+
+
 
 async function saveCanvasWF() {
+
   const payload = buildCanvasPayload();
-  if (!payload.name) { alert('请输入规则名称'); return; }
-  if (!payload.steps.length) { alert('请从左侧拖入至少一个动作节点'); return; }
+
+  if (!payload.name) { alert('璇疯緭鍏ヨ鍒欏悕绉?); return; }
+
+  if (!payload.steps.length) { alert('璇蜂粠宸︿晶鎷栧叆鑷冲皯涓€涓姩浣滆妭鐐?); return; }
+
   const url = wfEditingId ? '/workflow/update' : '/workflow/create';
+
   if (wfEditingId) payload.id = wfEditingId;
+
   try {
+
     const r = await fetch(url, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload) });
+
     const d = await r.json();
+
     if (d.ok) {
+
       wfEditingId = null;
+
       loadWorkflows();
+
     } else {
-      alert('保存失败: ' + (d.error || '未知错误'));
+
+      alert('淇濆瓨澶辫触: ' + (d.error || '鏈煡閿欒'));
+
     }
-  } catch(e) { alert('网络错误: ' + e.message); }
+
+  } catch(e) { alert('缃戠粶閿欒: ' + e.message); }
+
 }
 
-// ── 新建 ──
+
+
+// 鈹€鈹€ 鏂板缓 鈹€鈹€
+
 function showWFCreate() {
+
   wfEditingId = null;
+
   wfCanvasNodes = [];
+
   wfNodeIdSeq = 0;
+
   wfSelectedNode = null;
+
   document.getElementById('wfCanvasName').value = '';
+
   document.getElementById('wfCanvasTriggerType').value = 'keyword';
+
   document.getElementById('wfCanvasTriggerVal').value = '';
+
   document.getElementById('wfCanvasTriggerMode').value = 'any';
+
   document.getElementById('wfCanvasEnabled').checked = true;
+
   document.getElementById('wfCanvasTriggerMode').parentElement.style.display = '';
+
   renderCanvas();
+
 }
 
-// ── 从列表编辑 ──
+
+
+// 鈹€鈹€ 浠庡垪琛ㄧ紪杈?鈹€鈹€
+
 function editWF(id) {
+
   wfEditingId = id;
+
   fetch('/workflow/list').then(r=>r.json()).then(d=>{
+
     const wf = (d.workflows||[]).find(x=>x.id===id);
+
     if (!wf) return;
+
     document.getElementById('wfCanvasName').value = wf.name;
+
     document.getElementById('wfCanvasTriggerType').value = wf.trigger.type || 'keyword';
+
     if (wf.trigger.type === 'keyword') {
+
       document.getElementById('wfCanvasTriggerVal').value = (wf.trigger.keywords||[]).join(', ');
+
       document.getElementById('wfCanvasTriggerMode').value = wf.trigger.mode || 'any';
+
       document.getElementById('wfCanvasTriggerMode').parentElement.style.display = '';
+
     } else if (wf.trigger.type === 'prefix') {
+
       document.getElementById('wfCanvasTriggerVal').value = wf.trigger.prefix || '';
+
       document.getElementById('wfCanvasTriggerMode').parentElement.style.display = 'none';
+
     } else if (wf.trigger.type === 'regex') {
+
       document.getElementById('wfCanvasTriggerVal').value = wf.trigger.pattern || '';
+
       document.getElementById('wfCanvasTriggerMode').parentElement.style.display = 'none';
+
     }
+
     document.getElementById('wfCanvasEnabled').checked = wf.enabled !== false;
-    // 构建节点
+
+    // 鏋勫缓鑺傜偣
+
     wfCanvasNodes = [];
+
     wfNodeIdSeq = 0;
+
     (wf.steps||[]).forEach(s => {
+
       wfNodeIdSeq++;
+
       const act = WF_ACTIONS.find(a=>a.value===s.action);
+
       wfCanvasNodes.push({
+
         id: 'node_'+wfNodeIdSeq,
+
         action: s.action,
+
         label: act ? act.label : s.action,
+
         x: 80, y: 0,
+
         params: s.params || getDefaultParams(s.action)
+
       });
+
     });
+
     refreshCanvas();
+
   });
+
 }
 
-// ── 规则列表 ──
+
+
+// 鈹€鈹€ 瑙勫垯鍒楄〃 鈹€鈹€
+
 function formatTrigger(t) {
-  if (!t) return '未知';
-  if (t.type === 'keyword') return `关键词[${t.mode||'any'}]: ${(t.keywords||[]).join(', ')}`;
-  if (t.type === 'prefix') return `前缀: ${t.prefix}`;
-  if (t.type === 'regex') return `正则: ${t.pattern}`;
+
+  if (!t) return '鏈煡';
+
+  if (t.type === 'keyword') return `鍏抽敭璇峓${t.mode||'any'}]: ${(t.keywords||[]).join(', ')}`;
+
+  if (t.type === 'prefix') return `鍓嶇紑: ${t.prefix}`;
+
+  if (t.type === 'regex') return `姝ｅ垯: ${t.pattern}`;
+
   return t.type;
+
 }
+
+
 
 async function loadWorkflows() {
+
   try {
+
     const r = await fetch('/workflow/list');
+
     const d = await r.json();
+
     if (!d.ok) return;
+
     const list = d.workflows || [];
+
     const el = document.getElementById('wfList');
+
     if (list.length === 0) {
-      el.innerHTML = '<div style="text-align:center;padding:20px;color:var(--text-muted);font-size:13px">暂无自动化规则，点击「新建」开始编排</div>';
+
+      el.innerHTML = '<div style="text-align:center;padding:20px;color:var(--text-muted);font-size:13px">鏆傛棤鑷姩鍖栬鍒欙紝鐐瑰嚮銆屾柊寤恒€嶅紑濮嬬紪鎺?/div>';
+
       return;
+
     }
+
     el.innerHTML = list.map(wf => {
+
       const triggerDesc = formatTrigger(wf.trigger);
+
       const stepsDesc = (wf.steps||[]).map(s => {
+
         const a = WF_ACTIONS.find(x=>x.value===s.action);
+
         return a ? a.label : s.action;
-      }).join(' → ');
-      const badge = wf.enabled ? '<span style="font-size:11px;color:#10b981">● 启用</span>' : '<span style="font-size:11px;color:var(--text-muted)">○ 停用</span>';
+
+      }).join(' 鈫?');
+
+      const badge = wf.enabled ? '<span style="font-size:11px;color:#10b981">鈼?鍚敤</span>' : '<span style="font-size:11px;color:var(--text-muted)">鈼?鍋滅敤</span>';
+
       return `<div style="padding:12px;border-radius:var(--radius-sm);border:1px solid var(--rule);background:var(--ink-surface)">
+
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+
           <span style="font-weight:600;color:var(--text-paper)">${escapeHtml(wf.name)}</span>
+
           <span>${badge}</span>
+
         </div>
-        <div style="font-size:12px;color:var(--text-muted);margin-bottom:4px">触发: ${triggerDesc}</div>
-        <div style="font-size:12px;color:var(--text-muted);margin-bottom:8px">步骤: ${stepsDesc || '无'}</div>
+
+        <div style="font-size:12px;color:var(--text-muted);margin-bottom:4px">瑙﹀彂: ${triggerDesc}</div>
+
+        <div style="font-size:12px;color:var(--text-muted);margin-bottom:8px">姝ラ: ${stepsDesc || '鏃?}</div>
+
         <div style="display:flex;gap:6px">
-          <button class="btn btn-ghost btn-sm" onclick="editWF('${wf.id}')">加载到画布</button>
-          <button class="btn btn-ghost btn-sm" onclick="toggleWF('${wf.id}')">${wf.enabled?'停用':'启用'}</button>
-          <button class="btn btn-ghost btn-sm" style="color:#ef4444" onclick="deleteWF('${wf.id}')">删除</button>
+
+          <button class="btn btn-ghost btn-sm" onclick="editWF('${wf.id}')">鍔犺浇鍒扮敾甯?/button>
+
+          <button class="btn btn-ghost btn-sm" onclick="toggleWF('${wf.id}')">${wf.enabled?'鍋滅敤':'鍚敤'}</button>
+
+          <button class="btn btn-ghost btn-sm" style="color:#ef4444" onclick="deleteWF('${wf.id}')">鍒犻櫎</button>
+
         </div>
+
       </div>`;
+
     }).join('');
+
   } catch(e) { console.error('loadWorkflows', e); }
+
 }
+
+
 
 async function toggleWF(id) {
+
   try {
+
     const r = await fetch('/workflow/list');
+
     const d = await r.json();
+
     const wf = (d.workflows||[]).find(x=>x.id===id);
+
     if (!wf) return;
+
     await fetch('/workflow/update', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({id, enabled:!wf.enabled}) });
+
     loadWorkflows();
+
   } catch(e) { console.error(e); }
+
 }
+
+
 
 async function deleteWF(id) {
-  if (!confirm('确定删除此规则？')) return;
+
+  if (!confirm('纭畾鍒犻櫎姝よ鍒欙紵')) return;
+
   try {
+
     await fetch('/workflow/delete', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({id}) });
+
     loadWorkflows();
+
   } catch(e) { console.error(e); }
+
 }
 
-// ── 快捷键：Del 删除选中节点 ──
+
+
+// 鈹€鈹€ 蹇嵎閿細Del 鍒犻櫎閫変腑鑺傜偣 鈹€鈹€
+
 document.addEventListener('keydown', function(e) {
+
   if (e.key === 'Delete' && wfSelectedNode && document.getElementById('tab-workflow').style.display !== 'none') {
+
     wfCanvasNodes = wfCanvasNodes.filter(n => n.id !== wfSelectedNode);
+
     wfSelectedNode = null;
+
     refreshCanvas();
+
   }
+
 });
 
-// (已移除重复的 tab 切换加载 - switchPanelTab 统一处理)
+
+
+// (宸茬Щ闄ら噸澶嶇殑 tab 鍒囨崲鍔犺浇 - switchPanelTab 缁熶竴澶勭悊)
+
 document.addEventListener('click', function(e) { });
 
-// ========== 粒子云画布 ==========
+
+
+// ========== 绮掑瓙浜戠敾甯?==========
+
 function initParticles() {
+
   const canvas = document.getElementById('particleCanvas');
+
   if (!canvas) return;
+
   const ctx = canvas.getContext('2d');
+
   let w, h, particles = [];
+
   const PARTICLE_COUNT = 80;
 
+
+
   function resize() {
+
     w = canvas.width = window.innerWidth;
+
     h = canvas.height = window.innerHeight;
+
   }
+
   resize();
+
   window.addEventListener('resize', resize);
 
-  // 粒子颜色（从 CSS 变量读取，兼容 Canvas rgba）
+
+
+  // 绮掑瓙棰滆壊锛堜粠 CSS 鍙橀噺璇诲彇锛屽吋瀹?Canvas rgba锛?
+
   function getParticleColor() {
+
     const style = getComputedStyle(document.documentElement);
+
     const raw = style.getPropertyValue('--neon-cyan').trim() || '#00f0ff';
-    // 解析 hex 或 rgb
+
+    // 瑙ｆ瀽 hex 鎴?rgb
+
     if (raw.startsWith('#')) {
+
       const r = parseInt(raw.slice(1,3), 16);
+
       const g = parseInt(raw.slice(3,5), 16);
+
       const b = parseInt(raw.slice(5,7), 16);
+
       return { r, g, b };
+
     }
+
     return { r: 0, g: 240, b: 255 };
+
   }
 
+
+
   class Particle {
+
     constructor() {
+
       this.reset();
+
     }
+
     reset() {
+
       this.x = Math.random() * w;
+
       this.y = Math.random() * h;
+
       this.vx = (Math.random() - 0.5) * 0.4;
+
       this.vy = (Math.random() - 0.5) * 0.4;
+
       this.radius = Math.random() * 2 + 0.5;
+
       this.opacity = Math.random() * 0.4 + 0.1;
+
     }
+
     update() {
+
       this.x += this.vx;
+
       this.y += this.vy;
+
       if (this.x < 0 || this.x > w) this.vx *= -1;
+
       if (this.y < 0 || this.y > h) this.vy *= -1;
+
     }
+
     draw(ctx, color) {
+
       ctx.beginPath();
+
       ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+
       ctx.fillStyle = 'rgba(' + color.r + ',' + color.g + ',' + color.b + ',' + this.opacity + ')';
+
       ctx.fill();
+
     }
+
   }
+
+
 
   for (let i = 0; i < PARTICLE_COUNT; i++) particles.push(new Particle());
 
+
+
   let mouseX = -100, mouseY = -100;
+
   document.addEventListener('mousemove', (e) => { mouseX = e.clientX; mouseY = e.clientY; });
 
+
+
   function animate() {
+
     ctx.clearRect(0, 0, w, h);
+
     const color = getParticleColor();
 
+
+
     particles.forEach(p => {
+
       p.update();
+
       p.draw(ctx, color);
+
     });
 
-    // 连线：近距离粒子之间
+
+
+    // 杩炵嚎锛氳繎璺濈绮掑瓙涔嬮棿
+
     for (let i = 0; i < particles.length; i++) {
+
       for (let j = i + 1; j < particles.length; j++) {
+
         const dx = particles[i].x - particles[j].x;
+
         const dy = particles[i].y - particles[j].y;
+
         const dist = Math.sqrt(dx * dx + dy * dy);
+
         if (dist < 100) {
+
           ctx.beginPath();
+
           ctx.moveTo(particles[i].x, particles[i].y);
+
           ctx.lineTo(particles[j].x, particles[j].y);
+
           const lineOpacity = 0.06 * (1 - dist / 100);
+
           ctx.strokeStyle = 'rgba(' + color.r + ',' + color.g + ',' + color.b + ',' + lineOpacity + ')';
+
           ctx.lineWidth = 0.5;
+
           ctx.stroke();
+
         }
+
       }
-      // 鼠标吸引
+
+      // 榧犳爣鍚稿紩
+
       const dmx = particles[i].x - mouseX;
+
       const dmy = particles[i].y - mouseY;
+
       const dm = Math.sqrt(dmx * dmx + dmy * dmy);
+
       if (dm < 150) {
+
         particles[i].vx += dmx / dm * 0.02;
+
         particles[i].vy += dmy / dm * 0.02;
+
       }
+
     }
 
-    // 速度衰减
+
+
+    // 閫熷害琛板噺
+
     particles.forEach(p => {
+
       p.vx *= 0.999;
+
       p.vy *= 0.999;
+
     });
+
+
 
     requestAnimationFrame(animate);
+
   }
+
   animate();
+
 }
 
-// ========== Token 监控面板 ==========
+
+
+// ========== Token 鐩戞帶闈㈡澘 ==========
+
 let monitorTimer = null;
+
 let autoRefreshOn = true;
 
+
+
 function openMonitor() {
+
   const panel = document.getElementById('monitorPanel');
+
   const settings = document.getElementById('settingsPanel');
+
   if (settings) settings.style.display = 'none';
+
   panel.style.display = 'flex';
+
   fetchTokenStats();
+
   startAutoRefresh();
+
 }
+
+
 
 function closeMonitor() {
+
   const panel = document.getElementById('monitorPanel');
+
   panel.style.display = 'none';
+
   stopAutoRefresh();
+
   navigateTo('#chat');
+
 }
+
+
 
 function toggleAutoRefresh() {
+
   autoRefreshOn = document.getElementById('autoRefresh').checked;
+
   if (autoRefreshOn) startAutoRefresh(); else stopAutoRefresh();
+
 }
+
+
 
 function startAutoRefresh() {
+
   stopAutoRefresh();
+
   if (autoRefreshOn) monitorTimer = setInterval(fetchTokenStats, 3000);
+
 }
+
+
 
 function stopAutoRefresh() {
+
   if (monitorTimer) { clearInterval(monitorTimer); monitorTimer = null; }
+
 }
 
-// ===== 心跳检查 =====
+
+
+// ===== 蹇冭烦妫€鏌?=====
+
 let heartbeatTimer = null;
+
 let heartbeatFailCount = 0;
-let heartbeatStopped = false;  // 用户触发重连标记
-const HEARTBEAT_MAX_FAIL = 5;  // 连续失败5次判定为断开，暂停心跳
+
+let heartbeatStopped = false;  // 鐢ㄦ埛瑙﹀彂閲嶈繛鏍囪
+
+const HEARTBEAT_MAX_FAIL = 5;  // 杩炵画澶辫触5娆″垽瀹氫负鏂紑锛屾殏鍋滃績璺?
+
+
 
 function startHeartbeat() {
+
   stopHeartbeat();
+
   heartbeatFailCount = 0;
+
   heartbeatStopped = false;
+
   doPing();
+
   heartbeatTimer = setInterval(doPing, 5000);
+
 }
+
+
 
 function stopHeartbeat() {
+
   if (heartbeatTimer) { clearInterval(heartbeatTimer); heartbeatTimer = null; }
+
 }
+
+
 
 async function doPing() {
+
   if (heartbeatStopped) return;
+
   const start = performance.now();
+
   try {
+
     const r = await fetch('/ping', { signal: AbortSignal.timeout(4000) });
+
     if (!r.ok) throw new Error('bad status');
+
     const d = await r.json();
+
     const latency = Math.round(performance.now() - start);
 
+
+
     heartbeatFailCount = 0;
+
     updateHeartbeatUI('alive', latency);
+
     updateConnBanner(false);
+
   } catch (e) {
+
     heartbeatFailCount++;
+
     updateHeartbeatUI('dead', 0);
+
     if (heartbeatFailCount >= HEARTBEAT_MAX_FAIL) {
+
       stopHeartbeat();
+
       heartbeatStopped = true;
+
       updateConnBanner(true, true);  // paused mode
+
     }
+
   }
+
 }
+
+
 
 function updateHeartbeatUI(state, latency) {
+
   const dot = document.getElementById('heartbeatDot');
+
   const msg = document.getElementById('heartbeatMsg');
+
   const lat = document.getElementById('heartbeatLat');
+
   const bar = document.getElementById('heartbeatBar');
+
   if (!dot || !bar) return;
 
+
+
   if (state === 'alive') {
+
     bar.className = 'heartbeat-bar';
+
     dot.style.cssText = 'background:var(--ok);animation:pulse-dot 2s infinite;';
-    msg.textContent = '心跳正常 · 每5秒';
+
+    msg.textContent = '蹇冭烦姝ｅ父 路 姣?绉?;
+
     lat.textContent = latency + 'ms';
+
   } else {
+
     bar.className = 'heartbeat-bar dead';
+
     dot.style.cssText = 'background:var(--err);animation:none;';
-    msg.textContent = '心跳超时';
-    lat.textContent = '—';
+
+    msg.textContent = '蹇冭烦超时';
+
+    lat.textContent = '鈥?;
+
   }
+
 }
+
+
 
 function updateConnBanner(show, paused) {
+
   const banner = document.getElementById('connBanner');
+
   const statusDot = document.getElementById('statusDot');
+
   const statusLabel = document.getElementById('statusLabel');
+
   const panelDot = document.getElementById('panelStatusDot');
 
+
+
   if (show) {
+
     banner.style.display = 'flex';
+
     if (paused) {
+
       banner.className = 'conn-banner retrying';
-      banner.querySelector('.conn-banner-msg').textContent = '连接已断开 · 输入消息自动重连';
+
+      banner.querySelector('.conn-banner-msg').textContent = '杩炴帴宸叉柇寮€ 路 杈撳叆娑堟伅鑷姩閲嶈繛';
+
     } else {
+
       banner.className = 'conn-banner';
+
     }
+
     if (statusDot) { statusDot.className = 'status-dot offline'; }
-    if (statusLabel) statusLabel.textContent = '连接断开';
+
+    if (statusLabel) statusLabel.textContent = '杩炴帴鏂紑';
+
     if (panelDot) { panelDot.className = 'status-dot offline'; }
+
   } else {
+
     banner.style.display = 'none';
+
     if (statusDot) { statusDot.className = 'status-dot online'; }
-    if (statusLabel) statusLabel.textContent = '已连接';
+
+    if (statusLabel) statusLabel.textContent = '宸茶繛鎺?;
+
     if (panelDot) { panelDot.className = 'status-dot online'; }
+
   }
+
 }
 
-// 用户输入消息时自动恢复心跳
+
+
+// 鐢ㄦ埛杈撳叆娑堟伅鏃惰嚜鍔ㄦ仮澶嶅績璺?
+
 function onUserInputWake() {
+
   if (heartbeatStopped) {
+
     updateConnBanner(false);
+
     startHeartbeat();
+
   }
+
 }
+
 document.addEventListener('DOMContentLoaded', function() {
+
   var input = document.getElementById('msg-input');
+
   if (input) {
+
     input.addEventListener('input', onUserInputWake);
+
     input.addEventListener('keydown', onUserInputWake);
+
   }
-  // 发送按钮也触发恢复
+
+  // 鍙戦€佹寜閽篃瑙﹀彂鎭㈠
+
   var sendBtn = document.querySelector('.pill-send');
+
   if (sendBtn) sendBtn.addEventListener('click', onUserInputWake);
+
 });
 
-// 页面加载即启动心跳
+
+
+// 椤甸潰鍔犺浇鍗冲惎鍔ㄥ績璺?
+
 startHeartbeat();
 
+
+
 async function fetchTokenStats() {
+
   try {
+
     const r = await fetch('/token-stats');
+
     const j = await r.json();
+
     if (!j.ok) return;
+
     renderMonitor(j);
-  } catch(e) { /* 静默失败 */ }
+
+  } catch(e) { /* 闈欓粯澶辫触 */ }
+
 }
+
+
 
 function renderMonitor(j) {
-  // 总览卡片
+
+  // 鎬昏鍗＄墖
+
   document.getElementById('mHitRate').textContent = j.hit_rate + '%';
+
   const totalTk = (j.total.prompt_tokens + j.total.completion_tokens);
+
   document.getElementById('mTotalTokens').textContent = totalTk > 1000 ? (totalTk/1000).toFixed(1)+'k' : totalTk;
+
   document.getElementById('mRate').textContent = j.tokens_per_minute + ' tk/min';
+
   if (j.budget) {
+
     document.getElementById('mBudget').textContent = (j.budget.remaining/1000).toFixed(0)+'k';
+
     const pct = ((j.budget.used / j.budget.limit) * 100).toFixed(1);
+
     document.getElementById('budgetBar').style.width = Math.min(pct, 100) + '%';
+
     document.getElementById('budgetLabel').textContent = (j.budget.used/1000).toFixed(0)+'k / '+(j.budget.limit/1000).toFixed(0)+'k ('+pct+'%)';
+
   }
 
-  // 细分表格
+
+
+  // 缁嗗垎琛ㄦ牸
+
   const tb = document.getElementById('monitorTableBody');
+
   const empty = document.getElementById('monitorEmpty');
+
   const agents = j.by_agent || {};
+
   const hasData = j.total.calls > 0;
+
   empty.style.display = hasData ? 'none' : '';
+
   document.getElementById('monitorTable').style.display = hasData ? '' : 'none';
+
   if (!hasData) return;
+
   tb.innerHTML = '';
+
   for (const [name, a] of Object.entries(agents)) {
+
     const hitPct = a.prompt_tokens > 0 ? ((a.cached_tokens / a.prompt_tokens) * 100).toFixed(1) : '0.0';
+
     tb.innerHTML += `<tr>
+
       <td>${escHtml(name)}</td><td>${a.calls}</td><td>${fmtTk(a.prompt_tokens)}</td>
+
       <td>${fmtTk(a.cached_tokens)}</td><td>${fmtTk(a.completion_tokens)}</td><td>${hitPct}%</td>
+
     </tr>`;
+
   }
 
-  // 趋势柱状图
+
+
+  // 瓒嬪娍鏌辩姸鍥?
+
   drawMonitorBar(j.timeline || []);
+
 }
+
+
 
 function drawMonitorBar(timeline) {
+
   const canvas = document.getElementById('monitorBar');
+
   if (!canvas) return;
+
   const ctx = canvas.getContext('2d');
+
   const W = canvas.width, H = canvas.height;
+
   ctx.clearRect(0, 0, W, H);
+
   if (!timeline.length) return;
 
-  // 按 10 秒桶聚合
+
+
+  // 鎸?10 绉掓《鑱氬悎
+
   const now = Date.now() / 1000;
+
   const buckets = [];
+
   const bucketSize = 10; // 10s per bar
+
   const maxBars = 40;
+
   for (let i = 0; i < maxBars; i++) {
+
     buckets.push({ t: now - (maxBars - i) * bucketSize, prompt: 0, cached: 0, completion: 0 });
+
   }
+
   for (const entry of timeline) {
+
     const idx = Math.floor((entry.ts - (now - maxBars * bucketSize)) / bucketSize);
+
     if (idx >= 0 && idx < maxBars) {
+
       buckets[idx].prompt += entry.prompt;
+
       buckets[idx].cached += entry.cached;
+
       buckets[idx].completion += entry.completion;
+
     }
+
   }
+
+
 
   const maxVal = Math.max(1, ...buckets.map(b => b.prompt + b.completion));
+
   const barW = (W - 4) / maxBars - 1;
 
+
+
   for (let i = 0; i < maxBars; i++) {
+
     const b = buckets[i];
+
     const x = 2 + i * (barW + 1);
-    // 输入 (prompt) 层
+
+    // 杈撳叆 (prompt) 灞?
+
     const h1 = (b.prompt / maxVal) * (H - 4);
+
     ctx.fillStyle = 'var(--accent)';
+
     ctx.fillRect(x, H - 2 - h1, barW, h1);
-    // 缓存命中层
+
+    // 缂撳瓨鍛戒腑灞?
+
     if (b.cached > 0) {
+
       const h2 = (b.cached / maxVal) * (H - 4);
+
       ctx.fillStyle = 'rgba(167,139,250,0.7)';
+
       ctx.fillRect(x, H - 2 - h2, barW, h2);
+
     }
-    // 输出层 (叠在输入顶部)
+
+    // 杈撳嚭灞?(鍙犲湪杈撳叆椤堕儴)
+
     if (b.completion > 0) {
+
       const h3 = (b.completion / maxVal) * (H - 4);
+
       ctx.fillStyle = 'rgba(74,222,128,0.6)';
+
       ctx.fillRect(x, H - 2 - h1 - h3, barW, h3);
+
     }
+
   }
+
 }
+
+
 
 function fmtTk(n) { return n > 1000 ? (n/1000).toFixed(1)+'k' : String(n); }
 
+
+
 function escHtml(s) {
+
   const d = document.createElement('div');
+
   d.textContent = s;
+
   return d.innerHTML;
+
 }
+
 </script>
+
 </body>
+
 </html>
+

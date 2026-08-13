@@ -296,7 +296,7 @@ bash xuanshu
 | 端点 | 方法 | 说明 |
 |------|------|------|
 | `/chat` | POST | 同步对话 |
-| `/chat/stream` | POST | SSE 流式对话 |
+| `/chat/stream` | GET/POST | SSE 流式对话（支持实时思考链展示） |
 
 ### 模型 & Key
 
@@ -402,6 +402,28 @@ python -m decompile --tools                    # 查看可用工具
 支持：pyc / APK / DEX / JAR / PE / ELF / Mach-O / WASM / Lua / .NET。无外部工具时自动降级到 Python `dis` 反汇编。
 
 ---
+
+
+---
+
+## 更新日志
+
+### v0.0.0.4 (2025-08-14)
+
+- **新增**：SSE 流式实时思考链展示
+- **新增**：前端支持 `EventSource` 连接 `/chat/stream?msg=`
+- **新增**：思考链折叠面板逐轮展示工具调用过程
+- **修复**：多处中文编码乱码问题
+- **优化**：`/chat/stream` 端点支持 GET/POST 双协议
+- **优化**：工具调用状态实时反馈（搜索/浏览器/代码/文件/系统/记忆）
+
+### v0.0.0.3 (2026-07-27)
+
+- toast CSS 修复
+- config/logger 模块补充
+- 注册 API 全链路验证
+
+
 
 ## 许可证
 

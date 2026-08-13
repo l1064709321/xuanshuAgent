@@ -43,6 +43,12 @@ class TokenBudget:
     def remaining(self) -> int:
         return max(0, self.daily_limit - self._used)
 
+    def is_exhausted(self) -> bool:
+        if time.time() > self._reset_time:
+            self._used = 0
+            self._reset_time = time.time() + 86400
+        return self._used >= self.daily_limit
+
 
 # ═══════════════════════════════════════════
 # Watchdog — 自愈守护

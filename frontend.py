@@ -63,10 +63,16 @@ def _after_request(resp):
     resp.headers["Access-Control-Allow-Methods"] = "GET,POST,OPTIONS,DELETE"
     return resp
 
-# ── 优雅停机 ──
+# ── 优雅停机：Ctrl+C / SIGTERM 立即退出 ──
 def _handle_shutdown(signum, frame):
     slog.warn("shutdown_signal", signal=signum)
-    sys.exit(0)
+    try:
+        sys.stdout.flush()
+        sys.stderr.flush()
+    except Exception:
+        pass
+    # 立即终止进程，避免被后台线程 / werkzeug / Windows cmd 的“是否终止批处理”卡住
+    os._exit(0)
 
 signal.signal(signal.SIGTERM, _handle_shutdown)
 signal.signal(signal.SIGINT, _handle_shutdown)

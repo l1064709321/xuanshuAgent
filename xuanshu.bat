@@ -45,5 +45,5 @@ echo 依赖安装完成
     exit /b 1
 )
 
-echo 已启动 → http://localhost:8901
+echo 已启动 → http://localhost:8901 （按 Ctrl+C 退出）
 %PYTHON% frontend.py

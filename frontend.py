@@ -326,16 +326,21 @@ def chat():
     })
 
 # ── 流式对话 (SSE) ──
-@app.route("/chat/stream", methods=["POST"])
+@app.route("/chat/stream", methods=["GET", "POST"])
 def chat_stream():
     from flask import Response, stream_with_context
     client_key = request.headers.get("X-Forwarded-For", request.remote_addr or "unknown")
     if not _rl.allow(client_key):
         slog.warn("rate_limited", client_ip=client_key, path="/chat/stream")
         return Response("data: [错误] 请求太频繁\n\n", status=429, mimetype="text/event-stream")
-    data = request.get_json()
-    msg = data.get("msg", "")
-    image = data.get("image", None)
+    # 支持 GET (EventSource) 和 POST
+    if request.method == "GET":
+        msg = request.args.get("msg", "")
+        image = None
+    else:
+        data = request.get_json()
+        msg = data.get("msg", "")
+        image = data.get("image", None)
     if not msg:
         return Response("data: [错误] 消息不能为空\n\n", mimetype="text/event-stream")
 

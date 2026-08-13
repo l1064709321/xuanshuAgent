@@ -357,6 +357,26 @@ body::after {
   min-height: 44px;
   flex-shrink: 0;
 }
+/* 侧边栏展开按钮（桌面端，侧栏收起时显示） */
+.sidebar-toggle-btn {
+  width: 32px; height: 32px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 16px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition);
+  flex-shrink: 0;
+}
+.sidebar-toggle-btn:hover {
+  background: rgba(0,240,255,0.06);
+  color: var(--neon-cyan);
+  border-color: rgba(0,240,255,0.2);
+}
 .toolbar-avatar {
   width: 32px; height: 32px;
   border-radius: 50%;

@@ -4,6 +4,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from flask import Flask, request, jsonify, send_file
 from core import ParentBot
 from models import ModelPool
+from tts_tools import tts_speak
 from auth import send_sms, generate_code, store_code, verify_code, check_sms_rate, set_sms_rate, user_register, user_login, get_user_from_request
 from config import config
 import structured_logger as slog
@@ -1092,6 +1093,28 @@ def workflow_metrics_reset():
     reset_metrics()
     return jsonify({"ok": True, "message": "指标已重置"})
 
+
+# ── 语音朗读 ──
+import tempfile as _tempfile
+
+@app.route("/api/tts", methods=["POST"])
+def api_tts():
+    """文本转语音朗读，返回 mp3 音频流"""
+    data = request.get_json(force=True) or {}
+    text = str(data.get("text", "")).strip()
+    if not text:
+        return jsonify({"error": "text is required"}), 400
+
+    speed = float(data.get("speed", 1.0))
+    tmp = os.path.join(_tempfile.gettempdir(), f"xuanshu_read_{abs(hash(text)) % 100000}.mp3")
+
+    tts_speak({"text": text, "output": tmp, "speed": speed})
+
+    if not os.path.exists(tmp) or os.path.getsize(tmp) == 0:
+        return jsonify({"error": "TTS generation failed"}), 500
+
+    return send_file(tmp, mimetype="audio/mpeg", as_attachment=False,
+                     download_name="xuanshu_tts.mp3")
 
 # ── 健康检查 ──
 @app.route("/health", methods=["GET"])

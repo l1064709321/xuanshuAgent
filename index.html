@@ -183,6 +183,7 @@
           <textarea id="msg-input" placeholder="输入消息…" rows="1"></textarea>
           <div class="pill-right">
             <button class="pill-model" id="pillModelBtn" onclick="showModelQuickPicker(event)" title="切换模型">⚡</button>
+            <button class="pill-tts-toggle" id="ttsToggleBtn" onclick="toggleTTS()" title="语音朗读">🔊</button>
             <button class="pill-send" onclick="send()" title="发送">&uarr;</button>
           </div>
         </div>
@@ -826,6 +827,7 @@ window.addEventListener('DOMContentLoaded', function() {
   onHashChange();
   loadSidebarMemTree();
   loadSkillMarket();
+  syncTTSButton();
 });
 function switchPanelTab(el, tab) {
   document.querySelectorAll('.panel-tab').forEach(t => { t.classList.remove('active'); t.setAttribute('aria-selected', 'false'); });
@@ -1339,6 +1341,67 @@ loadModels();
 loadSidebarAvatar();
 
 // ========== 对话 ==========
+// ── 语音朗读 ──
+let _ttsAudio = null;
+let _ttsEnabled = localStorage.getItem('xuanshu_tts') === 'on';
+
+function syncTTSButton() {
+  const btn = document.getElementById('ttsToggleBtn');
+  if (!btn) return;
+  btn.classList.toggle('tts-on', _ttsEnabled);
+  btn.textContent = _ttsEnabled ? '🔉' : '🔊';
+  btn.title = _ttsEnabled ? '语音朗读：开' : '语音朗读：关';
+}
+
+function toggleTTS() {
+  _ttsEnabled = !_ttsEnabled;
+  localStorage.setItem('xuanshu_tts', _ttsEnabled ? 'on' : 'off');
+  syncTTSButton();
+  if (!_ttsEnabled && _ttsAudio) {
+    _ttsAudio.pause();
+    _ttsAudio = null;
+  }
+}
+
+async function readAloud(btn) {
+  const text = decodeURIComponent(btn.dataset.text || '');
+  if (!text) return;
+
+  // 如果正在播放，先停止
+  if (_ttsAudio) {
+    _ttsAudio.pause();
+    _ttsAudio = null;
+  }
+
+  btn.style.opacity = '0.5';
+  try {
+    const r = await fetch(API + '/api/tts', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text: text, speed: 1.0 })
+    });
+    if (!r.ok) throw new Error('TTS failed');
+    const blob = await r.blob();
+    const url = URL.createObjectURL(blob);
+    _ttsAudio = new Audio(url);
+    _ttsAudio.onended = () => {
+      URL.revokeObjectURL(url);
+      _ttsAudio = null;
+      btn.style.opacity = '';
+    };
+    _ttsAudio.onerror = () => {
+      URL.revokeObjectURL(url);
+      _ttsAudio = null;
+      btn.style.opacity = '';
+    };
+    await _ttsAudio.play();
+  } catch (e) {
+    console.error('朗读失败:', e);
+    btn.style.opacity = '';
+    if (_ttsAudio) { _ttsAudio = null; }
+  }
+}
+
 async function send() {
   const text = inp.value.trim();
   const btn = document.querySelector('.pill-send');
@@ -1378,6 +1441,12 @@ async function send() {
       const subAgent = d.agent || d.dispatched_to || '';
       const agentLabel = subAgent ? mainAgent + ' → @' + subAgent : mainAgent;
       addBubble('agent', d.reply, agentLabel, thinkings);
+      // 语音朗读开关开启时自动朗读
+      if (_ttsEnabled && d.reply) {
+        const lastBubble = conv.lastElementChild;
+        const btn = lastBubble.querySelector('.btn-tts-read');
+        if (btn) readAloud(btn);
+      }
     }
     if (d.model) {
       currentModel = d.model;
@@ -1473,7 +1542,7 @@ function addBubble(role, content, agentName, thinkings) {
         if (details && details.open) details.open = false;
       }, 2500);
     }
-    d.innerHTML = '<div class="agent-label"><span class="agent-name">'+agentName+'</span></div><div class="agent-body">'+thinkingHtml+html+'</div>';
+    d.innerHTML = '<div class="agent-label"><span class="agent-name">'+agentName+'</span><button class="btn-tts-read" title="朗读" onclick="readAloud(this)" data-text="'+encodeURIComponent(content)+'">&#x1f50a;</button></div><div class="agent-body">'+thinkingHtml+html+'</div>';
   } else if (role==='system') {
     d.innerHTML = '<div style="text-align:center;color:var(--text-muted)">'+html+'</div>';
   } else {
@@ -2244,7 +2313,8 @@ function renderRestoredMsg(m) {
   d.className = 'bubble ' + (m.r==='agent'?'agent system':m.r);
   if (m.r==='agent') {
     d.innerHTML = '<div class="agent-label">'+
-      '<span class="agent-name">'+m.a+'</span></div>'+
+      '<span class="agent-name">'+m.a+'</span>'+
+      '<button class="btn-tts-read" title="朗读" onclick="readAloud(this)" data-text="'+encodeURIComponent(m.c)+'">&#x1f50a;</button></div>'+
       '<div style="line-height:1.7">'+m.c+'</div>';
   } else { d.innerHTML = m.c; }
   conv.appendChild(d);

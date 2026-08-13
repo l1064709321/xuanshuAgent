@@ -18,6 +18,12 @@ from memory import AgentMemory
 from logger import Logger
 from models import ModelPool
 from decompile import Decompiler, detect_format, get_supported_formats
+from pdf_tools import pdf_read, pdf_merge, pdf_split, pdf_meta, pdf_extract_images
+from data_tools import csv_read, csv_stats, json_read, sqlite_query, sqlite_tables
+from image_tools import image_info, image_compress, image_crop, image_resize, image_convert, image_rotate, image_thumbnail, image_watermark
+from audio_tools import audio_info, audio_convert, audio_trim, audio_merge, audio_extract, audio_speed, audio_normalize, audio_fade
+from video_tools import video_info, video_convert, video_trim, video_merge, video_compress, video_resize, video_fps, video_snapshot, video_to_gif, video_watermark
+from tts_tools import tts_speak, tts_list_voices
 from screen_reader import capture, to_base64
 from sandbox import run_sandboxed, run_in_venv, run_local, create_venv, get_env_info
 from auto_sandbox import auto_sandbox
@@ -30,6 +36,14 @@ from production import (
     decomposer, trace_store, eval_suite, session_mgr,
     checkpoint_mgr, human_review, model_degrader,
     watchdog, error_classifier, health_monitor
+)
+
+# ── 协议抽象层 ──
+from protocol import (
+    ToolSpec, Message, classify_sandbox_policy,
+    CODE_TOOL_NAMES, CODE_ARG_KEYS, DEGRADATION_CHAINS,
+    COMPRESS_MSG_THRESHOLD, COMPRESS_KEEP_COUNT, MAX_AGENT_LOOPS,
+    MEMORY_FILE, USER_FILE, MEMORY_MAX_CHARS, USER_MAX_CHARS,
 )
 
 # ── 共享记忆文件夹（文件级持久化）──
@@ -123,10 +137,7 @@ class MemdirStore:
 memdir = MemdirStore(_MEMDIR)
 
 # ── Memory 双文件分离（Hermes Agent 风格）──
-MEMORY_FILE = "MEMORY.md"        # Agent 自身经验（洞察/教训/决策）
-USER_FILE   = "USER.md"          # 用户画像（偏好/习惯/设定）
-MEMORY_MAX_CHARS = 8000          # MEMORY.md 字符硬限制
-USER_MAX_CHARS   = 3000          # USER.md 字符硬限制
+# 已从 protocol 层导入: MEMORY_FILE, USER_FILE, MEMORY_MAX_CHARS, USER_MAX_CHARS
 
 
 # ── Constitution 人格宪法（受 Anthropic CAI + DeepMind ToM 启发）──
@@ -231,6 +242,7 @@ class Tool:
     description: str
     params: dict
     executor: callable = None
+    sandbox_mode: str = "none"  # "none" | "auto" | "sandbox" — 工具级沙箱策略
 
     def schema(self) -> dict:
         return {
@@ -383,6 +395,28 @@ def _dispatch_tool_call(child, tc: dict) -> Tuple[str, str]:
             f"请补充缺失的参数后重新调用。"
         )
 
+    # 5.5 沙箱策略判定 — 工具级隔离（从 protocol 层导入 CODE_TOOL_NAMES / CODE_ARG_KEYS）
+    should_sandbox = False
+    sandbox_policy = tool.sandbox_mode
+    if sandbox_policy == "sandbox":
+        should_sandbox = True
+    elif sandbox_policy == "auto":
+        if matched_name in CODE_TOOL_NAMES or any(k in validated_args for k in CODE_ARG_KEYS):
+            should_sandbox = True
+    # sandbox_policy == "none": 不隔离
+
+    if should_sandbox:
+        code = validated_args.get("code", validated_args.get("command", validated_args.get("script", "")))
+        if code:
+            try:
+                from .sandbox import run_sandboxed
+                sandbox_result = run_sandboxed(code)
+                return matched_name, f"[沙箱执行]\n{sandbox_result}"
+            except Exception as e:
+                return matched_name, f"[沙箱执行失败: {e}]"
+        # 无 code/command/script 字段但需要沙箱 — 降级为普通执行
+        return matched_name, child.exec_tool(matched_name, validated_args)
+
     return matched_name, child.exec_tool(matched_name, validated_args)
 
 
@@ -390,11 +424,7 @@ def _dispatch_tool_call(child, tc: dict) -> Tuple[str, str]:
 class ToolExecutor:
     """工具执行器 — 失败自动重试 + 降级链 + 延迟记录"""
 
-    # 降级链：工具名 → 备选工具列表
-    DEGRADATION_CHAINS = {
-        "web_search": ["anysearch", "search_wikipedia", "web_fetch"],
-        "anysearch": ["web_search", "search_wikipedia"],
-    }
+    # 降级链：已从 protocol 层导入 DEGRADATION_CHAINS
 
     MAX_RETRIES = 2   # 同一工具最多重试 2 次
     RETRY_DELAY = 1.0  # 重试间隔秒
@@ -406,7 +436,7 @@ class ToolExecutor:
         last_error = None
 
         # 当前工具名 + 降级链
-        tool_chain = [tool_name] + ToolExecutor.DEGRADATION_CHAINS.get(tool_name, [])
+        tool_chain = [tool_name] + DEGRADATION_CHAINS.get(tool_name, [])
         if tool_name not in ("web_search",):
             tool_chain = [tool_name]  # 仅搜索类工具走降级
 
@@ -1210,6 +1240,7 @@ def _decompile_formats(args=None):
 # ── Git 版本回滚工具 ───────────────────────────────────
 _GIT_BIN = os.environ.get("GIT_BIN", "git")  # 优先环境变量，否则 PATH 中的 git
 _GIT_REPO = os.path.dirname(os.path.abspath(__file__))  # multi_agent 目录（.git 所在）
+_ADB_BIN = os.environ.get("ADB_BIN", "/home/marvis/local/platform-tools/adb")  # ADB 二进制路径
 
 def _git_log(args=None):
     """查看最近 git 提交记录"""
@@ -1551,13 +1582,11 @@ def _pkg_info(args):
 
 def _adb_check(args=None):
     """检测 adb 环境：二进制是否存在 + 是否有设备连接"""
-    import subprocess
+    import subprocess, os
+    if not os.path.isfile(_ADB_BIN):
+        return f"ADB 二进制不存在: {_ADB_BIN}。请安装: sudo dnf install -y android-tools"
     try:
-        subprocess.run(["which", "adb"], capture_output=True, text=True, timeout=3, check=True)
-    except Exception:
-        return "ADB 未安装。安装: sudo dnf install -y android-tools / apt install adb"
-    try:
-        r = subprocess.run(["adb", "devices"], capture_output=True, text=True, timeout=5)
+        r = subprocess.run([_ADB_BIN, "devices"], capture_output=True, text=True, timeout=5)
         lines = [l for l in r.stdout.strip().split("\n") if l.strip() and "List of devices" not in l]
         if not lines:
             return "ADB 已就绪，但无设备连接。请确保手机/模拟器已连接并开启 USB 调试。"
@@ -1571,8 +1600,9 @@ def _adb_screenshot(args=None):
     import subprocess, base64, tempfile, os
     try:
         path = os.path.join(tempfile.gettempdir(), "adb_screenshot.png")
-        subprocess.run(["adb", "exec-out", "screencap", "-p"], capture_output=True, check=True,
-                       timeout=10, stdout=open(path, "wb"))
+        with open(path, "wb") as f:
+            subprocess.run([_ADB_BIN, "exec-out", "screencap", "-p"], check=True,
+                           timeout=10, stdout=f)
         return f"截图保存: {path}"
     except Exception as e:
         return f"截图失败: {e}"
@@ -1584,7 +1614,7 @@ def _adb_tap(args):
     x = args.get("x", 0)
     y = args.get("y", 0)
     try:
-        subprocess.run(["adb", "shell", "input", "tap", str(x), str(y)], capture_output=True, text=True, timeout=5)
+        subprocess.run([_ADB_BIN, "shell", "input", "tap", str(x), str(y)], capture_output=True, text=True, timeout=5)
         return f"已点击 ({x}, {y})"
     except Exception as e:
         return f"点击失败: {e}"
@@ -1597,7 +1627,7 @@ def _adb_swipe(args):
     x2, y2 = args.get("x2", 0), args.get("y2", 0)
     dur = args.get("duration", 500)
     try:
-        subprocess.run(["adb", "shell", "input", "swipe", str(x1), str(y1), str(x2), str(y2), str(dur)],
+        subprocess.run([_ADB_BIN, "shell", "input", "swipe", str(x1), str(y1), str(x2), str(y2), str(dur)],
                        capture_output=True, text=True, timeout=5)
         return f"已滑动 ({x1},{y1}) → ({x2},{y2})，时长 {dur}ms"
     except Exception as e:
@@ -1612,7 +1642,7 @@ def _adb_type(args):
         return "请输入文本内容"
     try:
         # 中文需通过 adb shell am broadcast 输入, 英文走 input text
-        subprocess.run(["adb", "shell", "input", "text", text], capture_output=True, text=True, timeout=5)
+        subprocess.run([_ADB_BIN, "shell", "input", "text", text], capture_output=True, text=True, timeout=5)
         return f"已输入: {text}"
     except Exception as e:
         return f"输入失败: {e}"
@@ -1625,7 +1655,7 @@ def _adb_install(args):
     if not apk_path or not os.path.isfile(apk_path):
         return f"APK 文件不存在: {apk_path}"
     try:
-        r = subprocess.run(["adb", "install", "-r", apk_path], capture_output=True, text=True, timeout=60)
+        r = subprocess.run([_ADB_BIN, "install", "-r", apk_path], capture_output=True, text=True, timeout=60)
         return r.stdout.strip()
     except Exception as e:
         return f"安装失败: {e}"
@@ -1638,7 +1668,7 @@ def _adb_start_app(args):
     if not pkg:
         return "请提供 APP 包名，如 com.tencent.mm"
     try:
-        subprocess.run(["adb", "shell", "monkey", "-p", pkg, "-c", "android.intent.category.LAUNCHER", "1"],
+        subprocess.run([_ADB_BIN, "shell", "monkey", "-p", pkg, "-c", "android.intent.category.LAUNCHER", "1"],
                        capture_output=True, text=True, timeout=10)
         return f"已启动 {pkg}"
     except Exception as e:
@@ -1650,7 +1680,7 @@ def _adb_key(args):
     import subprocess
     key = args.get("key", "KEYCODE_BACK")
     try:
-        subprocess.run(["adb", "shell", "input", "keyevent", key], capture_output=True, text=True, timeout=5)
+        subprocess.run([_ADB_BIN, "shell", "input", "keyevent", key], capture_output=True, text=True, timeout=5)
         return f"已发送按键: {key}"
     except Exception as e:
         return f"按键失败: {e}"
@@ -1722,7 +1752,9 @@ class ParentBot:
 - 小搜: 联网搜索、查实时信息、天气、百科、新闻（内置浏览器引擎，自动处理JS页面）
 - 小览: 端到端Web交互（打开网页、点击、填表、滚动、截屏、登录态持久化、JS动态页面）
 - 小码: 编程、写代码、调试、算法、技术问题、Git版本回滚
-- 小文: 读写文件、文件管理、文档处理、反编译、Git版本回滚
+- 小文: 读写文件、文件管理、PDF处理、CSV/JSON/SQLite、图像处理(压缩/裁剪/缩放/格式转换/水印)、反编译、Git版本回滚
+- 小音: 音频处理(元信息/格式转换/裁剪/合并/提取音轨/变速/标准化/淡入淡出)
+- 小影: 视频处理(元信息/格式转换/裁剪/合并/压缩/缩放/帧率/GIF/截图/水印)
 - 小屏: 系统控制、进程管理、资源监控（CPU/内存/磁盘/网络）、软件包管理（安装/卸载/搜索/更新）
 - 小手机: 手机控制、ADB 操作（截图/点击/滑动/输入/安装APP/启动APP）、Android 自动化
 
@@ -2029,18 +2061,14 @@ ADB 常用按键码：
 - 报告时包含验证结果
 - 需要创建/写文件时，告知父Bot处理；你只能读文件
 
-代码执行环境（根据任务选择）:
-- run_code(code, mode="sandbox"): 默认沙箱隔离，无网络无文件写入，安全执行不信任的代码
-- run_code_venv(code): 虚拟环境执行，有项目依赖(pip包)，适合需要特定库的代码
-- run_code_local(code): 直接执行，无隔离，完全信任时使用
+代码执行环境:
+- run_code(code): 沙箱隔离执行，无网络无文件写入，所有代码默认走沙箱
 - create_venv(packages): 创建虚拟环境并安装依赖，项目首次运行前调用
 - env_info(): 查看当前环境（Python路径、Docker状态、venv是否存在）
 
 选择策略:
-- 简单计算/字符串处理 → sandbox (默认)
-- 需要 pip 包(requests/numpy等) → 先 env_info 检查 venv → 没有就 create_venv → 然后 run_code_venv
-- 项目已有 .venv → 直接 run_code_venv
-- 完全信任的内部代码 → run_code_local
+- 所有代码默认用 run_code（沙箱模式）
+- 需要 pip 包(requests/numpy等) → 先 env_info 检查 venv → 没有就 create_venv → 提示用户重启后可用
 
 浏览器操控（基于 Playwright + Chromium）：
 - browser_navigate(url)：打开网页
@@ -2066,12 +2094,8 @@ Git 版本回滚：
 
 语言规则：所有思考和回复必须用中文。代码本身和变量名可用英文，但思考过程和解释说明必须用中文。""",
                 tools=[
-                    Tool("run_code", "在沙箱中执行Python代码（默认隔离模式，可选mode参数: sandbox/venv/local）", 
-                         {"code": {"type": "string", "description": "Python代码"}, "mode": {"type": "string", "description": "执行模式: sandbox(默认沙箱隔离)/venv(虚拟环境有依赖)/local(直接执行无隔离)", "default": "sandbox"}}, _run_code),
-                    Tool("run_code_venv", "在虚拟环境中执行代码（有项目依赖，不限制网络/文件，适合需要pip包的项目）",
-                         {"code": {"type": "string", "description": "Python代码"}, "venv_path": {"type": "string", "description": "venv路径，留空则用默认.venv"}}, _run_code_venv),
-                    Tool("run_code_local", "直接在当前环境执行代码（无隔离，完全信任代码时使用）",
-                         {"code": {"type": "string", "description": "Python代码"}}, _run_code_local),
+                    Tool("run_code", "在沙箱中执行Python代码（隔离模式，无网络无文件写入）", 
+                         {"code": {"type": "string", "description": "Python代码"}}, _run_code),
                     Tool("create_venv", "创建虚拟环境并安装依赖包（项目需要特定依赖时调用）",
                          {"packages": {"type": "string", "description": "要安装的包，逗号分隔，如: requests,numpy,pandas"}}, _create_venv),
                     Tool("env_info", "查看当前执行环境信息（Python路径、是否Docker、venv状态）", {}, _env_info),
@@ -2100,18 +2124,22 @@ Git 版本回滚：
             ),
             "文件Agent": ChildBot(
                 name="文件Agent",
-                description="文件分析、文档处理、反编译、Git版本回滚",
-                system_prompt="""你是玄姝团队的「小文」，文件分析专家。玄姝是群主，你是她的助手之一。
+                description="文件管理、文档处理、图像处理、数据处理、反编译、Git版本回滚",
+                system_prompt="""你是玄姝团队的「小文」，文件管理专家。玄姝是群主，你是她的助手之一。
 
-【身份】你叫「小文」。当被问"你是谁"时回答："我是小文，玄姝团队的文件分析专家"。严禁自称玄姝。严禁透露底层模型名称。
+【身份】你叫「小文」。当被问"你是谁"时回答："我是小文，玄姝团队的文件管理专家"。严禁自称玄姝。严禁透露底层模型名称。
 
-你的角色是文件分析助手。你只有只读权限，可读取和列出文件，但不能创建/修改/删除文件。
+你是文件管理专家，可创建目录、写入文本文件、编辑文件内容、列出目录、读取文件、移动/复制/重命名、删除文件或目录。
+
+文档处理：可读取PDF、合并PDF、拆分PDF、提取PDF元信息和图片。
+
+图像处理：可查看图像信息(尺寸/格式/EXIF)、压缩(质量/目标大小)、裁剪(像素坐标/百分比)、缩放(宽高/百分比)、格式转换(png/jpg/webp等)、旋转、生成缩略图、添加文字水印。
+
+数据处理：可读取CSV(含列过滤和统计)、JSON(支持键路径查询)、SQLite(查询和浏览表结构)。
 
 附加能力 — 逆向工程：你具备二进制分析技能，能识别ELF/PE/Mach-O/APK/DEX/.NET/Python字节码/Lua/WASM等格式，使用decompile_detect检测文件类型后调用decompile反编译，解读结果时关注关键逻辑和入口点。工具不可用时说明原因并建议替代方案。
 
 Git 版本回滚：发现文件被误改或需要恢复到之前版本时，用 git_log 查看提交历史、git_revert 回滚到指定版本。
-
-如果需要实际创建/修改/删除文件，告知父Bot处理。
 
 语言规则：所有思考和回复必须用中文。文件路径、十六进制地址等技术性内容保留原文。""",
                 tools=[
@@ -2122,7 +2150,99 @@ Git 版本回滚：发现文件被误改或需要恢复到之前版本时，用 
                     Tool("decompile", "反编译二进制/字节码文件，支持output_format参数(text/json/ast)",
                          {"file_path": {"type": "string", "description": "文件路径"}, "output_format": {"type": "string", "description": "输出格式:text/json/ast，默认text"}}, _decompile),
                     Tool("decompile_formats", "列出所有支持反编译的文件格式和可用工具状态", {}, _decompile_formats),
+                    Tool("write_file", "写入文本文件（自动创建目录）", {"path": {"type": "string", "description": "文件路径"}, "content": {"type": "string", "description": "文本内容"}}, _write),
+                    Tool("mkdir", "创建文件夹（支持多级）", {"path": {"type": "string", "description": "路径"}}, _mkdir),
+                    Tool("edit_file", "编辑文件 — 精确文本替换", {"path": {"type": "string", "description": "文件路径"}, "old_text": {"type": "string", "description": "要替换的原文本"}, "new_text": {"type": "string", "description": "替换后的新文本"}, "replace_all": {"type": "boolean", "description": "是否替换所有匹配项，默认false"}}, _edit),
+                    Tool("delete_path", "删除文件或文件夹", {"path": {"type": "string", "description": "路径"}}, _rm),
+                    Tool("copy_path", "复制文件或文件夹", {"src": {"type": "string", "description": "源路径"}, "dst": {"type": "string", "description": "目标路径"}}, _cp),
+                    Tool("move_path", "移动/重命名文件或文件夹", {"src": {"type": "string", "description": "源路径"}, "dst": {"type": "string", "description": "目标路径"}}, _mv),
+                    Tool("read_pdf", "读取PDF文本内容", {"path": {"type": "string", "description": "PDF文件路径"}, "page_start": {"type": "integer", "description": "起始页(1起，默认1)"}, "page_end": {"type": "integer", "description": "结束页(默认末页)"}}, pdf_read),
+                    Tool("merge_pdf", "合并多个PDF文件", {"paths": {"type": "array", "items": {"type": "string"}, "description": "PDF路径列表"}, "output": {"type": "string", "description": "输出文件路径"}}, pdf_merge),
+                    Tool("split_pdf", "拆分PDF按指定页或页码范围", {"path": {"type": "string", "description": "PDF路径"}, "pages": {"type": "array", "items": {"type": "integer"}, "description": "指定页码列表(1起)"}, "ranges": {"type": "array", "items": {"type": "array", "items": {"type": "integer"}}, "description": "页码范围列表如[[3,7],[10,15]]"}, "output_dir": {"type": "string", "description": "输出目录"}, "prefix": {"type": "string", "description": "文件名前缀"}}, pdf_split),
+                    Tool("pdf_meta", "提取PDF元信息(标题/作者/页数等)", {"path": {"type": "string", "description": "PDF路径"}}, pdf_meta),
+                    Tool("pdf_extract_images", "提取PDF中嵌入的图片", {"path": {"type": "string", "description": "PDF路径"}, "output_dir": {"type": "string", "description": "输出目录"}, "prefix": {"type": "string", "description": "图片名前缀"}}, pdf_extract_images),
+                    Tool("csv_read", "读取CSV文件", {"path": {"type": "string", "description": "CSV文件路径"}, "columns": {"type": "array", "items": {"type": "string"}, "description": "要显示的列名(全显示则省略)"}, "limit": {"type": "integer", "description": "最多行数(默认50)"}}, csv_read),
+                    Tool("csv_stats", "CSV统计:列数/行数/每列类型与数值统计", {"path": {"type": "string", "description": "CSV文件路径"}}, csv_stats),
+                    Tool("json_read", "读取JSON文件，支持键路径查询", {"path": {"type": "string", "description": "JSON文件路径"}, "key": {"type": "string", "description": "键路径如'a.b[0].c'(省略则读取全部)"}, "limit": {"type": "integer", "description": "输出最大字符数(默认10000)"}}, json_read),
+                    Tool("sqlite_query", "在SQLite数据库上执行只读查询", {"path": {"type": "string", "description": "SQLite数据库路径"}, "query": {"type": "string", "description": "SQL查询语句(SELECT/PRAGMA)"}, "limit": {"type": "integer", "description": "最多返回行数(默认50)"}}, sqlite_query),
+                    Tool("sqlite_tables", "列出SQLite数据库的所有表及其结构", {"path": {"type": "string", "description": "SQLite数据库路径"}}, sqlite_tables),
+                    Tool("image_info", "获取图像元信息(尺寸/格式/EXIF)", {"path": {"type": "string", "description": "图像文件路径"}}, image_info),
+                    Tool("image_compress", "压缩图像(质量/目标大小)", {"path": {"type": "string", "description": "图像路径"}, "quality": {"type": "integer", "description": "压缩质量1-100，默认85"}, "max_size_kb": {"type": "integer", "description": "目标最大KB(可选)"}, "output": {"type": "string", "description": "输出路径(可选)"}, "format": {"type": "string", "description": "输出格式如jpg/webp(可选)"}}, image_compress),
+                    Tool("image_crop", "裁剪图像", {"path": {"type": "string", "description": "图像路径"}, "box": {"type": "array", "items": {"type": "integer"}, "description": "像素坐标[left,upper,right,lower]"}, "percent": {"type": "array", "items": {"type": "integer"}, "description": "百分比坐标[l%,u%,r%,l%]"}, "output": {"type": "string", "description": "输出路径(可选)"}}, image_crop),
+                    Tool("image_resize", "缩放图像", {"path": {"type": "string", "description": "图像路径"}, "width": {"type": "integer", "description": "目标宽度(等比/单设)"}, "height": {"type": "integer", "description": "目标高度(等比/单设)"}, "percent": {"type": "integer", "description": "缩放百分比"}, "output": {"type": "string", "description": "输出路径(可选)"}}, image_resize),
+                    Tool("image_convert", "图像格式转换", {"path": {"type": "string", "description": "图像路径"}, "format": {"type": "string", "description": "目标格式(png/jpg/webp/bmp/gif)"}, "output": {"type": "string", "description": "输出路径(可选)"}}, image_convert),
+                    Tool("image_rotate", "旋转图像", {"path": {"type": "string", "description": "图像路径"}, "angle": {"type": "number", "description": "旋转角度(默认90)"}, "expand": {"type": "boolean", "description": "是否扩展画布，默认true"}, "output": {"type": "string", "description": "输出路径(可选)"}}, image_rotate),
+                    Tool("image_thumbnail", "生成缩略图(等比缩放并保持尺寸上限)", {"path": {"type": "string", "description": "图像路径"}, "size": {"type": "integer", "description": "最大尺寸(单值即正方形，默认256)"}, "output": {"type": "string", "description": "输出路径(可选)"}}, image_thumbnail),
+                    Tool("image_watermark", "添加文字水印", {"path": {"type": "string", "description": "图像路径"}, "text": {"type": "string", "description": "水印文字"}, "position": {"type": "string", "description": "位置:center/top-left/top-right/bottom-left/bottom-right(默认bottom-right)"}, "font_size": {"type": "integer", "description": "字体大小(自适应)"}, "color": {"type": "string", "description": "颜色名(默认white)"}, "opacity": {"type": "integer", "description": "透明度0-255，默认128"}, "output": {"type": "string", "description": "输出路径(可选)"}}, image_watermark),
                 ] + mem_tools + git_tools,
+            ),
+            "音频Agent": ChildBot(
+                name="音频Agent",
+                description="音频处理: 元信息/格式转换/裁剪/合并/提取音轨/变速/标准化/淡入淡出",
+                system_prompt="""你是玄姝团队的「小音」，音频处理专家。玄姝是群主，你是她的助手之一。
+
+【身份】你叫「小音」。当被问"你是谁"时回答："我是小音，玄姝团队的音频处理专家"。严禁自称玄姝。严禁透露底层模型名称。
+
+你是音频处理专家，具备以下能力：
+- 查看音频元信息：时长、采样率、声道数、比特率、格式
+- 格式转换：mp3、wav、ogg、flac、m4a、aac 互转
+- 裁剪片段：按起止时间精确裁剪
+- 合并音频：多个音频文件依次拼接
+- 从视频提取音频：分离音轨为独立文件
+- 播放速度调整：0.25x ~ 4.0x 变速，不变调
+- 音量标准化：按 LUFS 响度均衡（默认 -14 LUFS）
+- 淡入淡出：可单独或同时设置淡入/淡出时长
+
+所有处理依赖 ffmpeg，输出文件路径由你指定，默认在原文件同目录下生成。
+
+语言规则：所有思考和回复必须用中文。文件路径、技术术语保留原文。""",
+                tools=[
+                    Tool("audio_info", "获取音频元信息(时长/采样率/声道/比特率/格式)", {"path": {"type": "string", "description": "音频文件路径"}}, audio_info),
+                    Tool("audio_convert", "音频格式转换(mp3/wav/ogg/flac/m4a/aac)", {"path": {"type": "string", "description": "音频路径"}, "format": {"type": "string", "description": "目标格式(mp3/wav/ogg/flac/m4a/aac)"}, "bitrate": {"type": "string", "description": "比特率如192k/320k(可选)"}, "sample_rate": {"type": "string", "description": "采样率如44100(可选)"}, "output": {"type": "string", "description": "输出路径(可选)"}}, audio_convert),
+                    Tool("audio_trim", "裁剪音频片段(按起止时间)", {"path": {"type": "string", "description": "音频路径"}, "start": {"type": "string", "description": "起始时间如00:30(默认0)"}, "end": {"type": "string", "description": "结束时间如01:30"}, "duration": {"type": "string", "description": "裁剪时长(与end二选一)如30"}, "output": {"type": "string", "description": "输出路径(可选)"}}, audio_trim),
+                    Tool("audio_merge", "合并多个音频文件(依次拼接)", {"paths": {"type": "array", "items": {"type": "string"}, "description": "音频文件路径列表(至少2个)"}, "output": {"type": "string", "description": "输出路径(可选)"}}, audio_merge),
+                    Tool("audio_extract", "从视频文件提取音频", {"path": {"type": "string", "description": "视频文件路径"}, "format": {"type": "string", "description": "输出音频格式(默认mp3)"}, "bitrate": {"type": "string", "description": "比特率如192k(可选)"}, "output": {"type": "string", "description": "输出路径(可选)"}}, audio_extract),
+                    Tool("audio_speed", "调整播放速度(不变调)", {"path": {"type": "string", "description": "音频路径"}, "speed": {"type": "number", "description": "播放倍率(0.25~4.0, 默认1.0)"}, "output": {"type": "string", "description": "输出路径(可选)"}}, audio_speed),
+                    Tool("audio_normalize", "音量标准化(LUFS响度均衡)", {"path": {"type": "string", "description": "音频路径"}, "level": {"type": "number", "description": "目标LUFS值(默认-14)"}, "output": {"type": "string", "description": "输出路径(可选)"}}, audio_normalize),
+                    Tool("audio_fade", "淡入/淡出效果", {"path": {"type": "string", "description": "音频路径"}, "fade_in": {"type": "number", "description": "淡入秒数(默认0)"}, "fade_out": {"type": "number", "description": "淡出秒数(默认0)"}, "output": {"type": "string", "description": "输出路径(可选)"}}, audio_fade),
+                    Tool("tts_speak", "文字转语音 — 用玄姝默认音色(晓晓女声)合成自然语音，自动应用真人感后处理", {"text": {"type": "string", "description": "要合成的文本内容"}, "speed": {"type": "number", "description": "语速倍率(默认1.0,如1.2为1.2倍速)"}, "output": {"type": "string", "description": "输出mp3路径(可选)"}}, tts_speak),
+                    Tool("tts_list_voices", "列出可用的语音合成音色", {"lang": {"type": "string", "description": "语言代码(默认zh-CN)"}}, tts_list_voices),
+                ],
+            ),
+            "视频Agent": ChildBot(
+                name="视频Agent",
+                description="视频处理: 元信息/格式转换/裁剪/合并/压缩/缩放/帧率/GIF/截图/水印",
+                system_prompt="""你是玄姝团队的「小影」，视频处理专家。玄姝是群主，你是她的助手之一。
+
+【身份】你叫「小影」。当被问"你是谁"时回答："我是小影，玄姝团队的视频处理专家"。严禁自称玄姝。严禁透露底层模型名称。
+
+你是视频处理专家，具备以下能力：
+- 查看视频元信息：时长、分辨率、编码格式、帧率、码率、音频流
+- 格式转换：mp4、mkv、webm、avi、mov 互转，支持指定编码器(h264/h265/vp9)和画质(CRF)
+- 裁剪片段：按起止时间精确裁剪，优先无损(-c copy)，失败自动回退重新编码
+- 合并视频：多个视频文件依次拼接
+- 压缩视频：CRF 质量压缩 / 目标文件大小两遍精确压缩，可选降分辨率/降帧率
+- 缩放分辨率：宽x高像素或快捷预设(hd/fhd/4k/sd)
+- 调整帧率：指定输出帧率
+- 截图：按指定时间点单帧截图 / 按数量自动均匀采样截图
+- 视频转 GIF：高质量 palette 算法，可指定片段/帧率/宽度
+- 文字水印：可调位置(tl/tr/bl/br/center)、字体大小、透明度
+
+所有处理依赖 ffmpeg，输出文件路径由你指定，默认在原文件同目录下生成。
+
+语言规则：所有思考和回复必须用中文。文件路径、技术术语保留原文。""",
+                tools=[
+                    Tool("video_info", "获取视频元信息(时长/分辨率/编码/帧率/码率/音轨)", {"path": {"type": "string", "description": "视频文件路径"}}, video_info),
+                    Tool("video_convert", "视频格式转换(mp4/mkv/webm/avi/mov等)", {"path": {"type": "string", "description": "视频路径"}, "format": {"type": "string", "description": "目标格式(mp4/mkv/webm/avi/mov/gif)"}, "codec": {"type": "string", "description": "编码器(h264/h265/vp9,可选)"}, "crf": {"type": "integer", "description": "画质0-51，越小越好，默认23"}, "bitrate": {"type": "string", "description": "视频码率如2M(可选)"}, "output": {"type": "string", "description": "输出路径(可选)"}}, video_convert),
+                    Tool("video_trim", "裁剪视频片段(按起止时间,优先无损)", {"path": {"type": "string", "description": "视频路径"}, "start": {"type": "string", "description": "起始时间如00:30(默认0)"}, "end": {"type": "string", "description": "结束时间如01:30"}, "duration": {"type": "string", "description": "裁剪时长(与end二选一)"}, "output": {"type": "string", "description": "输出路径(可选)"}}, video_trim),
+                    Tool("video_merge", "合并多个视频文件(依次拼接)", {"paths": {"type": "array", "items": {"type": "string"}, "description": "视频文件路径列表(至少2个)"}, "output": {"type": "string", "description": "输出路径(可选)"}}, video_merge),
+                    Tool("video_compress", "压缩视频(CRF质量/目标文件大小,可选降分辨率/帧率)", {"path": {"type": "string", "description": "视频路径"}, "crf": {"type": "integer", "description": "画质0-51，默认28(较高压缩)"}, "max_size_mb": {"type": "integer", "description": "目标最大MB(可选,二遍精确)"}, "resolution": {"type": "string", "description": "降分辨率如1280x720(可选)"}, "fps": {"type": "string", "description": "降帧率如24(可选)"}, "codec": {"type": "string", "description": "编码器(默认libx264)"}, "output": {"type": "string", "description": "输出路径(可选)"}}, video_compress),
+                    Tool("video_resize", "调整视频分辨率(像素/hd/fhd/4k/sd)", {"path": {"type": "string", "description": "视频路径"}, "resolution": {"type": "string", "description": "目标分辨率(如1920x1080/hd/fhd/sd)"}, "output": {"type": "string", "description": "输出路径(可选)"}}, video_resize),
+                    Tool("video_fps", "调整视频帧率", {"path": {"type": "string", "description": "视频路径"}, "fps": {"type": "integer", "description": "目标帧率如24/30/60"}, "output": {"type": "string", "description": "输出路径(可选)"}}, video_fps),
+                    Tool("video_snapshot", "视频截图(指定时间点单帧/按数量均匀采样)", {"path": {"type": "string", "description": "视频路径"}, "at": {"type": "string", "description": "截图时间点如00:05(与count二选一)"}, "count": {"type": "integer", "description": "截图数量(自动间隔采样,与at二选一,默认1)"}, "width": {"type": "integer", "description": "输出宽度(等比缩放,可选)"}, "output": {"type": "string", "description": "输出路径(可选)"}}, video_snapshot),
+                    Tool("video_to_gif", "视频转GIF动图(palette高质量算法)", {"path": {"type": "string", "description": "视频路径"}, "start": {"type": "string", "description": "起始时间(默认0)"}, "duration": {"type": "string", "description": "GIF时长秒(默认5)"}, "fps": {"type": "integer", "description": "GIF帧率(默认10)"}, "width": {"type": "integer", "description": "输出宽度(默认320)"}, "output": {"type": "string", "description": "输出路径(可选)"}}, video_to_gif),
+                    Tool("video_watermark", "添加文字水印(位置/字体/透明度可调)", {"path": {"type": "string", "description": "视频路径"}, "text": {"type": "string", "description": "水印文字"}, "position": {"type": "string", "description": "位置:tl/tr/bl/br/center(默认br)"}, "font_size": {"type": "integer", "description": "字体大小(默认24)"}, "opacity": {"type": "number", "description": "透明度0-1,默认0.5"}, "output": {"type": "string", "description": "输出路径(可选)"}}, video_watermark),
+                ],
             ),
         }
 
@@ -2272,7 +2392,7 @@ Git 版本回滚：发现文件被误改或需要恢复到之前版本时，用 
                                  "装一个", "升级", "dnf install", "dnf remove"]):
             self.log.sys(f'关键词路由 → "电脑Agent"')
             return "电脑Agent"
-        if "保存" in q or "文件" in q or "读取" in q or "反编译" in q or "decompile" in q or "pyc" in q:
+        if "保存" in q or "文件" in q or "读取" in q or "反编译" in q or "decompile" in q or "pyc" in q or "创建" in q or "新建" in q or "写入" in q or "删除" in q or "复制" in q or "移动" in q or "重命名" in q or "mkdir" in q or "目录" in q:
             self.log.sys(f'关键词路由 → "文件Agent"')
             return "文件Agent"
         if "搜索" in q or "查" in q:
@@ -2622,6 +2742,23 @@ Git 版本回滚：发现文件被误改或需要恢复到之前版本时，用 
             trace_store.end_trace(trace_span, output_summary=str(result)[:200])
             return result
 
+        # ── /compact 命令：手动触发上下文压缩 ──
+        if stripped == "/compact":
+            before = len(self.shared_msgs)
+            # 蒸馏当前未蒸馏的增量部分
+            if self.shared_msgs:
+                self._distill_context(self.shared_msgs)
+            self._compress_shared_msgs()
+            after = len(self.shared_msgs)
+            summary_len = len(self._context_summary)
+            result = {"reply": (
+                f"上下文已压缩。\n"
+                f"消息: {before} → {after} 条 | 摘要: {summary_len} 字\n"
+                f"节省约 {max(0, before - after)} 条消息的上下文窗口。"
+            ), "thinking": []}
+            trace_store.end_trace(trace_span, output_summary=str(result)[:200])
+            return result
+
         # ── Agent 管理命令 ──
         if stripped.startswith("/agents"):
             agents = self.list_agents()
@@ -2933,10 +3070,13 @@ Git 版本回滚：发现文件被误改或需要恢复到之前版本时，用 
                         "_multimodal": modality}
 
         # 文本模型：标准 chat completions
+        # ── 前缀缓存注入：标记 system 消息为 cacheable ──
+        _messages = self._inject_cache_hints(messages, key)
+
         if self.fallback_mode:
-            resp = self.pool.call_llm_with_fallback(agent, messages, tools, fallback_models=extra_fallbacks, model_override=ov, stop=stop)
+            resp = self.pool.call_llm_with_fallback(agent, _messages, tools, fallback_models=extra_fallbacks, model_override=ov, stop=stop)
         else:
-            resp = self.pool.call_llm(agent, messages, tools, model_override=ov, stop=stop)
+            resp = self.pool.call_llm(agent, _messages, tools, model_override=ov, stop=stop)
         # 生产环境：Token 预算追踪 + 模型降级链
         usage = resp.get("usage") or {}
         tokens = usage.get("total_tokens", 0)
@@ -2952,6 +3092,36 @@ Git 版本回滚：发现文件被误改或需要恢复到之前版本时，用 
         if prompt_tokens:
             get_token_hit_tracker().record(agent, prompt_tokens, cached_tokens, completion_tokens)
         return resp
+
+    def _inject_cache_hints(self, messages: list, model_key: str) -> list:
+        """向支持前缀缓存的模型注入 cache_control 标记。
+        Anthropic: 给 system 消息添加 cache_control: {type: ephemeral}
+        DeepSeek/OpenAI: 标记首条 system 消息的 content 块用于 disk cache。
+        返回浅拷贝的 messages，不影响原始列表。"""
+        import copy
+        _msgs = copy.deepcopy(messages)
+
+        # Anthropic 风格 cache_control（通过模型名识别）
+        is_anthropic = any(x in model_key.lower() for x in ("claude", "anthropic"))
+        is_ds_openai = any(x in model_key.lower() for x in ("deepseek", "gpt", "openai", "qwen"))
+
+        if is_anthropic:
+            for i, m in enumerate(_msgs):
+                if m.get("role") == "system":
+                    content = m.get("content", "")
+                    if isinstance(content, str):
+                        _msgs[i]["content"] = [
+                            {"type": "text", "text": content,
+                             "cache_control": {"type": "ephemeral"}}
+                        ]
+        elif is_ds_openai:
+            # DeepSeek/OpenAI 前缀缓存：在第一条 system 后追加缓存提示字段
+            for i, m in enumerate(_msgs):
+                if m.get("role") == "system":
+                    _msgs[i]["_cache_mark"] = True
+                    break
+
+        return _msgs
 
     def _build_child_msgs(self, child: ChildBot, user_input: str,
                           extra_context: str = "", image: str = None) -> list:
@@ -3120,7 +3290,15 @@ Git 版本回滚：发现文件被误改或需要恢复到之前版本时，用 
         else:
             messages.insert(0, {"role": "system", "content": react_prompt.lstrip()})
 
-        for loop in range(5):
+        _loop = 0
+        while _loop < MAX_AGENT_LOOPS:
+            # token 预算检查：耗尽时强制退出，避免无限烧钱
+            if hasattr(self, '_token_budget') and self._token_budget.is_exhausted():
+                self.log.sys(f"日token预算({self._token_budget.daily_limit})耗尽，退出Agent循环")
+                break
+            loop = _loop
+            _loop += 1
+
             t0 = time.time()
             # P0: stop=["观察:"] 阻止模型自编工具返回结果
             resp = self._llm_call(child.name, messages, tools, stop=["观察:", "\n观察"])
@@ -3575,7 +3753,14 @@ DAG（只输出节点列表）:"""
         messages = self._build_child_msgs(child, user_input, "", image)
 
         # 工具循环
-        for loop in range(5):
+        _loop = 0
+        while _loop < MAX_AGENT_LOOPS:
+            if hasattr(self, '_token_budget') and self._token_budget.is_exhausted():
+                self.log.sys(f"日token预算({self._token_budget.daily_limit})耗尽，退出Agent循环")
+                break
+            loop = _loop
+            _loop += 1
+
             tools = child.tool_schemas() if loop == 0 else None
             if loop > 0:
                 tools = child.tool_schemas()
@@ -3751,7 +3936,7 @@ DAG（只输出节点列表）:"""
         """持久化父Bot对话上下文到磁盘"""
         try:
             data = {
-                "shared_msgs": self.shared_msgs[-80:],
+                "shared_msgs": self.shared_msgs[-COMPRESS_KEEP_COUNT:],
                 "agent_contexts": self._agent_contexts,
                 "context_summary": self._context_summary,
                 "updated": time.strftime("%Y-%m-%d %H:%M:%S"),
@@ -3776,7 +3961,7 @@ DAG（只输出节点列表）:"""
                     entry['agent'] = m['a']
                 shared.append(entry)
             data = {
-                "shared_msgs": shared[-80:],
+                "shared_msgs": shared[-COMPRESS_KEEP_COUNT:],
                 "agent_contexts": self._agent_contexts,
                 "context_summary": self._context_summary,
                 "updated": time.strftime("%Y-%m-%d %H:%M:%S"),
@@ -3792,12 +3977,12 @@ DAG（只输出节点列表）:"""
         """滚动压缩：保留最近80条（40轮），溢出部分提炼追加到摘要。
         摘要永远追加不覆盖，原始消息仅滚动窗口，不永久丢失。
         压缩前自动创建快照，支持回溯。"""
-        if len(self.shared_msgs) <= 80:
+        if len(self.shared_msgs) <= COMPRESS_KEEP_COUNT:
             return
         # ── 压缩前保存完整快照，供回溯使用 ──
         self._save_snapshot("auto")
-        overflow = self.shared_msgs[:-80]
-        self.shared_msgs = self.shared_msgs[-80:]
+        overflow = self.shared_msgs[:-COMPRESS_KEEP_COUNT]
+        self.shared_msgs = self.shared_msgs[-COMPRESS_KEEP_COUNT:]
 
         raw_text = "\n".join(
             f"{'用户' if m['role']=='user' else '助手'}: {m['content'][:400]}"
@@ -3859,25 +4044,45 @@ DAG（只输出节点列表）:"""
             self._auto_memorize()
 
     def _distill_context(self, messages: list) -> str:
-        """用 LLM 从对话中提取关键决策和约束，过滤寒暄/废话"""
-        raw_text = "\n".join(
-            f"{'用户' if m['role']=='user' else '助手'}: {m['content']}"
-            for m in messages
-        )
-        prompt = f"""从以下对话中提取关键信息，严格过滤废话。只输出要点列表。
-忽略：礼貌用语、表情、emoji、确认收到、谢谢、好的、明白等无信息量内容。
-提取：决策、约束、配置修改、技术参数、用户偏好、待办事项。
+        """增量上下文蒸馏：仅蒸馏新增消息并追加到已有摘要。
+        避免每次全量蒸馏烧 LLM，已有摘要视为「已蒸馏」不再重复处理。"""
+        if not messages:
+            return ""
 
-对话:
+        # 确定已蒸馏的消息数量（上次摘要覆盖了多少条）
+        distilled_count = getattr(self, '_distilled_msg_count', 0)
+        new_msgs = messages[distilled_count:]
+        if len(new_msgs) < 2:
+            return self._context_summary or ""
+
+        # 仅蒸馏增量部分
+        raw_text = "\n".join(
+            f"{'用户' if m['role']=='user' else '助手'}: {m['content'][:300]}"
+            for m in new_msgs
+        )
+        prompt = f"""从以下对话增量中提取关键信息。已有上下文摘要作为参考，只补充新信息不要重复。
+忽略：礼貌用语、表情、谢谢、好的、明白等无信息量内容。
+提取：新决策、新约束、新配置修改、新用户偏好、新待办事项。
+{('已有摘要供参考：' + self._context_summary[:500]) if self._context_summary else ''}
+
+增量对话({len(new_msgs)}条):
 {raw_text[:4000]}
 
-关键要点（每条一行，用 - 开头）："""
+新增要点（每条一行，用 - 开头）："""
         try:
             msgs = [{"role": "user", "content": prompt}]
             resp = self._llm_call("__distill__", msgs)
-            return resp["choices"][0]["message"]["content"].strip()
-        except Exception:
-            return ""
+            new_points = resp["choices"][0]["message"]["content"].strip()
+            if new_points and new_points != "无":
+                ts = time.strftime("%m-%d %H:%M")
+                section = f"\n### {ts}（+{len(new_msgs)}条）\n{new_points}"
+                self._context_summary = (self._context_summary + section) if self._context_summary else section.lstrip()
+                self._save_context()
+                self._distilled_msg_count = len(messages)
+            return self._context_summary or ""
+        except Exception as e:
+            self.log.sys(f"增量蒸馏失败: {e}")
+            return self._context_summary or ""
 
     def _compress_conversation_log(self, full_log: str):
         """对话流水归档：旧内容移到归档文件，活跃日志保留最后8000字（永不压缩丢失）"""

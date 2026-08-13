@@ -51,5 +51,5 @@ done
 # 验证
 $PYTHON -c "import flask" 2>/dev/null || { echo "错误: Flask 安装失败"; exit 1; }
 
-echo "已启动 → http://localhost:8901"
+echo "已启动 → http://localhost:8901（按 Ctrl+C 退出）"
 $PYTHON frontend.py

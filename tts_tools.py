@@ -2,7 +2,12 @@
 玄姝语音合成模块（edge-tts + 真人感后处理管线）
 """
 
-import os, subprocess, asyncio, edge_tts, tempfile
+import os, subprocess, asyncio, tempfile
+
+try:
+    import edge_tts
+except ImportError:
+    edge_tts = None
 
 _FFMPEG = os.path.expanduser("~/.local/bin/ffmpeg")
 
@@ -14,6 +19,8 @@ XUANSHU_PITCH = "+0Hz"
 
 def tts_speak(args: dict) -> str:
     """将文本合成为玄姝语音（女声/自然/真人感后处理）"""
+    if edge_tts is None:
+        return "语音合成模块未安装。请执行: pip install edge-tts"
     text = str(args.get("text", ""))
     if not text:
         return "请提供 text 参数"
@@ -103,6 +110,8 @@ def tts_speak(args: dict) -> str:
 
 def tts_list_voices(args: dict = None) -> str:
     """列出可用的语音音色"""
+    if edge_tts is None:
+        return "语音合成模块未安装。请执行: pip install edge-tts"
     lang = (args or {}).get("lang", "zh-CN")
     try:
         loop = asyncio.new_event_loop()

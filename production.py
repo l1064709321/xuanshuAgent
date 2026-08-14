@@ -57,12 +57,21 @@ class TokenBudget:
 class Watchdog:
     def __init__(self):
         self._last_heartbeat = 0
+        self._start_time = time.time()
 
     def start(self):
         self._last_heartbeat = time.time()
+        self._start_time = time.time()
 
     def heartbeat(self):
         self._last_heartbeat = time.time()
+
+    def get_health(self):
+        return {
+            "alive": True,
+            "last_heartbeat": self._last_heartbeat,
+            "uptime_seconds": int(time.time() - self._start_time),
+        }
 
 
 # ═══════════════════════════════════════════
@@ -129,7 +138,30 @@ class ErrorClassifier:
     pass
 
 class HealthMonitor:
-    pass
+    def __init__(self):
+        self._latencies = []
+        self._errors = 0
+        self._requests = 0
+
+    def record_latency(self, ms: float):
+        self._latencies.append(ms)
+
+    def record_request(self, ok: bool = True):
+        self._requests += 1
+        if not ok:
+            self._errors += 1
+
+    def get_stats(self):
+        import statistics
+        n = len(self._latencies)
+        err_rate = round(self._errors / self._requests, 4) if self._requests else 0.0
+        return {
+            "is_degraded": err_rate > 0.05,
+            "latency_p50": round(statistics.median(self._latencies), 1) if n else 0.0,
+            "latency_p95": round(sorted(self._latencies)[max(0, int(n * 0.95) - 1)], 1) if n >= 20 else 0.0,
+            "error_rate": err_rate,
+            "total_requests": self._requests,
+        }
 
 
 # ═══════════════════════════════════════════

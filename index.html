@@ -2944,23 +2944,23 @@ function addThinkingStep(el, step) {
 
   const toolMeta = {
 
-    'anysearch': { icon: '\xf0\x9f\x94\x8d', tag: 'search', cls: 'tc-tag-search' },
+    'anysearch': { icon: '\u{1F50D}', tag: 'search', cls: 'tc-tag-search' },
 
-    'web_search': { icon: '\xf0\x9f\x8c\x90', tag: 'search', cls: 'tc-tag-search' },
+    'web_search': { icon: '\u{1F310}', tag: 'search', cls: 'tc-tag-search' },
 
-    'browser_navigate': { icon: '\xf0\x9f\xa7\xad', tag: 'browser', cls: 'tc-tag-browser' },
+    'browser_navigate': { icon: '\u{1F4F0}', tag: 'browser', cls: 'tc-tag-browser' },
 
-    'run_code': { icon: '\xe2\x9a\xa1', tag: 'code', cls: 'tc-tag-code' },
+    'run_code': { icon: '\u26A1', tag: 'code', cls: 'tc-tag-code' },
 
-    'read_file': { icon: '\xf0\x9f\x93\x84', tag: 'file', cls: 'tc-tag-file' },
+    'read_file': { icon: '\u{1F4C4}', tag: 'file', cls: 'tc-tag-file' },
 
-    'sys_info': { icon: '\xf0\x9f\x96\xa5\xef\xb8\x8f', tag: 'system', cls: 'tc-tag-system' },
+    'sys_info': { icon: '\u{1F5A5}\uFE0F', tag: 'system', cls: 'tc-tag-system' },
 
-    'memdir_read': { icon: '\xf0\x9f\xa7\xa0', tag: 'memory', cls: 'tc-tag-memory' },
+    'memdir_read': { icon: '\u{1F9E0}', tag: 'memory', cls: 'tc-tag-memory' },
 
   };
 
-  const defaultMeta = { icon: '\xf0\x9f\x94\xa7', tag: 'tool', cls: 'tc-tag-code' };
+  const defaultMeta = { icon: '\u{1F527}', tag: 'tool', cls: 'tc-tag-code' };
 
   const tools = (step.tool || '').split(',').filter(Boolean).map(s => s.trim());
 

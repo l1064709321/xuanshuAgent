@@ -3613,7 +3613,7 @@ function finishStreamBubble(el, reply, agentLabel) {
 
   el.innerHTML = '<div class="agent-label"><span class="agent-name">' + agentLabel + '</span><button class="btn-tts-read" title="朗读" onclick="readAloud(this)" data-text="' + encodeURIComponent(reply) + '">&#x1f50a;</button></div><div class="agent-body">' + thinkingHtml + replyStream.innerHTML + '</div>';
 
-  // 自动折叠：根据思考内容长度计算停留时间
+  // 思考链折叠：思考完成后自动收起（停留0.8秒让用户看到「完成」状态）
 
   if (thinkingHtml) {
 
@@ -3621,81 +3621,7 @@ function finishStreamBubble(el, reply, agentLabel) {
 
     if (details) {
 
-      // 计算内容长度
-
-      const totalChars = (details.textContent || '').length;
-
-      const stepCount = details.querySelectorAll('.tc-step').length;
-
-      // 阅读时间：每步至少1秒 + 每100字加1秒，最少3秒最多15秒
-
-      const readTime = Math.min(15000, Math.max(3000, stepCount * 1000 + Math.floor(totalChars / 100) * 1000));
-
-      let collapseTimer = null;
-
-      let remaining = readTime;
-
-
-
-      const startCollapse = () => {
-
-        collapseTimer = setTimeout(() => {
-
-          if (details.open) details.open = false;
-
-        }, remaining);
-
-      };
-
-
-
-      // 鼠标悬停时暂停倒计时
-
-      details.addEventListener('mouseenter', () => {
-
-        if (collapseTimer) {
-
-          clearTimeout(collapseTimer);
-
-          collapseTimer = null;
-
-        }
-
-      });
-
-
-
-      // 鼠标离开后恢复倒计时（剩余时间）
-
-      details.addEventListener('mouseleave', () => {
-
-        if (!collapseTimer && details.open) {
-
-          remaining = 2000; // 鼠标离开后2秒收起
-
-          startCollapse();
-
-        }
-
-      });
-
-
-
-      // 用户手动折叠后取消定时器
-
-      details.addEventListener('toggle', () => {
-
-        if (!details.open && collapseTimer) {
-
-          clearTimeout(collapseTimer);
-
-        }
-
-      });
-
-
-
-      startCollapse();
+      setTimeout(() => { if (details.open) details.open = false; }, 800);
 
     }
 
@@ -3863,61 +3789,13 @@ function addBubble(role, content, agentName, thinkings) {
 
       '</details>';
 
-      // 思考完成后根据内容长度自动折叠
+      // 思考完成后自动折叠
 
       const details = d.querySelector('details.thinking-chain');
 
       if (details) {
 
-        const totalChars = (details.textContent || '').length;
-
-        const stepCount = details.querySelectorAll('.tc-step').length;
-
-        const readTime = Math.min(15000, Math.max(3000, stepCount * 1000 + Math.floor(totalChars / 100) * 1000));
-
-        let collapseTimer = null;
-
-        let remaining = readTime;
-
-
-
-        const startCollapse = () => {
-
-          collapseTimer = setTimeout(() => {
-
-            if (details.open) details.open = false;
-
-          }, remaining);
-
-        };
-
-
-
-        details.addEventListener('mouseenter', () => {
-
-          if (collapseTimer) { clearTimeout(collapseTimer); collapseTimer = null; }
-
-        });
-
-
-
-        details.addEventListener('mouseleave', () => {
-
-          if (!collapseTimer && details.open) { remaining = 2000; startCollapse(); }
-
-        });
-
-
-
-        details.addEventListener('toggle', () => {
-
-          if (!details.open && collapseTimer) clearTimeout(collapseTimer);
-
-        });
-
-
-
-        startCollapse();
+        setTimeout(() => { if (details.open) details.open = false; }, 800);
 
       }
 

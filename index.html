@@ -2994,7 +2994,7 @@ function finishStreamBubble(el, reply, agentLabel) {
 
   if (thinkingLive) {
 
-    thinkingLive.innerHTML = '<div class="tc-live-header"><span>鉁?鎬濊€冮摼瀹屾垚</span><span style="margin-left:auto;font-size:11px;color:var(--text-dim)">&#10003;</span></div>';
+    thinkingLive.innerHTML = '<div class="tc-live-header"><span>✅ 思考链完成</span><span style="margin-left:auto;font-size:11px;color:var(--text-dim)">&#10003;</span></div>';
 
   }
 
@@ -3060,21 +3060,21 @@ function addBubble(role, content, agentName, thinkings) {
 
         'decompile_detect': { icon: '馃敩', tag: '逆向', cls: 'tc-tag-code' },
 
-        'browser_navigate': { icon: '馃Л', tag: '娴忚鍣, cls: 'tc-tag-browser' },
+        'browser_navigate': { icon: '馃Л', tag: '浏览器', cls: 'tc-tag-browser' },
 
-        'browser_extract':  { icon: '馃搼', tag: '娴忚鍣, cls: 'tc-tag-browser' },
+        'browser_extract':  { icon: '馃搼', tag: '浏览器', cls: 'tc-tag-browser' },
 
-        'browser_click':    { icon: '馃憜', tag: '娴忚鍣, cls: 'tc-tag-browser' },
+        'browser_click':    { icon: '馃憜', tag: '浏览器', cls: 'tc-tag-browser' },
 
-        'browser_type':     { icon: '鈱笍', tag: '娴忚鍣, cls: 'tc-tag-browser' },
+        'browser_type':     { icon: '鈱笍', tag: '浏览器', cls: 'tc-tag-browser' },
 
-        'browser_screenshot': { icon: '馃摳', tag: '娴忚鍣, cls: 'tc-tag-browser' },
+        'browser_screenshot': { icon: '馃摳', tag: '浏览器', cls: 'tc-tag-browser' },
 
-        'browser_scroll':   { icon: '馃攧', tag: '娴忚鍣, cls: 'tc-tag-browser' },
+        'browser_scroll':   { icon: '馃攧', tag: '浏览器', cls: 'tc-tag-browser' },
 
-        'browser_get_state': { icon: '馃搵', tag: '娴忚鍣, cls: 'tc-tag-browser' },
+        'browser_get_state': { icon: '馃搵', tag: '浏览器', cls: 'tc-tag-browser' },
 
-        'browser_wait':     { icon: '鈴?, tag: '娴忚鍣, cls: 'tc-tag-browser' },
+        'browser_wait':     { icon: '鈴?, tag: '浏览器', cls: 'tc-tag-browser' },
 
         'sys_info':     { icon: '馃枼锔?, tag: '系统', cls: 'tc-tag-system' },
 
@@ -3090,11 +3090,11 @@ function addBubble(role, content, agentName, thinkings) {
 
         'network_info': { icon: '馃寪', tag: '网络', cls: 'tc-tag-system' },
 
-        'pkg_install':  { icon: '馃摝', tag: '鍖呯鐞, cls: 'tc-tag-system' },
+        'pkg_install':  { icon: '馃摝', tag: '包管理', cls: 'tc-tag-system' },
 
-        'pkg_search':   { icon: '馃攷', tag: '鍖呯鐞, cls: 'tc-tag-system' },
+        'pkg_search':   { icon: '馃攷', tag: '包管理', cls: 'tc-tag-system' },
 
-        'pkg_remove':   { icon: '馃棏锔?, tag: '鍖呯鐞, cls: 'tc-tag-system' },
+        'pkg_remove':   { icon: '馃棏锔?, tag: '包管理', cls: 'tc-tag-system' },
 
         'adb_check':    { icon: '馃摫', tag: 'ADB', cls: 'tc-tag-system' },
 
@@ -3156,13 +3156,13 @@ function addBubble(role, content, agentName, thinkings) {
 
       thinkingHtml = '<details class="thinking-chain">'+
 
-        '<summary><span>鉁?鎬濊€冮摼</span><span class="tc-badge">'+thinkings.length+' 姝?/span></summary>'+
+        '<summary><span>✅ 思考链</span><span class="tc-badge">'+thinkings.length+' 步</span></summary>'+
 
         '<div class="thinking-timeline">'+steps+'</div>'+
 
       '</details>';
 
-      // 鎬濊€冨畬鎴愬悗寤惰繜鎶樺彔锛氬厛鐭殏灞曠ず鍐嶆敹璧?
+      // 思考完成后延迟折叠：先短暂展示再收起
 
       setTimeout(() => {
 

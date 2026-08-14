@@ -46,6 +46,9 @@ from protocol import (
     MEMORY_FILE, USER_FILE, MEMORY_MAX_CHARS, USER_MAX_CHARS,
 )
 
+# ── 厂商上下文调度层（每厂商一文件，按 provider/model_key 路由）──
+from vendors import resolve_policy, estimate_tokens, inject_cache_hints, ContextPolicy
+
 # ── 共享记忆文件夹（文件级持久化）──
 _MEMDIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".memdir")
 os.makedirs(_MEMDIR, exist_ok=True)
@@ -3094,34 +3097,11 @@ Git 版本回滚：发现文件被误改或需要恢复到之前版本时，用 
         return resp
 
     def _inject_cache_hints(self, messages: list, model_key: str) -> list:
-        """向支持前缀缓存的模型注入 cache_control 标记。
-        Anthropic: 给 system 消息添加 cache_control: {type: ephemeral}
-        DeepSeek/OpenAI: 标记首条 system 消息的 content 块用于 disk cache。
-        返回浅拷贝的 messages，不影响原始列表。"""
-        import copy
-        _msgs = copy.deepcopy(messages)
-
-        # Anthropic 风格 cache_control（通过模型名识别）
-        is_anthropic = any(x in model_key.lower() for x in ("claude", "anthropic"))
-        is_ds_openai = any(x in model_key.lower() for x in ("deepseek", "gpt", "openai", "qwen"))
-
-        if is_anthropic:
-            for i, m in enumerate(_msgs):
-                if m.get("role") == "system":
-                    content = m.get("content", "")
-                    if isinstance(content, str):
-                        _msgs[i]["content"] = [
-                            {"type": "text", "text": content,
-                             "cache_control": {"type": "ephemeral"}}
-                        ]
-        elif is_ds_openai:
-            # DeepSeek/OpenAI 前缀缓存：在第一条 system 后追加缓存提示字段
-            for i, m in enumerate(_msgs):
-                if m.get("role") == "system":
-                    _msgs[i]["_cache_mark"] = True
-                    break
-
-        return _msgs
+        """按厂商调度注入前缀缓存标记（借用各厂商官方 API 规范）。
+        由 vendors 层按 provider/model_key 归一化后路由到对应 vendor.cache()。"""
+        entry = self.pool.all_models.get(model_key)
+        provider = entry.provider if entry else ""
+        return inject_cache_hints(messages, provider=provider, model_key=model_key)
 
     def _build_child_msgs(self, child: ChildBot, user_input: str,
                           extra_context: str = "", image: str = None) -> list:
@@ -3183,11 +3163,11 @@ Git 版本回滚：发现文件被误改或需要恢复到之前版本时，用 
 
         messages.append({"role": "system", "content": "\n\n---\n\n".join(frozen_parts)})
 
-        # ── system[1]: 动态层 —— 每次对话不同，控制在 ~300t 以内 ──
+        # ── system[1]: 动态层 —— 每次对话不同，按 token 预算保留最近窗口 ──
         dyn_parts = []
 
-        # 最近 2 条原始对话（不蒸馏，保持低 token 开销）
-        recent = self.shared_msgs[-2:]
+        # 最近对话窗口（业界标准：按 token 预算保留最近 N 轮原文，而非仅 2 条）
+        recent = self._pick_recent_window()
         if recent:
             block = "[## 最近对话]\n"
             for m in recent:
@@ -3973,16 +3953,67 @@ DAG（只输出节点列表）:"""
         except Exception as e:
             self.log.sys(f"外部上下文保存失败: {e}")
 
+    def _context_policy(self, model_key: str = "") -> ContextPolicy:
+        """解析当前模型的厂商上下文调度策略（窗口/折算/缓存/阈值）。"""
+        key = model_key or getattr(self, '_model_override', '') or self.pool.default_key
+        entry = self.pool.all_models.get(key)
+        if entry is None:
+            return resolve_policy(model_key=key)
+        return resolve_policy(model_key=key, provider=entry.provider, description=entry.description)
+
+    def _estimate_tokens(self, text: str) -> int:
+        """token 估算：按当前厂商的中文折算系数（如 deepseek≈1.6 字/token）。"""
+        if not text:
+            return 0
+        return estimate_tokens(text, self._context_policy().cjk_chars_per_token)
+
+    def _pick_recent_window(self) -> list:
+        """按厂商策略的 token 预算取最近对话窗口（保留最近 N 轮原文，而非仅 2 条）。"""
+        policy = self._context_policy()
+        picked = []
+        used = 0
+        for m in reversed(self.shared_msgs):
+            t = estimate_tokens(m.get("content", ""), policy.cjk_chars_per_token)
+            if picked and used + t > policy.recent_tokens:
+                break
+            picked.append(m)
+            used += t
+            if used >= policy.recent_tokens:
+                break
+        picked.reverse()
+        min_keep = 4  # 至少保留约 2 轮，保证指代上下文
+        if len(picked) < min_keep and len(self.shared_msgs) >= min_keep:
+            picked = self.shared_msgs[-min_keep:]
+        return picked
+
     def _compress_shared_msgs(self):
-        """滚动压缩：保留最近80条（40轮），溢出部分提炼追加到摘要。
-        摘要永远追加不覆盖，原始消息仅滚动窗口，不永久丢失。
-        压缩前自动创建快照，支持回溯。"""
-        if len(self.shared_msgs) <= COMPRESS_KEEP_COUNT:
+        """滚动压缩（按厂商策略的 token 阈值触发，保留最近窗口原文 + 摘要）。
+        从最新往回保留约 keep_budget token 的原文（最少 10 条），溢出部分提炼追加到摘要。
+        摘要永远追加不覆盖，压缩前自动快照，支持回溯。"""
+        policy = self._context_policy()
+        total = sum(estimate_tokens(m.get("content", ""), policy.cjk_chars_per_token) for m in self.shared_msgs)
+        if total <= policy.compact_threshold and len(self.shared_msgs) <= COMPRESS_KEEP_COUNT:
             return
         # ── 压缩前保存完整快照，供回溯使用 ──
         self._save_snapshot("auto")
-        overflow = self.shared_msgs[:-COMPRESS_KEEP_COUNT]
-        self.shared_msgs = self.shared_msgs[-COMPRESS_KEEP_COUNT:]
+        # 保留最近窗口：从最新往回，token 预算内（保留最近 N 轮原文，而非固定条数）
+        keep_budget = policy.keep_budget
+        kept = []
+        kept_tokens = 0
+        for m in reversed(self.shared_msgs):
+            t = estimate_tokens(m.get("content", ""), policy.cjk_chars_per_token)
+            if kept and kept_tokens + t > keep_budget:
+                break
+            kept.append(m)
+            kept_tokens += t
+        kept.reverse()
+        min_keep = min(len(self.shared_msgs), 10)
+        if len(kept) < min_keep:
+            kept = self.shared_msgs[-min_keep:]
+        overflow = self.shared_msgs[:len(self.shared_msgs) - len(kept)]
+        if not overflow:
+            return
+        self.shared_msgs = kept
 
         raw_text = "\n".join(
             f"{'用户' if m['role']=='user' else '助手'}: {m['content'][:400]}"
@@ -4004,7 +4035,7 @@ DAG（只输出节点列表）:"""
             section = f"\n### {ts}（{len(overflow)//2}轮）\n{new_summary}"
             self._context_summary = (self._context_summary + section) if self._context_summary else section.lstrip()
             self._save_context()
-            self.log.sys(f"上下文滚动压缩: 保留80条, 摘要{len(self._context_summary)}字")
+            self.log.sys(f"上下文滚动压缩: 保留{len(kept)}条, 摘要{len(self._context_summary)}字")
         except Exception as e:
             self.log.sys(f"上下文压缩失败: {e}")
 
@@ -4030,8 +4061,10 @@ DAG（只输出节点列表）:"""
             memdir.write("conversation-log.md", existing + "\n" + entry if existing else "# 对话流水\n" + entry)
         except Exception:
             pass
-        # ── 每 40 轮滚动压缩上下文 + 对话流水 ──
-        if len(self.shared_msgs) % 80 == 0:
+        # ── token 阈值触发滚动压缩（按厂商策略），条数兜底 ──
+        policy = self._context_policy()
+        total_tokens = sum(estimate_tokens(m.get("content", ""), policy.cjk_chars_per_token) for m in self.shared_msgs)
+        if total_tokens > policy.compact_threshold or len(self.shared_msgs) % 80 == 0:
             self._compress_shared_msgs()
             try:
                 full_log = memdir.read("conversation-log.md")

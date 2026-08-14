@@ -1,4 +1,5 @@
 @echo off
+setlocal enabledelayedexpansion
 chcp 65001 >nul
 cd /d "%~dp0"
 echo 玄姝 Agent 启动中...
@@ -37,12 +38,14 @@ exit /b 1
 :deps_ok
 echo 依赖安装完成
 
-:: 验证
-%PYTHON% -c "import flask" >nul 2>&1 || (
-    echo 错误: Flask 安装失败
-    echo 请手动运行: %PYTHON% -m pip install -r requirements.txt
-    pause
-    exit /b 1
+:: 验证核心依赖
+set "MISSING="
+for %%m in (flask requests openai pypdf PIL edge_tts) do (
+    %PYTHON% -c "import %%m" >nul 2>&1 || set "MISSING=!MISSING! %%m"
+)
+if defined MISSING (
+    echo 警告: 以下模块未安装:%MISSING%
+    echo 可用功能可能受限，尝试继续启动...
 )
 
 echo 已启动 → http://localhost:8901 （按 Ctrl+C 退出）

@@ -48,8 +48,15 @@ done
     exit 1
 }
 
-# 验证
-$PYTHON -c "import flask" 2>/dev/null || { echo "错误: Flask 安装失败"; exit 1; }
+# 验证核心依赖
+MISSING=""
+for mod in flask requests openai pypdf PIL edge_tts; do
+    $PYTHON -c "import $mod" 2>/dev/null || MISSING="$MISSING $mod"
+done
+if [ -n "$MISSING" ]; then
+    echo "警告: 以下模块未安装:$MISSING"
+    echo "可用功能可能受限，尝试继续启动..."
+fi
 
 echo "已启动 → http://localhost:8901（按 Ctrl+C 退出）"
 $PYTHON frontend.py

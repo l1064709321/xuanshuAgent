@@ -2025,12 +2025,12 @@ body::after {
 /* 时间线容器 */
 .thinking-timeline {
   position: relative;
-  padding: 0 14px 12px 14px;
+  padding: 0 14px 12px 18px;
 }
 .thinking-timeline::before {
   content: '';
   position: absolute;
-  left: 26px;
+  left: 21px;
   top: 0;
   bottom: 12px;
   width: 1px;
@@ -2039,8 +2039,9 @@ body::after {
 
 /* 单步 */
 .tc-step {
-  position: relative;
-  padding: 8px 0 8px 32px;
+  display: flex;
+  gap: 12px;
+  padding: 8px 0;
   animation: tcStepIn 0.3s ease-out both;
 }
 .tc-step:last-child { padding-bottom: 0; }
@@ -2056,20 +2057,8 @@ body::after {
 .tc-step:nth-child(4) { animation-delay: 0.26s; }
 .tc-step:nth-child(5) { animation-delay: 0.33s; }
 
-/* 时间线节点 */
-.tc-step::before {
-  content: '';
-  position: absolute;
-  left: -6px;
-  top: 14px;
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: var(--neon-cyan);
-  box-shadow: 0 0 6px rgba(0,240,255,0.5);
-  z-index: 1;
-}
-.tc-step:last-child::before {
+/* 最后一个点呼吸灯 */
+.tc-step:last-child .tc-dot {
   animation: tcPulse 1.5s ease-in-out infinite;
 }
 @keyframes tcPulse {
@@ -2084,11 +2073,22 @@ body::after {
   gap: 6px;
   margin-bottom: 4px;
 }
-.tc-round {
-  font-size: 10px;
-  color: var(--text-dim);
-  font-weight: 500;
-  min-width: 16px;
+.tc-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--neon-cyan);
+  box-shadow: 0 0 6px rgba(0,240,255,0.5);
+  flex-shrink: 0;
+}
+.tc-content {
+  flex: 1;
+  min-width: 0;
+}
+.tc-tools-preview {
+  font-size: 11px;
+  color: var(--text-secondary);
+  letter-spacing: 1px;
 }
 .tc-tool-icon {
   font-size: 13px;

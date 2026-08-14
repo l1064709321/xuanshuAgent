@@ -3540,7 +3540,19 @@ function addThinkingStep(el, step) {
 
   const thoughtText = (step.thought || '').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 
-  timeline.insertAdjacentHTML('beforeend', '<div class="tc-step"><div class="tc-tool-bar"><span class="tc-round">#' + step.round + '</span>' + toolBadges + '</div><div class="tc-thought">' + thoughtText + '</div></div>');
+  timeline.insertAdjacentHTML('beforeend', '<div class="tc-step">' +
+
+    '<div class="tc-dot"></div>' +
+
+    '<div class="tc-content">' +
+
+      '<div class="tc-tool-bar">' + toolBadges + '</div>' +
+
+      '<div class="tc-thought">' + thoughtText + '</div>' +
+
+    '</div>' +
+
+  '</div>');
 
   timeline.scrollTop = timeline.scrollHeight;
 
@@ -3574,10 +3586,20 @@ function finishStreamBubble(el, reply, agentLabel) {
 
       const stepsHtml = Array.from(steps).map(s => s.outerHTML).join('');
 
+      // 收集工具图标链
+
+      const toolIcons = Array.from(steps).map(s => {
+
+        const icon = s.querySelector('.tc-tool-icon');
+
+        return icon ? icon.textContent : '🔧';
+
+      }).filter((v, i, a) => a.indexOf(v) === i).join(' → ');
+
       thinkingHtml = '<details class="thinking-chain">
 ' +
 
-        '<summary><span>✅ 思考链</span><span class="tc-badge">' + stepCount + ' 步</span></summary>
+        '<summary><span>✅ 思考链</span><span class="tc-tools-preview">' + toolIcons + '</span><span class="tc-badge">' + stepCount + ' 步</span></summary>
 ' +
 
         '<div class="thinking-timeline">' + stepsHtml + '</div>
@@ -3745,15 +3767,15 @@ function addBubble(role, content, agentName, thinkings) {
 
         return '<div class="tc-step">'+
 
-          '<div class="tc-tool-bar">'+
+          '<div class="tc-dot"></div>'+
 
-            '<span class="tc-round">#'+t.round+'</span>'+
+          '<div class="tc-content">'+
 
-            toolBadges+
+            '<div class="tc-tool-bar">'+toolBadges+'</div>'+
+
+            '<div class="tc-thought">'+thoughtText+'</div>'+
 
           '</div>'+
-
-          '<div class="tc-thought">'+thoughtText+'</div>'+
 
         '</div>';
 
@@ -3761,7 +3783,7 @@ function addBubble(role, content, agentName, thinkings) {
 
       thinkingHtml = '<details class="thinking-chain">'+
 
-        '<summary><span>✅ 思考链</span><span class="tc-badge">'+thinkings.length+' 步</span></summary>'+
+        '<summary><span>✅ 思考链</span><span class="tc-tools-preview">'+Array.from(new Set(thinkings.map(t => (t.tool||'').split(',')[0]).filter(Boolean))).map(tn => { const m = toolMeta[tn] || defaultMeta; return m.icon; }).join(' → ')+'</span><span class="tc-badge">'+thinkings.length+' 步</span></summary>'+
 
         '<div class="thinking-timeline">'+steps+'</div>'+
 

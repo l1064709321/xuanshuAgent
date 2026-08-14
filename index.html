@@ -406,7 +406,7 @@
 
             <span class="status-dot offline" id="panelStatusDot"></span>
 
-            <span id="panelStatusLabel">鏈繛鎺API</span>
+            <span id="panelStatusLabel">未连接 API</span>
 
           </div>
 
@@ -436,7 +436,7 @@
 
         <div class="panel-section">
 
-          <button class="btn btn-ghost" onclick="clearAllModelKeys()" style="font-size:12px">娓呴櫎鎵€鏈夌嫭绔?Key</button>
+          <button class="btn btn-ghost" onclick="clearAllModelKeys()" style="font-size:12px">娓呴櫎鎵€有独立?Key</button>
 
         </div>
 
@@ -636,7 +636,7 @@
 
         <div class="panel-section">
 
-          <div class="section-title">鑷畾涔夊懡浠/div>
+          <div class="section-title">自定义命令/div>
 
           <div class="form-group">
 
@@ -1010,7 +1010,7 @@
 
         <div class="panel-section">
 
-          <button class="btn btn-ghost" onclick="clearAllModelKeys()" style="font-size:12px">娓呴櫎鎵€鏈夌嫭绔?Key</button>
+          <button class="btn btn-ghost" onclick="clearAllModelKeys()" style="font-size:12px">娓呴櫎鎵€有独立?Key</button>
 
         </div>
 
@@ -1090,7 +1090,7 @@
 
           <div style="font-size:13px;color:var(--text-muted)">绱: <span id="tokenCount">0 tk</span></div>
 
-          <div style="font-size:13px;color:var(--text-muted);margin-top:4px">妯″瀷: <span id="panelModel">鏈湴妯℃嫙</span></div>
+          <div style="font-size:13px;color:var(--text-muted);margin-top:4px">妯″瀷: <span id="panelModel">本地模拟</span></div>
 
         </div>
 
@@ -1180,7 +1180,7 @@
 
             <div class="section-title" style="margin:0">工具适配层/div>
 
-            <span id="toolAdapterStatus" style="font-size:12px;color:var(--text-muted)">鏈繛鎺?/span>
+            <span id="toolAdapterStatus" style="font-size:12px;color:var(--text-muted)">未连接/span>
 
           </div>
 
@@ -2352,9 +2352,9 @@ async function applyKey() {
 
   } catch(e) {
 
-    setStatus('offline', 'API 鏈嶅姟鏈惎鍔');
+    setStatus('offline', 'API 服务未启动');
 
-    showToast('API 鏈嶅姟鏈惎鍔(端口8900)');
+    showToast('API 服务未启动(端口8900)');
 
   }
 
@@ -2852,7 +2852,7 @@ async function applyModelSwitch() {
 
     hasKey = false;
 
-    setStatus('offline', 'API 鏈惎鍔');
+    setStatus('offline', 'API 未启动');
 
   }
 
@@ -2954,7 +2954,7 @@ async function applyInlineKey(areaId, modelKey, modelName) {
 
   } catch(e) {
 
-    status.innerHTML = '<span style="color:var(--cinnabar)">网络错误 鈥?API 鏈嶅姟鏈惎鍔/span>';
+    status.innerHTML = '<span style="color:var(--cinnabar)">网络错误 鈥?API 服务未启动/span>';
 
     if (inp) inp.style.borderColor = 'var(--cinnabar)';
 
@@ -3174,7 +3174,7 @@ async function addCustomModel() {
 
       method: 'POST', headers: {'Content-Type':'application/json'},
 
-      body: JSON.stringify({name, model_id: model_id||name, base_url, provider:'鑷畾涔'})
+      body: JSON.stringify({name, model_id: model_id||name, base_url, provider:'自定义'})
 
     });
 
@@ -3872,7 +3872,7 @@ async function uploadFiles() {
 
   } catch(e) {
 
-    showToast('上传失败: 鏈嶅姟鏈惎鍔');
+    showToast('上传失败: 服务未启动');
 
   }
 
@@ -4240,7 +4240,7 @@ async function uploadAvatarFromFile(input) {
 
     const dataUrl = e.target.result;
 
-    // 鏇存柊鎵€鏈夊ご鍍忔樉绀?
+    // 更新所有头像显示
 
     const initial = file.name.charAt(0).toUpperCase();
 
@@ -4334,7 +4334,7 @@ async function loadSkillMarket() {
 
   try {
 
-    // 鑾峰彇鎵€鏈?Agent 鐨勬妧鑳?
+    // 获取所有Agent 鐨勬妧鑳?
 
     const r = await fetch(API + '/skills/list', {
 
@@ -4436,7 +4436,7 @@ async function loadSkillMarket() {
 
     // 新建鎶€鑳芥寜閽?
 
-    html += '<div class="skill-market-add" onclick="showNewSkillDialog()">+ 鑷畾涔夋妧鑳/div>';
+    html += '<div class="skill-market-add" onclick="showNewSkillDialog()">+ 自定义夋妧鑳/div>';
 
 
 
@@ -4942,7 +4942,7 @@ function buildToolGrid() {
 
       '<span class="tool-card-name">'+tid+'</span></div>'+
 
-      '<div class="tool-card-desc">'+(t.available ? '宸插氨缁? : '鏈畨瑁)+'</div></div>';
+      '<div class="tool-card-desc">'+(t.available ? '宸插氨缁? : '未安装)+'</div></div>';
 
   }
 
@@ -5506,7 +5506,7 @@ function showDownloadPermInfo() {
 
     '<h3>下载权限</h3>'+
 
-    '<p>当前 Agent 浠呮嫢鏈変笅杞芥潈闄愶紙浠呭彲涓嬭浇鏂囦欢锛屼笉鍙笂浼犳垨淇敼锛夈€傚闇€瀹屾暣鏂囦欢绠＄悊鏉冮檺锛岃鍦ㄨ缃腑鎺堟潈鏂囦欢澶广€?/p>'+
+    '<p>当前 Agent 浠呮嫢有下载权限（仅可下载文件，不可上传或修改）。如需完整文件管理权限，请在设置中授权文件夹。/p>'+
 
     '<div class="perm-detail">'+
 
@@ -5560,7 +5560,7 @@ async function loadWorkspaceFiles() {
 
     if (!d.ok) {
 
-      document.getElementById('sidebarFileTree').innerHTML = '<div class="file-tree-loading">鏂囦欢鏈嶅姟鏈惎鍔/div>';
+      document.getElementById('sidebarFileTree').innerHTML = '<div class="file-tree-loading">鏂囦欢服务未启动/div>';
 
       return;
 
@@ -5580,7 +5580,7 @@ async function loadWorkspaceFiles() {
 
   } catch(e) {
 
-    document.getElementById('sidebarFileTree').innerHTML = '<div class="file-tree-loading">鏂囦欢鏈嶅姟鏈惎鍔/div>';
+    document.getElementById('sidebarFileTree').innerHTML = '<div class="file-tree-loading">鏂囦欢服务未启动/div>';
 
   }
 
@@ -5642,7 +5642,7 @@ async function openFileInViewer(path, name) {
 
   } catch(e) {
 
-    document.getElementById('fvMeta').textContent = '加载失败: 鏈嶅姟鏈惎鍔';
+    document.getElementById('fvMeta').textContent = '加载失败: 服务未启动';
 
     document.getElementById('fvContent').innerHTML = '';
 
@@ -6228,7 +6228,7 @@ async function saveCanvasWF() {
 
   if (!payload.name) { alert('璇疯緭鍏ヨ鍒欏悕绉?); return; '}
 
-  if (!payload.steps.length) { alert('璇蜂粠宸︿晶鎷栧叆鑷冲皯涓€涓姩浣滆妭鐐); return; '}
+  if (!payload.steps.length) { alert('请从左侧拖入至少一个动作节点); return; '}
 
   const url = wfEditingId ? '/workflow/update' : '/workflow/create';
 
@@ -6398,7 +6398,7 @@ async function loadWorkflows() {
 
     if (list.length === 0) {
 
-      el.innerHTML = '<div style="text-align:center;padding:20px;color:var(--text-muted);font-size:13px">鏆傛棤鑷姩鍖栬鍒欙紝鐐瑰嚮銆屾柊寤恒€嶅紑濮嬬紪鎺?/div>';
+      el.innerHTML = '<div style="text-align:center;padding:20px;color:var(--text-muted);font-size:13px">暂无自动化规则，点击「新建」开始编排/div>';
 
       return;
 

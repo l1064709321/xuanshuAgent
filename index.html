@@ -906,7 +906,7 @@
 
             <button class="pill-model" id="pillModelBtn" onclick="showModelQuickPicker(event)" title="鍒囨崲妯″瀷">⚡?/button>
 
-            <button class="pill-tts-toggle" id="ttsToggleBtn" onclick="toggleTTS()" title="璇煶朗读">🔊</button>
+            <button class="pill-tts-toggle" id="ttsToggleBtn" onclick="toggleTTS()" title="语音朗读">🔊</button>
 
             <button class="pill-send" onclick="send()" title="发送?>&uarr;</button>
 
@@ -940,7 +940,7 @@
 
 
 
-    <!-- ===== 璁剧疆闈㈡澘锛堝彸渚ф粦鍑猴級 ===== -->
+    <!-- ===== 设置闈㈡澘锛堝彸渚ф粦鍑猴級 ===== -->
 
     <div class="settings-overlay" id="settingsOverlay" onclick="toggleSettings();if(location.hash==='#settings')navigateTo('#chat')"></div>
 
@@ -948,7 +948,7 @@
 
       <div class="settings-panel-header">
 
-        <span class="settings-panel-title">璁剧疆</span>
+        <span class="settings-panel-title">设置</span>
 
         <button class="settings-panel-close" onclick="toggleSettings();if(location.hash==='#settings')navigateTo('#chat')">&times;</button>
 
@@ -960,11 +960,11 @@
 
         <div class="panel-tab active" tabindex="0" role="tab" aria-selected="true" onclick="switchPanelTab(this,'settings')">妯″瀷</div>
 
-        <div class="panel-tab" tabindex="0" role="tab" aria-selected="false" onclick="switchPanelTab(this,'theme')">涓婚</div>
+        <div class="panel-tab" tabindex="0" role="tab" aria-selected="false" onclick="switchPanelTab(this,'theme')">主题</div>
 
-        <div class="panel-tab" tabindex="0" role="tab" aria-selected="false" onclick="switchPanelTab(this,'tools')">宸ュ叿</div>
+        <div class="panel-tab" tabindex="0" role="tab" aria-selected="false" onclick="switchPanelTab(this,'tools')">工具</div>
 
-        <div class="panel-tab" tabindex="0" role="tab" aria-selected="false" onclick="switchPanelTab(this,'workflow')">宸ヤ綔娴?/div>
+        <div class="panel-tab" tabindex="0" role="tab" aria-selected="false" onclick="switchPanelTab(this,'workflow')">工作流/div>
 
       </div>
 
@@ -974,13 +974,13 @@
 
         <div class="panel-section">
 
-          <div class="section-title">杩炴帴鐘舵€?/div>
+          <div class="section-title">连接状态</div>
 
           <div class="status-indicator panel-status-box">
 
             <span class="status-dot offline" id="panelStatusDot"></span>
 
-            <span id="panelStatusLabel">鏈繛鎺?API</span>
+            <span id="panelStatusLabel">未连接 API</span>
 
           </div>
 
@@ -1000,7 +1000,7 @@
 
           <div style="display:flex;gap:8px;flex-wrap:wrap">
 
-            <button class="btn btn-primary" onclick="applyKey()">搴旂敤 Key</button>
+            <button class="btn btn-primary" onclick="applyKey()">应用 Key</button>
 
             <button class="btn btn-ghost" onclick="resetKey()">閲嶇疆涓烘湰鍦版ā寮?/button>
 
@@ -1020,19 +1020,19 @@
 
           <div class="form-group">
 
-            <label for="modelSearch" class="form-label">鎼滅储妯″瀷</label>
+            <label for="modelSearch" class="form-label">搜索妯″瀷</label>
 
-            <input id="modelSearch" type="text" class="form-input model-search-input" placeholder="鎼滅储妯″瀷…? oninput="filterModels()">
+            <input id="modelSearch" type="text" class="form-input model-search-input" placeholder="搜索妯″瀷…? oninput="filterModels()">
 
           </div>
 
           <div class="form-group">
 
-            <label for="providerFilter" class="form-label">绛涢€夊巶鍟?/label>
+            <label for="providerFilter" class="form-label">筛选厂商</label>
 
             <select id="providerFilter" class="form-input model-search-input" onchange="filterModels()">
 
-              <option value="">鍏ㄩ儴鍘傚晢</option>
+              <option value="">全部厂商</option>
 
             </select>
 
@@ -1040,11 +1040,11 @@
 
           <div id="modelList" style="max-height:320px;overflow-y:auto;display:flex;flex-direction:column;gap:4px"></div>
 
-          <button class="btn btn-ghost" id="showCustomBtn" onclick="showCustomModel()" style="margin-top:12px;width:100%">+ 鑷畾涔夋ā鍨?/button>
+          <button class="btn btn-ghost" id="showCustomBtn" onclick="showCustomModel()" style="margin-top:12px;width:100%">+ 自定义模型</button>
 
           <div id="customModelForm" style="display:none;margin-top:16px;padding-top:16px;border-top:1px solid var(--rule)">
 
-            <div class="section-title" style="margin-top:0">娣诲姞鑷畾涔夋ā鍨?/div>
+            <div class="section-title" style="margin-top:0">添加自定义模型</div>
 
             <div class="form-group">
 
@@ -1066,7 +1066,7 @@
 
               <label for="customModelId" class="form-label">Model ID</label>
 
-              <input id="customModelId" class="form-input" placeholder="榛樿鍚屽悕绉?>
+              <input id="customModelId" class="form-input" placeholder="榛樿鍚屽悕绉?>
 
             </div>
 
@@ -1074,9 +1074,9 @@
 
             <div style="display:flex;gap:8px">
 
-              <button class="btn btn-primary" onclick="addCustomModel()" style="flex:1">娣诲姞</button>
+              <button class="btn btn-primary" onclick="addCustomModel()" style="flex:1">添加</button>
 
-              <button class="btn btn-ghost" onclick="hideCustomModel()" style="flex:1">鍙栨秷</button>
+              <button class="btn btn-ghost" onclick="hideCustomModel()" style="flex:1">取消</button>
 
             </div>
 
@@ -1086,11 +1086,11 @@
 
         <div class="panel-section">
 
-          <div class="section-title">Token 缁熻</div>
+          <div class="section-title">Token 缁熻</div>
 
-          <div style="font-size:13px;color:var(--text-muted)">绱: <span id="tokenCount">0 tk</span></div>
+          <div style="font-size:13px;color:var(--text-muted)">绱: <span id="tokenCount">0 tk</span></div>
 
-          <div style="font-size:13px;color:var(--text-muted);margin-top:4px">妯″瀷: <span id="panelModel">鏈湴妯℃嫙</span></div>
+          <div style="font-size:13px;color:var(--text-muted);margin-top:4px">妯″瀷: <span id="panelModel">鏈湴妯℃嫙</span></div>
 
         </div>
 
@@ -1110,7 +1110,7 @@
 
               <div class="mode-thumb dark-thumb"></div>
 
-              <span>娣辫壊</span>
+              <span>深色</span>
 
             </div>
 
@@ -1118,7 +1118,7 @@
 
               <div class="mode-thumb light-thumb"></div>
 
-              <span>娴呰壊</span>
+              <span>浅色</span>
 
             </div>
 
@@ -1128,7 +1128,7 @@
 
         <div class="panel-section">
 
-          <div class="section-title">閰嶈壊鏂规</div>
+          <div class="section-title">閰嶈壊鏂规</div>
 
           <div class="accent-palette">
 
@@ -1152,7 +1152,7 @@
 
               <span class="chip-dot" style="background:oklch(0.62 0.16 5)"></span>
 
-              <span class="chip-label">妯辩矇</span>
+              <span class="chip-label">樱粉</span>
 
             </div>
 
@@ -1160,7 +1160,7 @@
 
               <span class="chip-dot" style="background:oklch(0.50 0.10 55)"></span>
 
-              <span class="chip-label">涔﹀皝妫?/span>
+              <span class="chip-label">书封棕</span>
 
             </div>
 
@@ -1178,9 +1178,9 @@
 
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
 
-            <div class="section-title" style="margin:0">宸ュ叿閫傞厤灞?/div>
+            <div class="section-title" style="margin:0">工具适配层/div>
 
-            <span id="toolAdapterStatus" style="font-size:12px;color:var(--text-muted)">鏈繛鎺?/span>
+            <span id="toolAdapterStatus" style="font-size:12px;color:var(--text-muted)">鏈繛鎺?/span>
 
           </div>
 
@@ -1188,7 +1188,7 @@
 
             <input id="toolAdapterUrl" class="form-input" placeholder="閫傞厤灞傚湴鍧€" value="http://127.0.0.1:9010" style="flex:1;">
 
-            <button class="btn btn-primary" onclick="checkToolEnv()" style="white-space:nowrap">鎵弿</button>
+            <button class="btn btn-primary" onclick="checkToolEnv()" style="white-space:nowrap">扫描</button>
 
           </div>
 
@@ -1200,7 +1200,7 @@
 
         <div class="panel-section" id="presetSection" style="display:none">
 
-          <div class="section-title" id="presetTitle">棰勮鎿嶄綔</div>
+          <div class="section-title" id="presetTitle">预置操作</div>
 
           <div id="presetList" style="display:flex;flex-direction:column;gap:8px"></div>
 
@@ -1210,13 +1210,13 @@
 
         <div class="panel-section">
 
-          <div class="section-title">鑷畾涔夊懡浠?/div>
+          <div class="section-title">自定义命令/div>
 
           <div class="form-group">
 
             <select id="customToolSelect" class="form-input" onchange="updateCustomTool()">
 
-              <option value="">閫夋嫨宸ュ叿</option>
+              <option value="">閫夋嫨工具</option>
 
             </select>
 
@@ -1224,11 +1224,11 @@
 
           <div class="form-group">
 
-            <input id="customCmd" class="form-input" placeholder="杈撳叆鍛戒护…? onkeydown="if(event.key==='Enter'){runCustomCmd()}" style="font-family:var(--mono)">
+            <input id="customCmd" class="form-input" placeholder="输入鍛戒护…? onkeydown="if(event.key==='Enter'){runCustomCmd()}" style="font-family:var(--mono)">
 
           </div>
 
-          <button class="btn btn-primary" onclick="runCustomCmd()" style="width:100%">鎵ц</button>
+          <button class="btn btn-primary" onclick="runCustomCmd()" style="width:100%">执行</button>
 
         </div>
 
@@ -1236,7 +1236,7 @@
 
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
 
-            <div class="section-title" style="margin:0">鎵ц缁撴灉</div>
+            <div class="section-title" style="margin:0">执行缁撴灉</div>
 
             <button class="btn btn-ghost btn-sm" onclick="document.getElementById('toolOutput').style.display='none'">鍏抽棴</button>
 
@@ -1256,17 +1256,17 @@
 
       <div class="panel-content" id="tab-workflow" style="display:none">
 
-        <!-- 椤堕儴宸ュ叿鏍?-->
+        <!-- 椤堕儴工具鏍?-->
 
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
 
-          <div class="section-title" style="margin:0">鍙鍖栫紪鎺?/div>
+          <div class="section-title" style="margin:0">鍙鍖栫紪鎺?/div>
 
           <div style="display:flex;gap:6px">
 
-            <button class="btn btn-ghost btn-sm" onclick="showWFCreate()">鏂板缓</button>
+            <button class="btn btn-ghost btn-sm" onclick="showWFCreate()">新建</button>
 
-            <button class="btn btn-primary btn-sm" onclick="saveCanvasWF()">淇濆瓨鍒颁簯绔?/button>
+            <button class="btn btn-primary btn-sm" onclick="saveCanvasWF()">保存到云端/button>
 
           </div>
 
@@ -1274,19 +1274,19 @@
 
 
 
-        <!-- 瑙勫垯鍚嶇О + 瑙﹀彂鏉′欢 -->
+        <!-- 规则名称 + 瑙﹀彂鏉′欢 -->
 
         <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap">
 
-          <input id="wfCanvasName" class="form-input" placeholder="瑙勫垯鍚嶇О" style="width:160px" value="">
+          <input id="wfCanvasName" class="form-input" placeholder="规则名称" style="width:160px" value="">
 
           <select id="wfCanvasTriggerType" class="form-input" style="width:120px" onchange="onCanvasTriggerChange()">
 
-            <option value="keyword">鍏抽敭璇嶅尮閰?/option>
+            <option value="keyword">关键词匹配/option>
 
-            <option value="prefix">鍓嶇紑鍖归厤</option>
+            <option value="prefix">前缀匹配</option>
 
-            <option value="regex">姝ｅ垯鍖归厤</option>
+            <option value="regex">正则匹配</option>
 
           </select>
 
@@ -1302,7 +1302,7 @@
 
           <label style="font-size:12px;display:flex;align-items:center;gap:4px;white-space:nowrap">
 
-            <input type="checkbox" id="wfCanvasEnabled" checked onchange="syncCanvasWF()">鍚敤
+            <input type="checkbox" id="wfCanvasEnabled" checked onchange="syncCanvasWF()">鍚敤
 
           </label>
 
@@ -1318,13 +1318,13 @@
 
           <div style="width:100px;background:var(--ink-surface);border-right:1px solid var(--rule);padding:8px;display:flex;flex-direction:column;gap:8px;overflow-y:auto">
 
-            <div style="font-size:11px;color:var(--text-muted);text-align:center;margin-bottom:4px">鎷栧叆鐢诲竷</div>
+            <div style="font-size:11px;color:var(--text-muted);text-align:center;margin-bottom:4px">拖入画布</div>
 
             <div class="wf-palette-node" draggable="true" data-action="web_search" ondragstart="onPaletteDrag(event)">
 
               <div class="wf-palette-dot" style="background:#3b82f6"></div>
 
-              <span>鎼滅储</span>
+              <span>搜索</span>
 
             </div>
 
@@ -1332,7 +1332,7 @@
 
               <div class="wf-palette-dot" style="background:#8b5cf6"></div>
 
-              <span>AI鎬荤粨</span>
+              <span>AI总结</span>
 
             </div>
 
@@ -1340,7 +1340,7 @@
 
               <div class="wf-palette-dot" style="background:#10b981"></div>
 
-              <span>鍐欐枃浠?/span>
+              <span>写文件/span>
 
             </div>
 
@@ -1348,7 +1348,7 @@
 
               <div class="wf-palette-dot" style="background:#f59e0b"></div>
 
-              <span>閫氱煡</span>
+              <span>通知</span>
 
             </div>
 
@@ -1390,15 +1390,15 @@
 
           min-width:280px;box-shadow:0 8px 32px rgba(0,0,0,0.3)">
 
-          <div style="font-weight:600;margin-bottom:12px" id="wfNodeEditorTitle">缂栬緫鑺傜偣</div>
+          <div style="font-weight:600;margin-bottom:12px" id="wfNodeEditorTitle">编辑节点</div>
 
           <div id="wfNodeEditorBody"></div>
 
           <div style="display:flex;gap:8px;margin-top:12px">
 
-            <button class="btn btn-primary btn-sm" onclick="applyNodeEdit()" style="flex:1">纭畾</button>
+            <button class="btn btn-primary btn-sm" onclick="applyNodeEdit()" style="flex:1">确定</button>
 
-            <button class="btn btn-ghost btn-sm" onclick="closeNodeEdit()" style="flex:1">鍙栨秷</button>
+            <button class="btn btn-ghost btn-sm" onclick="closeNodeEdit()" style="flex:1">取消</button>
 
           </div>
 
@@ -1414,7 +1414,7 @@
 
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
 
-            <div class="section-title" style="margin:0">宸蹭繚瀛樿鍒?/div>
+            <div class="section-title" style="margin:0">宸蹭繚瀛樿鍒?/div>
 
           </div>
 
@@ -4566,7 +4566,7 @@ async function importAll() {
 
 function doLogout() {
 
-  if (!confirm('纭畾閫€鍑虹櫥褰曪紵')) return;
+  if (!confirm('确定閫€鍑虹櫥褰曪紵')) return;
 
   localStorage.removeItem('xuanshu_token');
 
@@ -4866,7 +4866,7 @@ async function checkToolEnv() {
 
   toolAdapterBase = document.getElementById('toolAdapterUrl').value.replace(/\/$/, '');
 
-  status.textContent = '鎵弿涓€?';
+  status.textContent = '扫描涓€?';
 
   status.style.color = 'var(--warning)';
 

@@ -3558,15 +3558,52 @@ function finishStreamBubble(el, reply, agentLabel) {
 
   }
 
+  // 流式思考链 → 折叠面板
+
   const thinkingLive = el.querySelector('.thinking-live');
 
-  if (thinkingLive) {
+  let thinkingHtml = '';
 
-    thinkingLive.innerHTML = '<div class="tc-live-header"><span>✅ 思考链完成</span><span style="margin-left:auto;font-size:11px;color:var(--text-dim)">&#10003;</span></div>';
+  if (thinkingLive && thinkingLive.style.display !== 'none') {
+
+    const steps = thinkingLive.querySelectorAll('.tc-step');
+
+    const stepCount = steps.length;
+
+    if (stepCount > 0) {
+
+      const stepsHtml = Array.from(steps).map(s => s.outerHTML).join('');
+
+      thinkingHtml = '<details class="thinking-chain">
+' +
+
+        '<summary><span>✅ 思考链</span><span class="tc-badge">' + stepCount + ' 步</span></summary>
+' +
+
+        '<div class="thinking-timeline">' + stepsHtml + '</div>
+' +
+
+      '</details>';
+
+    }
 
   }
 
-  el.innerHTML = '<div class="agent-label"><span class="agent-name">' + agentLabel + '</span><button class="btn-tts-read" title="朗读" onclick="readAloud(this)" data-text="' + encodeURIComponent(reply) + '">&#x1f50a;</button></div><div class="agent-body">' + (el.querySelector('.thinking-live') ? el.querySelector('.thinking-live').outerHTML : '') + replyStream.innerHTML + '</div>';
+  el.innerHTML = '<div class="agent-label"><span class="agent-name">' + agentLabel + '</span><button class="btn-tts-read" title="朗读" onclick="readAloud(this)" data-text="' + encodeURIComponent(reply) + '">&#x1f50a;</button></div><div class="agent-body">' + thinkingHtml + replyStream.innerHTML + '</div>';
+
+  // 自动折叠：2.5秒后收起
+
+  if (thinkingHtml) {
+
+    setTimeout(() => {
+
+      const details = el.querySelector('details.thinking-chain');
+
+      if (details && details.open) details.open = false;
+
+    }, 2500);
+
+  }
 
   if (_ttsEnabled && reply) {
 

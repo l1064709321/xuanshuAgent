@@ -114,16 +114,18 @@ python frontend.py
 
 ### 子 Agent
 
-6 个子 Agent，每个都有独立的记忆、工具集、人格宪法：
+8 个子 Agent，每个都有独立的记忆、工具集、人格宪法：
 
 | Agent | 职责 | 工具 |
 |-------|------|------|
-| 搜索 | 联网搜索、百科、天气、网页抓取 | web_search, web_fetch, weather |
-| 浏览器 | 浏览器交互、页面抓取 | navigate, extract, click, type, scroll, screenshot |
+| 电脑 | 系统信息、进程管理、资源监控、软件包管理 | sys_info, process_list, process_kill, disk_usage, memory_usage, cpu_info, network_info, pkg_search, pkg_install, pkg_remove, pkg_update |
+| 手机 | ADB 操控 Android 设备/模拟器 | adb_check, adb_screenshot, adb_tap, adb_swipe, adb_type, adb_install, adb_start_app, adb_key |
+| 搜索 | 联网搜索、实时信息、天气、百科 | anysearch, web_search, web_fetch, search_wikipedia, get_weather |
+| 浏览器 | 端到端浏览器操控 | browser_navigate, browser_extract, browser_click, browser_type, browser_scroll, browser_screenshot, browser_get_state |
 | 代码 | 编程、调试、shell 执行、沙箱 | shell_run, sandbox_run, git_log, git_revert |
 | 文件 | 文件读写、反编译、项目结构分析 | read_file, write_file, list_dir, decompile, grep |
-| 电脑 | 系统信息、进程管理、资源监控 | sys_info, disk_usage, memory_usage, cpu_info |
-| 应用 | 软件包管理（dnf/yum） | pkg_search, pkg_install, pkg_remove, pkg_update |
+| 音频 | 音频处理、格式转换、裁剪、合并、TTS | audio_info, audio_convert, audio_trim, audio_merge, audio_extract, audio_speed, audio_normalize, audio_fade, tts_speak, tts_list_voices |
+| 视频 | 视频处理、格式转换、裁剪、压缩、GIF、水印 | video_info, video_convert, video_trim, video_merge, video_compress, video_resize, video_fps, video_snapshot, video_to_gif, video_watermark |
 
 所有 Agent 共享：`memdir_*`（共享记忆读写）和 `git_*`（版本回滚）。
 
@@ -365,38 +367,56 @@ bash xuanshu
 ```
 xuanshuAgent/
 ├── core.py              父 Bot + 协调者 + 子 Agent + Skill 系统
-├── frontend.py           Flask 后端 + REST API + SSE
-├── models.py             134+ 模型预设
-├── memory.py             子 Agent 独立记忆 + 上下文持久化
-├── web_search.py         联网搜索
-├── monitor.py            性能监控
-├── logger.py             日志模块
-├── light_server.py       轻量 HTTP Server
-├── sandbox.py            沙箱执行环境
-├── auto_sandbox.py       自动沙箱检测
-├── screen_reader.py      屏幕截图读取
-├── main.py               命令行入口
-├── index.html            Web 前端
-├── style.css             样式
-├── xuanshu               一键启动 (Linux/macOS)
-├── xuanshu.bat           一键启动 (Windows)
-├── xuanshu.service       systemd 服务
-├── requirements.txt      依赖清单
-├── .memdir/              共享记忆文件夹
-│   └── snapshots/        记忆快照
-├── .memory/              子 Agent 记忆
-├── .skills/              手动 Skill
-└── decompile/            反编译模块
+├── frontend.py          Flask 后端 + REST API + SSE
+├── production.py        生产环境 Stub + 健康监控
+├── protocol.py          上下文协议 + 厂商调度接入
+├── models.py            177+ 模型预设
+├── memory.py            子 Agent 独立记忆 + 上下文持久化
+├── embeddings.py        向量嵌入
+├── auth.py              认证
+├── config.py            配置
+├── web_search.py        联网搜索
+├── monitor.py           性能监控
+├── logger.py            日志模块
+├── structured_logger.py 结构化日志
+├── light_server.py      轻量 HTTP Server
+├── sandbox.py           沙箱执行环境
+├── auto_sandbox.py      自动沙箱检测
+├── screen_reader.py     屏幕截图读取
+├── workflow.py          工作流定义
+├── workflow_executor.py 工作流执行器
+├── data_tools.py        数据工具
+├── audio_tools.py       音频工具
+├── image_tools.py       图像工具
+├── pdf_tools.py         PDF 工具
+├── video_tools.py       视频工具
+├── tts_tools.py         TTS 工具
+├── main.py              命令行入口
+├── vendors/             厂商调度层（上下文窗口/缓存策略归一化）
+├── index.html           Web 前端
+├── style.css            样式
+├── xuanshu              一键启动 (Linux/macOS)
+├── xuanshu.bat          一键启动 (Windows)
+├── xuanshu.service      systemd 服务
+├── requirements.txt     依赖清单
+├── decompile.py         反编译模块
+├── .memdir/             共享记忆文件夹
+│   └── snapshots/       记忆快照
+├── .memory/             子 Agent 记忆
+├── .skills/             手动 Skill
+└── workflows/           工作流目录
 ```
 
 ---
 
 ## 反编译
 
-```bash
-python -m decompile target.pyc --format text   # 反编译
-python -m decompile target.pyc --detect        # 仅格式检测
-python -m decompile --tools                    # 查看可用工具
+```python
+from decompile import Decompiler
+
+d = Decompiler()
+d.decompile("target.pyc", output_format="text")   # 反编译
+d.detect_format("target.bin")                      # 仅格式检测
 ```
 
 支持：pyc / APK / DEX / JAR / PE / ELF / Mach-O / WASM / Lua / .NET。无外部工具时自动降级到 Python `dis` 反汇编。

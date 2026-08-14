@@ -2930,9 +2930,11 @@ function createStreamBubble(agentLabel) {
 
 function addThinkingStep(el, step) {
 
-  const thinkingLive = document.getElementById('thinkingLive');
+  const thinkingLive = el.querySelector('.thinking-live');
 
-  const timeline = document.getElementById('thinkingTimeline');
+  const timeline = el.querySelector('.thinking-timeline');
+
+  if (!thinkingLive || !timeline) return;
 
   if (thinkingLive.style.display === 'none') {
 
@@ -2982,7 +2984,7 @@ function addThinkingStep(el, step) {
 
 function finishStreamBubble(el, reply, agentLabel) {
 
-  const replyStream = document.getElementById('replyStream');
+  const replyStream = el.querySelector('.reply-stream');
 
   if (replyStream) {
 
@@ -2990,7 +2992,7 @@ function finishStreamBubble(el, reply, agentLabel) {
 
   }
 
-  const thinkingLive = document.getElementById('thinkingLive');
+  const thinkingLive = el.querySelector('.thinking-live');
 
   if (thinkingLive) {
 
@@ -3036,91 +3038,91 @@ function addBubble(role, content, agentName, thinkings) {
 
       const toolMeta = {
 
-        'anysearch':    { icon: '馃攳', tag: '搜索', cls: 'tc-tag-search' },
+        'anysearch':    { icon: '\u{1F50D}', tag: '搜索', cls: 'tc-tag-search' },
 
-        'web_search':   { icon: '馃寪', tag: '搜索', cls: 'tc-tag-search' },
+        'web_search':   { icon: '\u{1F310}', tag: '搜索', cls: 'tc-tag-search' },
 
-        'search_wikipedia': { icon: '馃摉', tag: '百科', cls: 'tc-tag-search' },
+        'search_wikipedia': { icon: '\u{1F4D6}', tag: '百科', cls: 'tc-tag-search' },
 
-        'web_fetch':    { icon: '馃暦锔?, tag: '抓取', cls: 'tc-tag-search' },
+        'web_fetch':    { icon: '\u{1F4D7}', tag: '抓取', cls: 'tc-tag-search' },
 
-        'get_weather':  { icon: '馃尋锔?, tag: '天气', cls: 'tc-tag-search' },
+        'get_weather':  { icon: '\u{1F324}', tag: '天气', cls: 'tc-tag-search' },
 
-        'run_code':     { icon: '鈿?, tag: '代码', cls: 'tc-tag-code' },
+        'run_code':     { icon: '\u26A1', tag: '代码', cls: 'tc-tag-code' },
 
-        'read_file':    { icon: '馃搫', tag: '文件', cls: 'tc-tag-file' },
+        'read_file':    { icon: '\u{1F4C4}', tag: '文件', cls: 'tc-tag-file' },
 
-        'list_files':   { icon: '馃搨', tag: '文件', cls: 'tc-tag-file' },
+        'list_files':   { icon: '\u{1F4C1}', tag: '文件', cls: 'tc-tag-file' },
 
-        'write_file':   { icon: '鉁忥笍', tag: '文件', cls: 'tc-tag-file' },
+        'write_file':   { icon: '\u270F\uFE0F', tag: '文件', cls: 'tc-tag-file' },
 
-        'edit_file':    { icon: '鉁忥笍', tag: '文件', cls: 'tc-tag-file' },
+        'edit_file':    { icon: '\u270F\uFE0F', tag: '文件', cls: 'tc-tag-file' },
 
-        'decompile':    { icon: '馃敩', tag: '逆向', cls: 'tc-tag-code' },
+        'decompile':    { icon: '\u{1F52C}', tag: '逆向', cls: 'tc-tag-code' },
 
-        'decompile_detect': { icon: '馃敩', tag: '逆向', cls: 'tc-tag-code' },
+        'decompile_detect': { icon: '\u{1F52C}', tag: '逆向', cls: 'tc-tag-code' },
 
-        'browser_navigate': { icon: '馃Л', tag: '浏览器', cls: 'tc-tag-browser' },
+        'browser_navigate': { icon: '\u{1F4F0}', tag: '浏览器', cls: 'tc-tag-browser' },
 
-        'browser_extract':  { icon: '馃搼', tag: '浏览器', cls: 'tc-tag-browser' },
+        'browser_extract':  { icon: '\u{1F4E2}', tag: '浏览器', cls: 'tc-tag-browser' },
 
-        'browser_click':    { icon: '馃憜', tag: '浏览器', cls: 'tc-tag-browser' },
+        'browser_click':    { icon: '\u{1F446}', tag: '浏览器', cls: 'tc-tag-browser' },
 
-        'browser_type':     { icon: '鈱笍', tag: '浏览器', cls: 'tc-tag-browser' },
+        'browser_type':     { icon: '\u270D\uFE0F', tag: '浏览器', cls: 'tc-tag-browser' },
 
-        'browser_screenshot': { icon: '馃摳', tag: '浏览器', cls: 'tc-tag-browser' },
+        'browser_screenshot': { icon: '\u{1F4F7}', tag: '浏览器', cls: 'tc-tag-browser' },
 
-        'browser_scroll':   { icon: '馃攧', tag: '浏览器', cls: 'tc-tag-browser' },
+        'browser_scroll':   { icon: '\u{1F504}', tag: '浏览器', cls: 'tc-tag-browser' },
 
-        'browser_get_state': { icon: '馃搵', tag: '浏览器', cls: 'tc-tag-browser' },
+        'browser_get_state': { icon: '\u{1F4E1}', tag: '浏览器', cls: 'tc-tag-browser' },
 
-        'browser_wait':     { icon: '鈴?, tag: '浏览器', cls: 'tc-tag-browser' },
+        'browser_wait':     { icon: '\u231B', tag: '浏览器', cls: 'tc-tag-browser' },
 
-        'sys_info':     { icon: '馃枼锔?, tag: '系统', cls: 'tc-tag-system' },
+        'sys_info':     { icon: '\u{1F5A5}\uFE0F', tag: '系统', cls: 'tc-tag-system' },
 
-        'process_list': { icon: '馃搳', tag: '进程', cls: 'tc-tag-system' },
+        'process_list': { icon: '\u{1F4CA}', tag: '进程', cls: 'tc-tag-system' },
 
-        'process_kill': { icon: '馃拃', tag: '进程', cls: 'tc-tag-system' },
+        'process_kill': { icon: '\u{1F4DB}', tag: '进程', cls: 'tc-tag-system' },
 
-        'disk_usage':   { icon: '馃捑', tag: '磁盘', cls: 'tc-tag-system' },
+        'disk_usage':   { icon: '\u{1F4BE}', tag: '磁盘', cls: 'tc-tag-system' },
 
-        'memory_usage': { icon: '馃', tag: '内存', cls: 'tc-tag-system' },
+        'memory_usage': { icon: '\u{1F4BB}', tag: '内存', cls: 'tc-tag-system' },
 
-        'cpu_info':     { icon: '鈿欙笍', tag: 'CPU', cls: 'tc-tag-system' },
+        'cpu_info':     { icon: '\u2699\uFE0F', tag: 'CPU', cls: 'tc-tag-system' },
 
-        'network_info': { icon: '馃寪', tag: '网络', cls: 'tc-tag-system' },
+        'network_info': { icon: '\u{1F310}', tag: '网络', cls: 'tc-tag-system' },
 
-        'pkg_install':  { icon: '馃摝', tag: '包管理', cls: 'tc-tag-system' },
+        'pkg_install':  { icon: '\u{1F4E5}', tag: '包管理', cls: 'tc-tag-system' },
 
-        'pkg_search':   { icon: '馃攷', tag: '包管理', cls: 'tc-tag-system' },
+        'pkg_search':   { icon: '\u{1F50D}', tag: '包管理', cls: 'tc-tag-system' },
 
-        'pkg_remove':   { icon: '馃棏锔?, tag: '包管理', cls: 'tc-tag-system' },
+        'pkg_remove':   { icon: '\u{1F4E6}', tag: '包管理', cls: 'tc-tag-system' },
 
-        'adb_check':    { icon: '馃摫', tag: 'ADB', cls: 'tc-tag-system' },
+        'adb_check':    { icon: '\u{1F4F1}', tag: 'ADB', cls: 'tc-tag-system' },
 
-        'adb_screenshot': { icon: '馃摳', tag: 'ADB', cls: 'tc-tag-system' },
+        'adb_screenshot': { icon: '\u{1F4F7}', tag: 'ADB', cls: 'tc-tag-system' },
 
-        'adb_tap':      { icon: '馃憜', tag: 'ADB', cls: 'tc-tag-system' },
+        'adb_tap':      { icon: '\u{1F446}', tag: 'ADB', cls: 'tc-tag-system' },
 
-        'adb_swipe':    { icon: '馃憠', tag: 'ADB', cls: 'tc-tag-system' },
+        'adb_swipe':    { icon: '\u{1F442}', tag: 'ADB', cls: 'tc-tag-system' },
 
-        'adb_type':     { icon: '鈱笍', tag: 'ADB', cls: 'tc-tag-system' },
+        'adb_type':     { icon: '\u270D\uFE0F', tag: 'ADB', cls: 'tc-tag-system' },
 
-        'git_log':      { icon: '馃摐', tag: 'Git', cls: 'tc-tag-file' },
+        'git_log':      { icon: '\u{1F4CB}', tag: 'Git', cls: 'tc-tag-file' },
 
-        'git_revert':   { icon: '鈴?, tag: 'Git', cls: 'tc-tag-file' },
+        'git_revert':   { icon: '\u23EA', tag: 'Git', cls: 'tc-tag-file' },
 
-        'git_status':   { icon: '馃搵', tag: 'Git', cls: 'tc-tag-file' },
+        'git_status':   { icon: '\u{1F4E1}', tag: 'Git', cls: 'tc-tag-file' },
 
-        'memdir_read':  { icon: '馃', tag: '记忆', cls: 'tc-tag-memory' },
+        'memdir_read':  { icon: '\u{1F4C0}', tag: '记忆', cls: 'tc-tag-memory' },
 
-        'memdir_write': { icon: '馃捑', tag: '记忆', cls: 'tc-tag-memory' },
+        'memdir_write': { icon: '\u{1F4DD}', tag: '记忆', cls: 'tc-tag-memory' },
 
-        'memdir_search': { icon: '馃攳', tag: '记忆', cls: 'tc-tag-memory' },
+        'memdir_search': { icon: '\u{1F50D}', tag: '记忆', cls: 'tc-tag-memory' },
 
       };
 
-      const defaultMeta = { icon: '馃敡', tag: '工具', cls: 'tc-tag-code' };
+      const defaultMeta = { icon: '\u{1F527}', tag: '工具', cls: 'tc-tag-code' };
 
 
 

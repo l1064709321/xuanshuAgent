@@ -14,50 +14,55 @@
 
 | 源 | 克隆地址 |
 |---|---------|
-| 华为云 CodeHub（推荐国内） | `https://codehub.devcloud.cn-north-4.huaweicloud.com/8965d3a4483445cca386477c8d9dd196/xuanshu-agent.git` |
-| Gitee | `https://gitee.com/l1064709321/xuanshuAgent.git` |
-| GitHub | `https://github.com/l1064709321/xuanshuAgent.git` |
+| **GitHub** | `https://github.com/l1064709321/xuanshuAgent.git` |
+| Gitee（国内镜像） | `https://gitee.com/l1064709321/xuanshuAgent.git` |
+| 华为云 CodeHub | `https://codehub.devcloud.cn-north-4.huaweicloud.com/8965d3a4483445cca386477c8d9dd196/xuanshu-agent.git` |
 
-### 一键启动（推荐）
+📥 **GitHub Release 下载**：https://github.com/l1064709321/xuanshuAgent/releases
+
+### 启动方式
+
+#### 方式一：Docker 启动（推荐）
 
 ```bash
-git clone https://codehub.devcloud.cn-north-4.huaweicloud.com/8965d3a4483445cca386477c8d9dd196/xuanshu-agent.git
-cd xuanshu-agent
+git clone https://github.com/l1064709321/xuanshuAgent.git
+cd xuanshuAgent
 docker compose up -d
 ```
 
-访问 http://localhost:8901。
+访问 http://localhost:8901
 
-如果没有 Docker，启动脚本会自动用 Python 模式（pip 自动选源）。将 clone 地址替换为上表中任一源即可：
+#### 方式二：一键脚本启动
 
 **Windows：**
 
 ```cmd
-git clone https://codehub.devcloud.cn-north-4.huaweicloud.com/8965d3a4483445cca386477c8d9dd196/xuanshu-agent.git
-cd xuanshu-agent
+git clone https://github.com/l1064709321/xuanshuAgent.git
+cd xuanshuAgent
 xuanshu.bat
 ```
-
-- 启动脚本会自动创建虚拟环境、安装依赖并启动服务。端口默认 8901，浏览器打开 http://localhost:8901 即可使用。
 
 **Linux / macOS：**
 
 ```bash
-git clone https://codehub.devcloud.cn-north-4.huaweicloud.com/8965d3a4483445cca386477c8d9dd196/xuanshu-agent.git
-cd xuanshu-agent
+git clone https://github.com/l1064709321/xuanshuAgent.git
+cd xuanshuAgent
+chmod +x xuanshu
 ./xuanshu
 ```
 
-- 启动后访问 http://localhost:8901。首次运行若遇权限问题执行 `chmod +x xuanshu`。
+启动脚本会自动创建虚拟环境、安装依赖并启动服务。浏览器打开 http://localhost:8901 即可使用。
 
-### 手动安装
+#### 方式三：手动安装
 
 ```bash
-git clone https://gitee.com/l1064709321/xuanshuAgent.git
+git clone https://github.com/l1064709321/xuanshuAgent.git
 cd xuanshuAgent
 pip install -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple
 python frontend.py
 ```
+
+访问 http://localhost:8901
 
 ### 环境要求
 

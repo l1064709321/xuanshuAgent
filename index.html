@@ -178,7 +178,7 @@
 
     <div class="sidebar-header">
 
-      <div class="sidebar-avatar" id="sidebarAvatar" onclick="navigateTo('#profile')" title="个人主页">鐜?/div>
+      <div class="sidebar-avatar" id="sidebarAvatar" onclick="navigateTo('#profile')" title="个人主页">玄姝</div>
 
       <span class="sidebar-logo">玄姝</span>
 
@@ -256,7 +256,7 @@
 
       <button class="sidebar-toggle-btn" id="sidebarToggleBtn" onclick="toggleLeft()" title="展开侧栏" style="display:none">&#9776;</button>
 
-      <div class="toolbar-avatar" id="toolbarAvatar" onclick="navigateTo('#profile')" title="个人主页">鐜?/div>
+      <div class="toolbar-avatar" id="toolbarAvatar" onclick="navigateTo('#profile')" title="个人主页">玄姝</div>
 
       <span class="u-flex-1"></span>
 
@@ -862,6 +862,572 @@
 
 
 
+        <div class="page-stage">
+
+
+
+    <!-- ===== 对话椤?===== -->
+
+    <section id="page-chat" class="page-section active">
+
+      <div class="conversation" id="conv">
+
+        <div class="welcome conversation-empty" id="welcome">
+
+          <div class="empty-state">
+
+            <div class="greeting">玄姝</div>
+
+            <div class="subtitle">多模型智能助手?· 已就绪?/div>
+
+          </div>
+
+        </div>
+
+      </div>
+
+
+
+      <div class="input-area">
+
+        <div class="model-bar" id="modelChips"></div>
+
+        <input type="file" id="fileInput" multiple style="display:none" onchange="uploadFiles()" accept="*/*">
+
+        <span id="imagePreview" style="display:none;margin-bottom:8px"></span>
+
+        <div class="input-pill">
+
+          <button class="pill-btn pill-add" id="fileBrowseBtn" title="上传文件" aria-label="上传文件" onclick="document.getElementById('fileInput').click()">+</button>
+
+          <textarea id="msg-input" placeholder="输入消息…? rows="1"></textarea>
+
+          <div class="pill-right">
+
+            <button class="pill-model" id="pillModelBtn" onclick="showModelQuickPicker(event)" title="鍒囨崲妯″瀷">⚡?/button>
+
+            <button class="pill-tts-toggle" id="ttsToggleBtn" onclick="toggleTTS()" title="璇煶朗读">🔊</button>
+
+            <button class="pill-send" onclick="send()" title="发送?>&uarr;</button>
+
+          </div>
+
+        </div>
+
+      </div>
+
+
+
+      <!-- 鏂囦欢鏌ョ湅闈㈡澘 -->
+
+      <div class="file-viewer" id="fileViewerPanel" style="display:none">
+
+        <div class="file-viewer-header">
+
+          <span class="file-viewer-path" id="fvPath">…?/span>
+
+          <button class="file-viewer-close" onclick="closeFileViewer()" aria-label="关闭文件查看器?>&times;</button>
+
+        </div>
+
+        <div class="file-viewer-meta" id="fvMeta"></div>
+
+        <div class="file-viewer-content" id="fvContent"></div>
+
+      </div>
+
+    </section>
+
+
+
+    <!-- ===== 璁剧疆闈㈡澘锛堝彸渚ф粦鍑猴級 ===== -->
+
+    <div class="settings-overlay" id="settingsOverlay" onclick="toggleSettings();if(location.hash==='#settings')navigateTo('#chat')"></div>
+
+    <aside class="settings-panel" id="settingsPanel">
+
+      <div class="settings-panel-header">
+
+        <span class="settings-panel-title">璁剧疆</span>
+
+        <button class="settings-panel-close" onclick="toggleSettings();if(location.hash==='#settings')navigateTo('#chat')">&times;</button>
+
+      </div>
+
+      <div class="settings-panel-body">
+
+      <div class="panel-tabs">
+
+        <div class="panel-tab active" tabindex="0" role="tab" aria-selected="true" onclick="switchPanelTab(this,'settings')">妯″瀷</div>
+
+        <div class="panel-tab" tabindex="0" role="tab" aria-selected="false" onclick="switchPanelTab(this,'theme')">涓婚</div>
+
+        <div class="panel-tab" tabindex="0" role="tab" aria-selected="false" onclick="switchPanelTab(this,'tools')">宸ュ叿</div>
+
+        <div class="panel-tab" tabindex="0" role="tab" aria-selected="false" onclick="switchPanelTab(this,'workflow')">宸ヤ綔娴?/div>
+
+      </div>
+
+
+
+      <div class="panel-content" id="tab-settings">
+
+        <div class="panel-section">
+
+          <div class="section-title">杩炴帴鐘舵€?/div>
+
+          <div class="status-indicator panel-status-box">
+
+            <span class="status-dot offline" id="panelStatusDot"></span>
+
+            <span id="panelStatusLabel">鏈繛鎺?API</span>
+
+          </div>
+
+        </div>
+
+        <div class="panel-section">
+
+          <div class="section-title">API Key</div>
+
+          <div class="form-group">
+
+            <label for="keyInput" class="form-label">OpenAI API Key</label>
+
+            <input id="keyInput" type="password" class="form-input" placeholder="sk-xxxxxxxx" autocomplete="off">
+
+          </div>
+
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+
+            <button class="btn btn-primary" onclick="applyKey()">搴旂敤 Key</button>
+
+            <button class="btn btn-ghost" onclick="resetKey()">閲嶇疆涓烘湰鍦版ā寮?/button>
+
+          </div>
+
+        </div>
+
+        <div class="panel-section">
+
+          <button class="btn btn-ghost" onclick="clearAllModelKeys()" style="font-size:12px">娓呴櫎鎵€鏈夌嫭绔?Key</button>
+
+        </div>
+
+        <div class="panel-section">
+
+          <div class="section-title">妯″瀷閫夋嫨</div>
+
+          <div class="form-group">
+
+            <label for="modelSearch" class="form-label">鎼滅储妯″瀷</label>
+
+            <input id="modelSearch" type="text" class="form-input model-search-input" placeholder="鎼滅储妯″瀷…? oninput="filterModels()">
+
+          </div>
+
+          <div class="form-group">
+
+            <label for="providerFilter" class="form-label">绛涢€夊巶鍟?/label>
+
+            <select id="providerFilter" class="form-input model-search-input" onchange="filterModels()">
+
+              <option value="">鍏ㄩ儴鍘傚晢</option>
+
+            </select>
+
+          </div>
+
+          <div id="modelList" style="max-height:320px;overflow-y:auto;display:flex;flex-direction:column;gap:4px"></div>
+
+          <button class="btn btn-ghost" id="showCustomBtn" onclick="showCustomModel()" style="margin-top:12px;width:100%">+ 鑷畾涔夋ā鍨?/button>
+
+          <div id="customModelForm" style="display:none;margin-top:16px;padding-top:16px;border-top:1px solid var(--rule)">
+
+            <div class="section-title" style="margin-top:0">娣诲姞鑷畾涔夋ā鍨?/div>
+
+            <div class="form-group">
+
+              <label for="customName" class="form-label">妯″瀷鍚嶇О</label>
+
+              <input id="customName" class="form-input" placeholder="濡?MyModel">
+
+            </div>
+
+            <div class="form-group">
+
+              <label for="customUrl" class="form-label">API Base URL</label>
+
+              <input id="customUrl" class="form-input" placeholder="濡?https://api.xxx.com/v1" oninput="autoDetectUrl()" autocomplete="url">
+
+            </div>
+
+            <div class="form-group">
+
+              <label for="customModelId" class="form-label">Model ID</label>
+
+              <input id="customModelId" class="form-input" placeholder="榛樿鍚屽悕绉?>
+
+            </div>
+
+            <div id="urlDetect" style="font-size:12px;color:var(--text-muted);margin-bottom:8px"></div>
+
+            <div style="display:flex;gap:8px">
+
+              <button class="btn btn-primary" onclick="addCustomModel()" style="flex:1">娣诲姞</button>
+
+              <button class="btn btn-ghost" onclick="hideCustomModel()" style="flex:1">鍙栨秷</button>
+
+            </div>
+
+          </div>
+
+        </div>
+
+        <div class="panel-section">
+
+          <div class="section-title">Token 缁熻</div>
+
+          <div style="font-size:13px;color:var(--text-muted)">绱: <span id="tokenCount">0 tk</span></div>
+
+          <div style="font-size:13px;color:var(--text-muted);margin-top:4px">妯″瀷: <span id="panelModel">鏈湴妯℃嫙</span></div>
+
+        </div>
+
+      </div>
+
+
+
+      <div class="panel-content" id="tab-theme" style="display:none">
+
+        <div class="panel-section">
+
+          <div class="section-title">鑳屾櫙妯″紡</div>
+
+          <div class="mode-switch-row">
+
+            <div class="mode-card active" id="modeDark" onclick="setMode('dark')">
+
+              <div class="mode-thumb dark-thumb"></div>
+
+              <span>娣辫壊</span>
+
+            </div>
+
+            <div class="mode-card" id="modeLight" onclick="setMode('light')">
+
+              <div class="mode-thumb light-thumb"></div>
+
+              <span>娴呰壊</span>
+
+            </div>
+
+          </div>
+
+        </div>
+
+        <div class="panel-section">
+
+          <div class="section-title">閰嶈壊鏂规</div>
+
+          <div class="accent-palette">
+
+            <div class="accent-chip active" id="chipCyber" onclick="setAccent('cyber')" title="绉戝够钃?>
+
+              <span class="chip-dot" style="background:oklch(0.62 0.20 230)"></span>
+
+              <span class="chip-label">绉戝够钃?/span>
+
+            </div>
+
+            <div class="accent-chip" id="chipForest" onclick="setAccent('forest')" title="鎶ょ溂缁?>
+
+              <span class="chip-dot" style="background:oklch(0.50 0.15 145)"></span>
+
+              <span class="chip-label">鎶ょ溂缁?/span>
+
+            </div>
+
+            <div class="accent-chip" id="chipSakura" onclick="setAccent('sakura')" title="妯辩矇">
+
+              <span class="chip-dot" style="background:oklch(0.62 0.16 5)"></span>
+
+              <span class="chip-label">妯辩矇</span>
+
+            </div>
+
+            <div class="accent-chip" id="chipLeather" onclick="setAccent('leather')" title="涔﹀皝妫?>
+
+              <span class="chip-dot" style="background:oklch(0.50 0.10 55)"></span>
+
+              <span class="chip-label">涔﹀皝妫?/span>
+
+            </div>
+
+          </div>
+
+        </div>
+
+      </div>
+
+
+
+      <div class="panel-content" id="tab-tools" style="display:none">
+
+        <div class="panel-section">
+
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+
+            <div class="section-title" style="margin:0">宸ュ叿閫傞厤灞?/div>
+
+            <span id="toolAdapterStatus" style="font-size:12px;color:var(--text-muted)">鏈繛鎺?/span>
+
+          </div>
+
+          <div style="display:flex;gap:8px;margin-bottom:12px">
+
+            <input id="toolAdapterUrl" class="form-input" placeholder="閫傞厤灞傚湴鍧€" value="http://127.0.0.1:9010" style="flex:1;">
+
+            <button class="btn btn-primary" onclick="checkToolEnv()" style="white-space:nowrap">鎵弿</button>
+
+          </div>
+
+          <div id="toolEnvResult" style="font-size:12px;color:var(--text-muted);margin-bottom:8px"></div>
+
+          <div class="tool-grid" id="toolGrid"></div>
+
+        </div>
+
+        <div class="panel-section" id="presetSection" style="display:none">
+
+          <div class="section-title" id="presetTitle">棰勮鎿嶄綔</div>
+
+          <div id="presetList" style="display:flex;flex-direction:column;gap:8px"></div>
+
+          <div id="presetParams" style="margin-top:12px;display:none"></div>
+
+        </div>
+
+        <div class="panel-section">
+
+          <div class="section-title">鑷畾涔夊懡浠?/div>
+
+          <div class="form-group">
+
+            <select id="customToolSelect" class="form-input" onchange="updateCustomTool()">
+
+              <option value="">閫夋嫨宸ュ叿</option>
+
+            </select>
+
+          </div>
+
+          <div class="form-group">
+
+            <input id="customCmd" class="form-input" placeholder="杈撳叆鍛戒护…? onkeydown="if(event.key==='Enter'){runCustomCmd()}" style="font-family:var(--mono)">
+
+          </div>
+
+          <button class="btn btn-primary" onclick="runCustomCmd()" style="width:100%">鎵ц</button>
+
+        </div>
+
+        <div class="panel-section" id="toolOutput" style="display:none">
+
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+
+            <div class="section-title" style="margin:0">鎵ц缁撴灉</div>
+
+            <button class="btn btn-ghost btn-sm" onclick="document.getElementById('toolOutput').style.display='none'">鍏抽棴</button>
+
+          </div>
+
+          <div id="toolExitCode" style="font-size:12px;color:var(--text-muted);margin-bottom:4px"></div>
+
+          <pre id="toolOutputContent" class="tool-output"></pre>
+
+        </div>
+
+      </div>
+
+
+
+
+
+      <div class="panel-content" id="tab-workflow" style="display:none">
+
+        <!-- 椤堕儴宸ュ叿鏍?-->
+
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+
+          <div class="section-title" style="margin:0">鍙鍖栫紪鎺?/div>
+
+          <div style="display:flex;gap:6px">
+
+            <button class="btn btn-ghost btn-sm" onclick="showWFCreate()">鏂板缓</button>
+
+            <button class="btn btn-primary btn-sm" onclick="saveCanvasWF()">淇濆瓨鍒颁簯绔?/button>
+
+          </div>
+
+        </div>
+
+
+
+        <!-- 瑙勫垯鍚嶇О + 瑙﹀彂鏉′欢 -->
+
+        <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap">
+
+          <input id="wfCanvasName" class="form-input" placeholder="瑙勫垯鍚嶇О" style="width:160px" value="">
+
+          <select id="wfCanvasTriggerType" class="form-input" style="width:120px" onchange="onCanvasTriggerChange()">
+
+            <option value="keyword">鍏抽敭璇嶅尮閰?/option>
+
+            <option value="prefix">鍓嶇紑鍖归厤</option>
+
+            <option value="regex">姝ｅ垯鍖归厤</option>
+
+          </select>
+
+          <input id="wfCanvasTriggerVal" class="form-input" placeholder="鍏抽敭璇嶏紝閫楀彿鍒嗛殧" style="flex:1;min-width:160px" value="">
+
+          <select id="wfCanvasTriggerMode" class="form-input" style="width:100px" onchange="syncCanvasWF()">
+
+            <option value="any">浠讳竴</option>
+
+            <option value="all">鍏ㄨ瘝</option>
+
+          </select>
+
+          <label style="font-size:12px;display:flex;align-items:center;gap:4px;white-space:nowrap">
+
+            <input type="checkbox" id="wfCanvasEnabled" checked onchange="syncCanvasWF()">鍚敤
+
+          </label>
+
+        </div>
+
+
+
+        <!-- 鑺傜偣闈㈡澘 + 鐢诲竷 -->
+
+        <div style="display:flex;gap:0;border:1px solid var(--rule);border-radius:var(--radius-md);overflow:hidden;height:420px">
+
+          <!-- 宸︿晶鑺傜偣妯℃澘 -->
+
+          <div style="width:100px;background:var(--ink-surface);border-right:1px solid var(--rule);padding:8px;display:flex;flex-direction:column;gap:8px;overflow-y:auto">
+
+            <div style="font-size:11px;color:var(--text-muted);text-align:center;margin-bottom:4px">鎷栧叆鐢诲竷</div>
+
+            <div class="wf-palette-node" draggable="true" data-action="web_search" ondragstart="onPaletteDrag(event)">
+
+              <div class="wf-palette-dot" style="background:#3b82f6"></div>
+
+              <span>鎼滅储</span>
+
+            </div>
+
+            <div class="wf-palette-node" draggable="true" data-action="ai_summary" ondragstart="onPaletteDrag(event)">
+
+              <div class="wf-palette-dot" style="background:#8b5cf6"></div>
+
+              <span>AI鎬荤粨</span>
+
+            </div>
+
+            <div class="wf-palette-node" draggable="true" data-action="write_file" ondragstart="onPaletteDrag(event)">
+
+              <div class="wf-palette-dot" style="background:#10b981"></div>
+
+              <span>鍐欐枃浠?/span>
+
+            </div>
+
+            <div class="wf-palette-node" draggable="true" data-action="notify" ondragstart="onPaletteDrag(event)">
+
+              <div class="wf-palette-dot" style="background:#f59e0b"></div>
+
+              <span>閫氱煡</span>
+
+            </div>
+
+          </div>
+
+          <!-- SVG 鐢诲竷 -->
+
+          <div style="flex:1;position:relative;overflow:auto;background:var(--ink-bg)"
+
+               ondragover="onCanvasDragOver(event)" ondrop="onCanvasDrop(event)"
+
+               onclick="onCanvasClick(event)">
+
+            <svg id="wfCanvas" width="800" height="420" style="display:block;cursor:default">
+
+              <defs>
+
+                <marker id="arrowhead" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+
+                  <polygon points="0 0, 8 3, 0 6" fill="var(--text-muted)"/>
+
+                </marker>
+
+              </defs>
+
+            </svg>
+
+          </div>
+
+        </div>
+
+
+
+        <!-- 鑺傜偣灞炴€х紪杈戞诞灞?-->
+
+        <div id="wfNodeEditor" style="display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:999;
+
+          background:var(--ink-surface);border:1px solid var(--rule);border-radius:var(--radius-md);padding:16px;
+
+          min-width:280px;box-shadow:0 8px 32px rgba(0,0,0,0.3)">
+
+          <div style="font-weight:600;margin-bottom:12px" id="wfNodeEditorTitle">缂栬緫鑺傜偣</div>
+
+          <div id="wfNodeEditorBody"></div>
+
+          <div style="display:flex;gap:8px;margin-top:12px">
+
+            <button class="btn btn-primary btn-sm" onclick="applyNodeEdit()" style="flex:1">纭畾</button>
+
+            <button class="btn btn-ghost btn-sm" onclick="closeNodeEdit()" style="flex:1">鍙栨秷</button>
+
+          </div>
+
+        </div>
+
+        <div id="wfNodeOverlay" style="display:none;position:fixed;inset:0;z-index:998;background:rgba(0,0,0,0.3)" onclick="closeNodeEdit()"></div>
+
+
+
+        <!-- 瑙勫垯鍒楄〃 -->
+
+        <div class="panel-section" style="margin-top:12px">
+
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+
+            <div class="section-title" style="margin:0">宸蹭繚瀛樿鍒?/div>
+
+          </div>
+
+          <div id="wfList" style="display:flex;flex-direction:column;gap:8px;max-height:240px;overflow-y:auto"></div>
+
+        </div>
+
+      </div>
+
+
+
+    </div><!-- /page-stage -->
+
     <!-- ===== Token 监控面板 ===== -->
 
     <aside class="settings-panel" id="monitorPanel" style="display:none">
@@ -894,7 +1460,7 @@
 
           <div class="monitor-card">
 
-            <div class="monitor-card-label">缓存命中鐜?/div>
+            <div class="monitor-card-label">缓存命中玄姝</div>
 
             <div class="monitor-card-value" id="mHitRate" style="color:var(--accent)">--%</div>
 
@@ -1028,7 +1594,7 @@
 
       <div class="avatar-section">
 
-        <div class="avatar-big" id="drawerAvatar">鐜?/div>
+        <div class="avatar-big" id="drawerAvatar">玄姝</div>
 
         <div class="avatar-actions">
 
@@ -1210,7 +1776,7 @@ async function checkAuth() {
 
       hideAuth();
 
-      document.getElementById('toolbarAvatar').textContent = '鐜?;
+      document.getElementById('toolbarAvatar').textContent = '玄姝?';
 
       return;
 
@@ -1254,7 +1820,7 @@ async function doSendCode() {
 
   const err = document.getElementById('regError');
 
-  if (!/^\d{11}$/.test(phone)) { err.textContent = '璇疯緭鍏ユ纭殑鎵嬫満鍙; return; }
+  if (!/^\d{11}$/.test(phone)) { err.textContent = '请输入正确的手机号'; return; '}
 
   btn.disabled = true;
 
@@ -1268,13 +1834,13 @@ async function doSendCode() {
 
       if (j.mock && j.code) { err.style.color = 'var(--accent)'; err.textContent = '（模拟）验证码 ' + j.code; }
 
-      else { err.style.color = 'var(--accent)'; err.textContent = '验证码已发送，5分钟内有效; }
+      else { err.style.color = 'var(--accent)'; err.textContent = '验证码已发送，5分钟内有效; '}
 
       let cd = 60;
 
       btn.textContent = cd + 's';
 
-      const t = setInterval(() => { cd--; btn.textContent = cd + 's'; if(cd<=0){clearInterval(t);btn.textContent='鑾峰彇楠岃瘉鐮?;btn.disabled=false;} }, 1000);
+      const t = setInterval(() => { cd--; btn.textContent = cd + 's'; if(cd<=0){clearInterval(t);btn.textContent='鑾峰彇楠岃瘉鐮?;btn.disabled=false;} }, 1000');
 
     } else {
 
@@ -1304,11 +1870,11 @@ async function doRegister() {
 
   err.style.color = 'var(--cinnabar)';
 
-  if (!/^\d{11}$/.test(phone)) { err.textContent = '璇疯緭鍏ユ纭殑鎵嬫満鍙; return; }
+  if (!/^\d{11}$/.test(phone)) { err.textContent = '请输入正确的手机号'; return; '}
 
   if (code.length !== 6) { err.textContent = '璇疯緭鍏?位验证码'; return; }
 
-  if (password.length < 6) { err.textContent = '密码至少6位"; return; }
+  if (password.length < 6) { err.textContent = '密码至少6位'; return; '}
 
   const r = await fetch(API + '/auth/register', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({phone, code, password}) });
 
@@ -1346,7 +1912,7 @@ async function doLogin() {
 
   err.style.color = 'var(--cinnabar)';
 
-  if (!phone || !password) { err.textContent = '请输入手机号和密码; return; }
+  if (!phone || !password) { err.textContent = '请输入手机号和密码; return; '}
 
   const r = await fetch(API + '/auth/login', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({phone, password}) });
 
@@ -1740,13 +2306,13 @@ async function applyKey() {
 
   if (currentModel === 'local') {
 
-    showToast('璇峰厛请在模型列表中选择一个真实模型);
+    showToast('璇峰厛请在模型列表中选择一个真实模型');
 
     return;
 
   }
 
-  setStatus('offline', '验证中…);
+  setStatus('offline', '验证中…');
 
   try {
 
@@ -1786,7 +2352,7 @@ async function applyKey() {
 
   } catch(e) {
 
-    setStatus('offline', 'API 鏈嶅姟鏈惎鍔);
+    setStatus('offline', 'API 鏈嶅姟鏈惎鍔');
 
     showToast('API 鏈嶅姟鏈惎鍔(端口8900)');
 
@@ -1996,7 +2562,7 @@ function renderModelList(models) {
 
         const keyVal = modelKeyValues[m.key] || '';
 
-        const masked = keyVal ? maskKeyText(keyVal) : '鈥⑩€⑩€⑩€⑩€⑩€⑩€⑩€?;
+        const masked = keyVal ? maskKeyText(keyVal) : '鈥⑩€⑩€⑩€⑩€⑩€⑩€⑩€?';
 
         return '<div onclick="pickModel(\''+m.key+'\',\''+esName+'\')" style="padding:10px 12px;border-radius:8px;border:1px solid '+border+';cursor:pointer;font-size:13px;transition:all var(--transition);'+bg+'">'+
 
@@ -2220,7 +2786,7 @@ function buildModelChips() {
 
       const dot = m.has_key ? 'ok' : 'no';
 
-      const shortName = m.name.length > 10 ? m.name.slice(0, 9) + '鈥? : m.name;
+      const shortName = m.name.length > 10 ? m.name.slice(0, 9) + '鈥? : m.name';
 
       return '<button class="model-chip'+active+'" onclick="switchChip(\''+m.key+'\')" title="'+(m.has_key?'已配Key':'未配Key')+' | '+m.provider+'">'+
 
@@ -2286,7 +2852,7 @@ async function applyModelSwitch() {
 
     hasKey = false;
 
-    setStatus('offline', 'API 鏈惎鍔);
+    setStatus('offline', 'API 鏈惎鍔');
 
   }
 
@@ -2332,7 +2898,7 @@ async function applyInlineKey(areaId, modelKey, modelName) {
 
   btn.disabled = true;
 
-  btn.textContent = '验证中…;
+  btn.textContent = '验证中…';
 
   btn.style.opacity = '0.7';
 
@@ -2406,9 +2972,9 @@ async function applyInlineKey(areaId, modelKey, modelName) {
 
 function maskKeyText(key) {
 
-  if (!key || key.length < 8) return '鈥⑩€⑩€⑩€?;
+  if (!key || key.length < 8) return '鈥⑩€⑩€⑩€?';
 
-  return key.slice(0, 6) + '鈥⑩€⑩€? + key.slice(-4);
+  return key.slice(0, 6) + '鈥⑩€⑩€? + key.slice(-4');
 
 }
 
@@ -2448,13 +3014,13 @@ async function copyModelKey(modelKey) {
 
   const val = modelKeyValues[modelKey];
 
-  if (!val) { showToast('Key 信息不可用); return; }
+  if (!val) { showToast('Key 信息不可用); return; '}
 
   try {
 
     await navigator.clipboard.writeText(val);
 
-    showToast('Key 宸插鍒跺埌鍓创鏉);
+    showToast('Key 宸插鍒跺埌鍓创鏉');
 
   } catch(e) {
 
@@ -2466,7 +3032,7 @@ async function copyModelKey(modelKey) {
 
     document.execCommand('copy'); document.body.removeChild(ta);
 
-    showToast('Key 宸插鍒);
+    showToast('Key 宸插鍒');
 
   }
 
@@ -2476,7 +3042,7 @@ async function copyModelKey(modelKey) {
 
 async function clearAllModelKeys() {
 
-  if (!confirm('确定要清除所有模型的独立 Key 閰嶇疆鍚楋紵姝ゆ搷浣滀笉鍙挙閿€銆?)) return;
+  if (!confirm('确定要清除所有模型的独立 Key 閰嶇疆鍚楋紵姝ゆ搷浣滀笉鍙挙閿€銆?)) return';
 
   for (const m of allModels) {
 
@@ -2608,7 +3174,7 @@ async function addCustomModel() {
 
       method: 'POST', headers: {'Content-Type':'application/json'},
 
-      body: JSON.stringify({name, model_id: model_id||name, base_url, provider:'鑷畾涔})
+      body: JSON.stringify({name, model_id: model_id||name, base_url, provider:'鑷畾涔'})
 
     });
 
@@ -2650,7 +3216,7 @@ async function delModel(key) {
 
     await loadModels();
 
-    showToast('已删除);
+    showToast('已删除');
 
   } catch(e) { showToast('删除失败: ' + (e.message||'网络错误')); }
 
@@ -3292,7 +3858,7 @@ async function uploadFiles() {
 
     if (!d.ok) { showToast('上传失败: ' + (d.error || '未知错误')); return; }
 
-    showToast('已上传' + d.uploaded.length + ' 涓枃浠);
+    showToast('已上传' + d.uploaded.length + ' 涓枃浠');
 
     // 鍒锋柊渚ф爮鏂囦欢鏍?
 
@@ -3306,7 +3872,7 @@ async function uploadFiles() {
 
   } catch(e) {
 
-    showToast('上传失败: 鏈嶅姟鏈惎鍔);
+    showToast('上传失败: 鏈嶅姟鏈惎鍔');
 
   }
 
@@ -3356,11 +3922,11 @@ function loadSidebarAvatar() {
 
   } else {
 
-    if (profileEl) { profileEl.style.backgroundImage = ''; profileEl.textContent = '鐜?; }
+    if (profileEl) { profileEl.style.backgroundImage = ''; profileEl.textContent = '玄姝?; '}
 
     toolbarEl.style.backgroundImage = '';
 
-    toolbarEl.textContent = '鐜?;
+    toolbarEl.textContent = '玄姝?';
 
   }
 
@@ -3398,7 +3964,7 @@ function uploadProfileAvatar() {
 
       loadSidebarAvatar();
 
-      showToast('澶村儚宸叉洿鏂?);
+      showToast('澶村儚宸叉洿鏂?');
 
     };
 
@@ -3430,7 +3996,7 @@ async function readSidebarMemdir(rel) {
 
     if (!d.ok) { showToast(d.error); return; }
 
-    showToast(rel + ' 宸插鍒跺埌鍓创鏉);
+    showToast(rel + ' 宸插鍒跺埌鍓创鏉');
 
     try { await navigator.clipboard.writeText(d.content); } catch(_) {}
 
@@ -3442,7 +4008,7 @@ async function readSidebarMemdir(rel) {
 
 async function deleteSidebarMemdir(rel) {
 
-  if (!confirm('删除 ' + rel + ' 锛?)) return;
+  if (!confirm('删除 ' + rel + ' 锛?)) return';
 
   try {
 
@@ -3454,7 +4020,7 @@ async function deleteSidebarMemdir(rel) {
 
     const d = await r.json();
 
-    if (d.ok) { showToast('已删除); refreshSidebarMemdir(); }
+    if (d.ok) { showToast('已删除); refreshSidebarMemdir(); '}
 
     else { showToast('失败'); }
 
@@ -3492,7 +4058,7 @@ async function loadSidebarMemTree() {
 
       const ext = name.split('.').pop().toLowerCase();
 
-      const icon = ext === 'md' ? '馃摑' : ext === 'json' ? '馃搵' : ext === 'txt' ? '馃搫' : '馃梻锔?;
+      const icon = ext === 'md' ? '馃摑' : ext === 'json' ? '馃搵' : ext === 'txt' ? '馃搫' : '馃梻锔?';
 
       html += '<div class="mem-tree-item" onclick="viewMemFile(\'' + e.rel.replace(/'/g, "\\'") + '\')">' +
 
@@ -3584,11 +4150,11 @@ function openAvatarDrawer() {
 
   const mainAvatar = document.getElementById('toolbarAvatar').textContent;
 
-  document.getElementById('drawerAvatar').textContent = mainAvatar || '鐜?;
+  document.getElementById('drawerAvatar').textContent = mainAvatar || '玄姝?';
 
   // 鍚屾鎵嬫満鍙
 
-  const phone = localStorage.getItem('xuanshu_phone') || '鈥?;
+  const phone = localStorage.getItem('xuanshu_phone') || '鈥?';
 
   document.getElementById('drawerPhone').textContent = phone;
 
@@ -3634,7 +4200,7 @@ async function loadDrawerMemList() {
 
       const ext = name.split('.').pop().toLowerCase();
 
-      const icon = ext === 'md' ? '馃摑' : ext === 'json' ? '馃搵' : ext === 'txt' ? '馃搫' : '馃梻锔?;
+      const icon = ext === 'md' ? '馃摑' : ext === 'json' ? '馃搵' : ext === 'txt' ? '馃搫' : '馃梻锔?';
 
       html += '<div class="drawer-mem-item" onclick="viewMemFile(\'' + e.rel.replace(/'/g, "\\'") + '\')">' +
 
@@ -3714,7 +4280,7 @@ async function uploadAvatarFromFile(input) {
 
     });
 
-    showToast('澶村儚宸叉洿鏂?);
+    showToast('澶村儚宸叉洿鏂?');
 
   };
 
@@ -3790,21 +4356,21 @@ async function loadSkillMarket() {
 
     const builtinSkills = [
 
-      { name: '联网搜索', desc: '使用搜索引擎获取实时信息', icon: '馃攳', agent: '搜索Agent' },
+      { name: '联网搜索', desc: '使用搜索引擎获取实时信息', icon: '🔍', agent: '搜索Agent' },
 
-      { name: '代码执行', desc: '在沙箱中运行 Python 代码', icon: '鈿?, agent: '代码Agent' },
+      { name: '代码执行', desc: '在沙箱中运行 Python 代码', icon: '⚡', agent: '代码Agent' },
 
-      { name: '文件管理', desc: '璇诲啓銆佺紪杈戙€佸垹闄ゆ枃浠?, icon: '馃搨', agent: '文件Agent' },
+      { name: '文件管理', desc: '璇诲啓銆佺紪杈戙€佸垹闄ゆ枃浠?, icon: '📁', agent: '文件Agent' },
 
-      { name: '娴忚鍣ㄦ搷鎺?, desc: '鎵撳紑缃戦〉銆佺偣鍑汇€佽緭鍏ャ€佹埅鍥?, icon: '馃Л', agent: '浏览器Agent' },
+      { name: '娴忚鍣ㄦ搷鎺?, desc: '鎵撳紑缃戦〉銆佺偣鍑汇€佽緭鍏ャ€佹埅鍥?, icon: '📰', agent: '浏览器Agent' },
 
-      { name: '系统管理', desc: '杩涚▼銆佺鐩樸€佺綉缁溿€佸寘绠＄悊', icon: '馃枼锔?, agent: '电脑Agent' },
+      { name: '系统管理', desc: '杩涚▼銆佺鐩樸€佺綉缁溿€佸寘绠＄悊', icon: '🖥️', agent: '电脑Agent' },
 
-      { name: '手机控制', desc: 'ADB 操控 Android 设备', icon: '馃摫', agent: '手机Agent' },
+      { name: '手机控制', desc: 'ADB 操控 Android 设备', icon: '📱', agent: '手机Agent' },
 
-      { name: '记忆管理', desc: '读写 Agent 长期记忆文件', icon: '馃', agent: '全部' },
+      { name: '记忆管理', desc: '读写 Agent 长期记忆文件', icon: '💿', agent: '全部' },
 
-      { name: 'Git 版本', desc: '鏌ョ湅鎻愪氦銆佸洖婊氥€佹仮澶?, icon: '馃摐', agent: '代码Agent' },
+      { name: 'Git 版本', desc: '鏌ョ湅鎻愪氦銆佸洖婊氥€佹仮澶?, icon: '📋', agent: '代码Agent' },
 
     ];
 
@@ -4118,7 +4684,7 @@ async function deleteSkill(id, agent) {
 
   const d = await res.json();
 
-  if (d.ok) { showToast('已删除); refreshSkills(); }
+  if (d.ok) { showToast('已删除); refreshSkills(); '}
 
   else { showToast('删除失败'); }
 
@@ -4184,7 +4750,7 @@ async function submitNewSkill() {
 
   const content = document.getElementById('skillFormContent')?.value?.trim();
 
-  if (!agent || !name || !content) { showToast('请填写完整); return; }
+  if (!agent || !name || !content) { showToast('请填写完整); return; '}
 
   const res = await fetch(API + '/skills/create', {
 
@@ -4300,7 +4866,7 @@ async function checkToolEnv() {
 
   toolAdapterBase = document.getElementById('toolAdapterUrl').value.replace(/\/$/, '');
 
-  status.textContent = '鎵弿涓€?;
+  status.textContent = '鎵弿涓€?';
 
   status.style.color = 'var(--warning)';
 
@@ -4528,7 +5094,7 @@ async function runCommand(toolId, command) {
 
   output.style.display = 'block';
 
-  content.textContent = '执行涓€?;
+  content.textContent = '执行涓€?';
 
   code.textContent = '';
 
@@ -4688,7 +5254,7 @@ async function restoreFromServer() {
 
       d.className = 'bubble system';
 
-      d.innerHTML = '记忆鎽樿锛+data.context_summary;
+      d.innerHTML = '记忆鎽樿锛+data.context_summary';
 
       conv.appendChild(d);
 
@@ -4924,7 +5490,7 @@ function loadAgentConfig() {
 
   URL.revokeObjectURL(url);
 
-  showToast('Agent 閰嶇疆宸蹭笅杞?);
+  showToast('Agent 閰嶇疆宸蹭笅杞?');
 
 }
 
@@ -5030,7 +5596,7 @@ async function openFileInViewer(path, name) {
 
   document.getElementById('fvPath').textContent = path;
 
-  document.getElementById('fvMeta').textContent = '加载中…;
+  document.getElementById('fvMeta').textContent = '加载中…';
 
   document.getElementById('fvContent').innerHTML = '<div style="padding:20px;color:var(--text-muted);text-align:center">加载中…/div>';
 
@@ -5060,7 +5626,7 @@ async function openFileInViewer(path, name) {
 
     }
 
-    document.getElementById('fvMeta').textContent = name + ' 鈥?' + formatSize(d.size) + ' 鈥?' + d.lines + ' 琛?;
+    document.getElementById('fvMeta').textContent = name + ' 鈥?' + formatSize(d.size) + ' 鈥?' + d.lines + ' 琛?';
 
     if (d.type === 'binary') {
 
@@ -5076,7 +5642,7 @@ async function openFileInViewer(path, name) {
 
   } catch(e) {
 
-    document.getElementById('fvMeta').textContent = '加载失败: 鏈嶅姟鏈惎鍔;
+    document.getElementById('fvMeta').textContent = '加载失败: 鏈嶅姟鏈惎鍔';
 
     document.getElementById('fvContent').innerHTML = '';
 
@@ -5454,11 +6020,11 @@ function getDefaultParams(action) {
 
     case 'web_search': return { query: '{user_message}' };
 
-    case 'ai_summary': return { prompt: '甯垜鎬荤粨涓婇潰鐨勫唴瀹 };
+    case 'ai_summary': return { prompt: '甯垜鎬荤粨涓婇潰鐨勫唴瀹 '};
 
     case 'write_file': return { filename: 'output.txt', content: '{ai_output}' };
 
-    case 'notify':     return { message: '宸ヤ綔娴佹墽琛屽畬鎴? };
+    case 'notify':     return { message: '宸ヤ綔娴佹墽琛屽畬鎴? '};
 
     default: return {};
 
@@ -5600,7 +6166,7 @@ function onCanvasTriggerChange() {
 
   } else {
 
-    v.placeholder = '姝ｅ垯琛ㄨ揪寮?; v.value = '';
+    v.placeholder = '姝ｅ垯琛ㄨ揪寮?; v.value = ''';
 
     m.parentElement.style.display = 'none';
 
@@ -5660,9 +6226,9 @@ async function saveCanvasWF() {
 
   const payload = buildCanvasPayload();
 
-  if (!payload.name) { alert('璇疯緭鍏ヨ鍒欏悕绉?); return; }
+  if (!payload.name) { alert('璇疯緭鍏ヨ鍒欏悕绉?); return; '}
 
-  if (!payload.steps.length) { alert('璇蜂粠宸︿晶鎷栧叆鑷冲皯涓€涓姩浣滆妭鐐); return; }
+  if (!payload.steps.length) { alert('璇蜂粠宸︿晶鎷栧叆鑷冲皯涓€涓姩浣滆妭鐐); return; '}
 
   const url = wfEditingId ? '/workflow/update' : '/workflow/create';
 
@@ -6330,7 +6896,7 @@ function updateHeartbeatUI(state, latency) {
 
     dot.style.cssText = 'background:var(--ok);animation:pulse-dot 2s infinite;';
 
-    msg.textContent = '心跳正常 · 姣?绉?;
+    msg.textContent = '心跳正常 · 姣?绉?';
 
     lat.textContent = latency + 'ms';
 
@@ -6342,7 +6908,7 @@ function updateHeartbeatUI(state, latency) {
 
     msg.textContent = '蹇冭烦超时';
 
-    lat.textContent = '鈥?;
+    lat.textContent = '鈥?';
 
   }
 
@@ -6390,7 +6956,7 @@ function updateConnBanner(show, paused) {
 
     if (statusDot) { statusDot.className = 'status-dot online'; }
 
-    if (statusLabel) statusLabel.textContent = '已连接;
+    if (statusLabel) statusLabel.textContent = '已连接';
 
     if (panelDot) { panelDot.className = 'status-dot online'; }
 

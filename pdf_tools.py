@@ -5,7 +5,12 @@ PDF 处理工具函数集（pypdf 实现）
 
 import os
 import io
-from pypdf import PdfReader, PdfWriter
+
+try:
+    from pypdf import PdfReader, PdfWriter
+except ImportError:
+    PdfReader = None
+    PdfWriter = None
 
 _WS = os.path.dirname(os.path.abspath(__file__))
 

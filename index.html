@@ -436,7 +436,7 @@
 
         <div class="panel-section">
 
-          <button class="btn btn-ghost" onclick="clearAllModelKeys()" style="font-size:12px">娓呴櫎鎵€有独立?Key</button>
+          <button class="btn btn-ghost" onclick="clearAllModelKeys()" style="font-size:12px">清除所有独立?Key</button>
 
         </div>
 
@@ -558,7 +558,7 @@
 
           <div class="accent-palette">
 
-            <div class="accent-chip active" id="chipCyber" onclick="setAccent('cyber')" title="绉戝够钃?>
+            <div class="accent-chip active" id="chipCyber" onclick="setAccent('cyber')" title="科幻蓝>
 
               <span class="chip-dot" style="background:oklch(0.62 0.20 230)"></span>
 
@@ -566,7 +566,7 @@
 
             </div>
 
-            <div class="accent-chip" id="chipForest" onclick="setAccent('forest')" title="鎶ょ溂缁?>
+            <div class="accent-chip" id="chipForest" onclick="setAccent('forest')" title="护眼绿>
 
               <span class="chip-dot" style="background:oklch(0.50 0.15 145)"></span>
 
@@ -582,7 +582,7 @@
 
             </div>
 
-            <div class="accent-chip" id="chipLeather" onclick="setAccent('leather')" title="涔﹀皝妫?>
+            <div class="accent-chip" id="chipLeather" onclick="setAccent('leather')" title="书封棕>
 
               <span class="chip-dot" style="background:oklch(0.50 0.10 55)"></span>
 
@@ -682,7 +682,7 @@
 
       <div class="panel-content" id="tab-workflow" style="display:none">
 
-        <!-- 椤堕儴工具鏍?-->
+        <!-- 顶部工具鏍?-->
 
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
 
@@ -808,7 +808,7 @@
 
 
 
-        <!-- 鑺傜偣灞炴€х紪杈戞诞灞?-->
+        <!-- 节点属性炴€х编辑戞诞灞?-->
 
         <div id="wfNodeEditor" style="display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:999;
 
@@ -904,7 +904,7 @@
 
           <div class="pill-right">
 
-            <button class="pill-model" id="pillModelBtn" onclick="showModelQuickPicker(event)" title="鍒囨崲妯″瀷"></button>
+            <button class="pill-model" id="pillModelBtn" onclick="showModelQuickPicker(event)" title="切换模型"></button>
 
             <button class="pill-tts-toggle" id="ttsToggleBtn" onclick="toggleTTS()" title="语音朗读">🔊</button>
 
@@ -918,7 +918,7 @@
 
 
 
-      <!-- 鏂囦欢鏌ョ湅闈㈡澘 -->
+      <!-- 文件查看面板 -->
 
       <div class="file-viewer" id="fileViewerPanel" style="display:none">
 
@@ -940,7 +940,7 @@
 
 
 
-    <!-- ===== 设置闈㈡澘锛堝彸渚ф粦鍑猴級 ===== -->
+    <!-- ===== 设置面板锛堝彸渚ф粦鍑猴級 ===== -->
 
     <div class="settings-overlay" id="settingsOverlay" onclick="toggleSettings();if(location.hash==='#settings')navigateTo('#chat')"></div>
 
@@ -1010,7 +1010,7 @@
 
         <div class="panel-section">
 
-          <button class="btn btn-ghost" onclick="clearAllModelKeys()" style="font-size:12px">娓呴櫎鎵€有独立?Key</button>
+          <button class="btn btn-ghost" onclick="clearAllModelKeys()" style="font-size:12px">清除所有独立?Key</button>
 
         </div>
 
@@ -1086,7 +1086,7 @@
 
         <div class="panel-section">
 
-          <div class="section-title">Token 缁熻</div>
+          <div class="section-title">Token 统计</div>
 
           <div style="font-size:13px;color:var(--text-muted)">绱: <span id="tokenCount">0 tk</span></div>
 
@@ -1102,7 +1102,7 @@
 
         <div class="panel-section">
 
-          <div class="section-title">鑳屾櫙妯″紡</div>
+          <div class="section-title">背景模式</div>
 
           <div class="mode-switch-row">
 
@@ -1128,11 +1128,11 @@
 
         <div class="panel-section">
 
-          <div class="section-title">閰嶈壊鏂规</div>
+          <div class="section-title">配色方案</div>
 
           <div class="accent-palette">
 
-            <div class="accent-chip active" id="chipCyber" onclick="setAccent('cyber')" title="绉戝够钃?>
+            <div class="accent-chip active" id="chipCyber" onclick="setAccent('cyber')" title="科幻蓝>
 
               <span class="chip-dot" style="background:oklch(0.62 0.20 230)"></span>
 
@@ -1140,15 +1140,15 @@
 
             </div>
 
-            <div class="accent-chip" id="chipForest" onclick="setAccent('forest')" title="鎶ょ溂缁?>
+            <div class="accent-chip" id="chipForest" onclick="setAccent('forest')" title="护眼绿>
 
               <span class="chip-dot" style="background:oklch(0.50 0.15 145)"></span>
 
-              <span class="chip-label">鎶ょ</span>
+              <span class="chip-label">护</span>
 
             </div>
 
-            <div class="accent-chip" id="chipSakura" onclick="setAccent('sakura')" title="妯辩矇">
+            <div class="accent-chip" id="chipSakura" onclick="setAccent('sakura')" title="樱粉">
 
               <span class="chip-dot" style="background:oklch(0.62 0.16 5)"></span>
 
@@ -1156,7 +1156,7 @@
 
             </div>
 
-            <div class="accent-chip" id="chipLeather" onclick="setAccent('leather')" title="涔﹀皝妫?>
+            <div class="accent-chip" id="chipLeather" onclick="setAccent('leather')" title="书封棕>
 
               <span class="chip-dot" style="background:oklch(0.50 0.10 55)"></span>
 
@@ -1236,7 +1236,7 @@
 
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
 
-            <div class="section-title" style="margin:0">执行缁撴灉</div>
+            <div class="section-title" style="margin:0">执行结果</div>
 
             <button class="btn btn-ghost btn-sm" onclick="document.getElementById('toolOutput').style.display='none'">鍏抽棴</button>
 
@@ -1256,7 +1256,7 @@
 
       <div class="panel-content" id="tab-workflow" style="display:none">
 
-        <!-- 椤堕儴工具鏍?-->
+        <!-- 顶部工具鏍?-->
 
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
 
@@ -1310,11 +1310,11 @@
 
 
 
-        <!-- 鑺傜偣闈㈡澘 + 鐢诲竷 -->
+        <!-- 节点面板 + 画布 -->
 
         <div style="display:flex;gap:0;border:1px solid var(--rule);border-radius:var(--radius-md);overflow:hidden;height:420px">
 
-          <!-- 宸︿晶鑺傜偣妯℃澘 -->
+          <!-- 宸︿晶节点妯℃澘 -->
 
           <div style="width:100px;background:var(--ink-surface);border-right:1px solid var(--rule);padding:8px;display:flex;flex-direction:column;gap:8px;overflow-y:auto">
 
@@ -1382,7 +1382,7 @@
 
 
 
-        <!-- 鑺傜偣灞炴€х紪杈戞诞灞?-->
+        <!-- 节点属性炴€х编辑戞诞灞?-->
 
         <div id="wfNodeEditor" style="display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:999;
 
@@ -1408,7 +1408,7 @@
 
 
 
-        <!-- 瑙勫垯鍒楄〃 -->
+        <!-- 规则列表 -->
 
         <div class="panel-section" style="margin-top:12px">
 
@@ -1616,7 +1616,7 @@
 
 
 
-      <!-- 记忆鏂囦欢澶?-->
+      <!-- 记忆文件夹?-->
 
       <div class="drawer-section">
 
@@ -1658,7 +1658,7 @@
 
 
 
-  <!-- ===== 搴曢儴瀵艰埅锛堢Щ鍔ㄧ锛?===== -->
+  <!-- ===== 底部导航锛堢Щ鍔ㄧ锛?===== -->
 
   <nav class="bottom-nav">
 
@@ -1712,7 +1712,7 @@ let pendingImage = null;
 
 
 
-// 输入妗嗗疄鏃惰嚜鍔ㄨ皟鑺傞珮搴?
+// 输入框实时自动调节高度?
 
 inp.addEventListener('input', () => {
 
@@ -1840,7 +1840,7 @@ async function doSendCode() {
 
       btn.textContent = cd + 's';
 
-      const t = setInterval(() => { cd--; btn.textContent = cd + 's'; if(cd<=0){clearInterval(t);btn.textContent='鑾峰彇楠岃瘉鐮?;btn.disabled=false;} }, 1000');
+      const t = setInterval(() => { cd--; btn.textContent = cd + 's'; if(cd<=0){clearInterval(t);btn.textContent='鑾峰彇验证鐮?;btn.disabled=false;} }, 1000');
 
     } else {
 
@@ -1872,7 +1872,7 @@ async function doRegister() {
 
   if (!/^\d{11}$/.test(phone)) { err.textContent = '请输入正确的手机号'; return; }
 
-  if (code.length !== 6) { err.textContent = '璇疯緭鍏?位验证码'; return; }
+  if (code.length !== 6) { err.textContent = '请输入位验证码'; return; }
 
   if (password.length < 6) { err.textContent = '密码至少6位'; return; }
 
@@ -2306,7 +2306,7 @@ async function applyKey() {
 
   if (currentModel === 'local') {
 
-    showToast('璇峰厛请在模型列表中选择一个真实模型');
+    showToast('请先在模型列表中选择一个真实模型');
 
     return;
 
@@ -2716,7 +2716,7 @@ function showModelQuickPicker(e) {
 
 
 
-  // 瀹氫綅鍒版寜閽笂鏂
+  // 定位到按钮上方
 
   document.body.appendChild(picker);
 
@@ -3020,7 +3020,7 @@ async function copyModelKey(modelKey) {
 
     await navigator.clipboard.writeText(val);
 
-    showToast('Key 宸插鍒跺埌鍓创鏉');
+    showToast('Key 已复制跺埌鍓创鏉');
 
   } catch(e) {
 
@@ -3032,7 +3032,7 @@ async function copyModelKey(modelKey) {
 
     document.execCommand('copy'); document.body.removeChild(ta);
 
-    showToast('Key 宸插鍒');
+    showToast('Key 已复制');
 
   }
 
@@ -3910,7 +3910,7 @@ async function uploadFiles() {
 
     showToast('已上传' + d.uploaded.length + ' 涓枃浠');
 
-    // 鍒锋柊渚ф爮鏂囦欢鏍?
+    // 刷新侧边栏文件树
 
     loadWorkspaceFiles();
 
@@ -4014,7 +4014,7 @@ function uploadProfileAvatar() {
 
       loadSidebarAvatar();
 
-      showToast('澶村儚宸叉洿鏂?');
+      showToast('头像已更新');
 
     };
 
@@ -4028,7 +4028,7 @@ function uploadProfileAvatar() {
 
 
 
-// refreshSidebarMemdir 宸插簾寮冿紝鐢?loadSidebarMemTree + loadDrawerMemList 替代
+// refreshSidebarMemdir 已弃用，用loadSidebarMemTree + loadDrawerMemList 替代
 
 
 
@@ -4046,7 +4046,7 @@ async function readSidebarMemdir(rel) {
 
     if (!d.ok) { showToast(d.error); return; }
 
-    showToast(rel + ' 宸插鍒跺埌鍓创鏉');
+    showToast(rel + ' 已复制到剪贴板');
 
     try { await navigator.clipboard.writeText(d.content); } catch(_) {}
 
@@ -4080,7 +4080,7 @@ async function deleteSidebarMemdir(rel) {
 
 
 
-// ========== 渚ц竟鏍忚蹇嗘枃浠舵爲锛堝彧璇鈥?用户可看不可改）==========
+// ========== 渚ц竟鏍忚蹇嗘枃浠舵爲锛堝彧读用户可看不可改）==========
 
 async function loadSidebarMemTree() {
 
@@ -4202,7 +4202,7 @@ function openAvatarDrawer() {
 
   document.getElementById('drawerAvatar').textContent = mainAvatar || '玄姝?';
 
-  // 鍚屾鎵嬫満鍙
+  // 鍚屾手机鍙
 
   const phone = localStorage.getItem('xuanshu_phone') || '鈥?';
 
@@ -4282,7 +4282,7 @@ async function uploadAvatarFromFile(input) {
 
   if (!file) return;
 
-  // 璇诲彇涓?base64 data URL
+  // 读取为 base64 data URL
 
   const reader = new FileReader();
 
@@ -4302,7 +4302,7 @@ async function uploadAvatarFromFile(input) {
 
     document.getElementById('sidebarAvatar').textContent = initial;
 
-    // 瀛樺偍鍒?localStorage
+    // 存储到?localStorage
 
     localStorage.setItem('xuanshu_avatar', dataUrl);
 
@@ -4330,7 +4330,7 @@ async function uploadAvatarFromFile(input) {
 
     });
 
-    showToast('澶村儚宸叉洿鏂?');
+    showToast('头像已更新');
 
   };
 
@@ -4342,7 +4342,7 @@ async function uploadAvatarFromFile(input) {
 
 
 
-// 椤甸潰鍔犺浇鏃舵仮澶嶅ご鍍?
+// 页面鍔犺浇鏃舵仮澶嶅ご鍍?
 
 (function restoreAvatar() {
 
@@ -4384,7 +4384,7 @@ async function loadSkillMarket() {
 
   try {
 
-    // 获取所有Agent 鐨勬妧鑳?
+    // 获取所有Agent 的技能?
 
     const r = await fetch(API + '/skills/list', {
 
@@ -4402,7 +4402,7 @@ async function loadSkillMarket() {
 
     let html = '';
 
-    // 鍐呯疆鎶€鑳芥ā鏉?
+    // 内置技能模板
 
     const builtinSkills = [
 
@@ -4412,9 +4412,9 @@ async function loadSkillMarket() {
 
       { name: '文件管理', desc: '读写、编辑、删除文件', icon: '📁', agent: '文件Agent' },
 
-      { name: '娴忚鍣ㄦ搷鎺?, desc: '鎵撳紑缃戦〉銆佺偣鍑汇€佽緭鍏ャ€佹埅鍥?, icon: '📰', agent: '浏览器Agent' },
+      { name: '娴忚鍣ㄦ搷鎺?, desc: '打开网页、点击、输入、截图, icon: '📰', agent: '浏览器Agent' },
 
-      { name: '系统管理', desc: '杩涚▼銆佺鐩樸€佺綉缁溿€佸寘绠＄悊', icon: '🖥️', agent: '电脑Agent' },
+      { name: '系统管理', desc: '进程、磁盘、网络、包管理', icon: '🖥️', agent: '电脑Agent' },
 
       { name: '手机控制', desc: 'ADB 操控 Android 设备', icon: '📱', agent: '手机Agent' },
 
@@ -4426,9 +4426,9 @@ async function loadSkillMarket() {
 
 
 
-    // 鍐呯疆鎶€鑳?
+    // 内置技能
 
-    html += '<div class="skill-market-section"><div class="skill-market-label">鍐呯疆鎶€</div>';
+    html += '<div class="skill-market-section"><div class="skill-market-label">内置技能</div>';
 
     builtinSkills.forEach(s => {
 
@@ -4454,7 +4454,7 @@ async function loadSkillMarket() {
 
 
 
-    // 宸插涔犵殑鎶€鑳?
+    // 已学习的技能
 
     if (skills.length) {
 
@@ -4484,7 +4484,7 @@ async function loadSkillMarket() {
 
 
 
-    // 新建鎶€鑳芥寜閽?
+    // 新建技能按钮
 
     html += '<div class="skill-market-add" onclick="showNewSkillDialog()"></div>';
 
@@ -4504,7 +4504,7 @@ async function loadSkillMarket() {
 
 function showNewSkillDialog() {
 
-  const name = prompt('鎶€技能名称');
+  const name = prompt('技能名称');
 
   if (!name) return;
 
@@ -4628,7 +4628,7 @@ function doLogout() {
 
 
 
-// ========== 鎶€鑳界鐞==========
+// ========== 技能管理==========
 
 function escapeHtml(s) {
 
@@ -4660,7 +4660,7 @@ async function refreshSkills(agent) {
 
   if (!d.ok || !d.skills || !d.skills.length) {
 
-    list.innerHTML = '<div style="font-size:13px;color:var(--text-muted);text-align:center;padding:12px">鏆傛棤鎶€</div>';
+    list.innerHTML = '<div style="font-size:13px;color:var(--text-muted);text-align:center;padding:12px">暂无技能</div>';
 
     return;
 
@@ -4762,7 +4762,7 @@ function newSkill() {
 
   overlay.innerHTML = '<div class="skill-form-panel">'+
 
-    '<h2 style="font-family:var(--serif);font-size:20px;color:var(--text-paper);margin-bottom:20px">新建鎶€鑳?/h2>'+
+    '<h2 style="font-family:var(--serif);font-size:20px;color:var(--text-paper);margin-bottom:20px">新建技能/h2>'+
 
     '<div class="form-group"><label class="form-label">Agent</label>'+
 
@@ -4776,7 +4776,7 @@ function newSkill() {
 
     '<input id="skillFormName" class="form-input" placeholder="濡? flask-perf、excel-layout"></div>'+
 
-    '<div class="form-group"><label class="form-label">鎶€鑳藉唴瀹?(Markdown)</label>'+
+    '<div class="form-group"><label class="form-label">技能内容 (Markdown)</label>'+
 
     '<textarea id="skillFormContent" class="form-input" placeholder="描述经验/规则/姝ラ鈥? style="min-height:120px"></textarea></div>'+
 
@@ -4992,7 +4992,7 @@ function buildToolGrid() {
 
       '<span class="tool-card-name">'+tid+'</span></div>'+
 
-      '<div class="tool-card-desc">'+(t.available ? '宸插氨缁? : '未安装)+'</div></div>';
+      '<div class="tool-card-desc">'+(t.available ? '已就绪 : '未安装)+'</div></div>';
 
   }
 
@@ -5522,7 +5522,7 @@ function loadAgentConfig() {
 
     version: '1.0.0',
 
-    description: '澶氭ā鍨嬫櫤鑳藉姪鎵嬶紝鏀寔鏂囦欢绠＄悊銆佽仈缃戞悳绱€佷唬鐮佸垎鏋愮瓑',
+    description: '多模型智能助手，支持文件管理、联网搜索、代码分析等',
 
     permissions: { fileAccess: true, webSearch: true, toolExecution: true, download: false },
 
@@ -5638,7 +5638,7 @@ async function loadWorkspaceFiles() {
 
 
 
-// ========== 鏂囦欢鏌ョ湅鍣?==========
+// ========== 文件查看器?==========
 
 async function openFileInViewer(path, name) {
 
@@ -5680,7 +5680,7 @@ async function openFileInViewer(path, name) {
 
     if (d.type === 'binary') {
 
-      document.getElementById('fvContent').innerHTML = '<div style="padding:20px;color:var(--text-muted);text-align:center">鏃犳硶棰勮浜岃繘鍒舵枃浠(' + d.ext + ')</div>';
+      document.getElementById('fvContent').innerHTML = '<div style="padding:20px;color:var(--text-muted);text-align:center">无法预览二进制文件(' + d.ext + ')</div>';
 
     } else {
 
@@ -6070,11 +6070,11 @@ function getDefaultParams(action) {
 
     case 'web_search': return { query: '{user_message}' };
 
-    case 'ai_summary': return { prompt: '甯垜鎬荤粨涓婇潰鐨勫唴瀹 '};
+    case 'ai_summary': return { prompt: '帮我总结上面的内容 '};
 
     case 'write_file': return { filename: 'output.txt', content: '{ai_output}' };
 
-    case 'notify':     return { message: '宸ヤ綔娴佹墽琛屽畬鎴? '};
+    case 'notify':     return { message: '工作流执行完成 '};
 
     default: return {};
 
@@ -6114,7 +6114,7 @@ function openNodeEditor(nodeId) {
 
     case 'ai_summary':
 
-      html = `<div class="form-group"><label class="form-label">鍒嗘瀽鎻愮ず</label><input id="wfEdit_prompt" class="form-input" value="${escapeHtml(params.prompt||'')}" placeholder="支持 {search_result} 绛夊彉閲?></div>`;
+      html = `<div class="form-group"><label class="form-label">分析提示</label><input id="wfEdit_prompt" class="form-input" value="${escapeHtml(params.prompt||'')}" placeholder="支持 {search_result} 绛夊彉閲?></div>`;
 
       break;
 
@@ -6216,7 +6216,7 @@ function onCanvasTriggerChange() {
 
   } else {
 
-    v.placeholder = '姝ｅ垯琛ㄨ揪寮?; v.value = ''';
+    v.placeholder = '正则表达式?; v.value = ''';
 
     m.parentElement.style.display = 'none';
 
@@ -6276,7 +6276,7 @@ async function saveCanvasWF() {
 
   const payload = buildCanvasPayload();
 
-  if (!payload.name) { alert('璇疯緭鍏ヨ鍒欏悕绉?); return; '}
+  if (!payload.name) { alert('请输入规则名称); return; '}
 
   if (!payload.steps.length) { alert('请从左侧拖入至少一个动作节点); return; '}
 
@@ -6338,7 +6338,7 @@ function showWFCreate() {
 
 
 
-// 鈹€鈹€ 浠庡垪琛ㄧ紪杈?鈹€鈹€
+// 鈹€鈹€ 从列表编辑?鈹€鈹€
 
 function editWF(id) {
 
@@ -6594,7 +6594,7 @@ function initParticles() {
 
 
 
-  // 粒子颜色（从 CSS 鍙橀噺璇诲彇锛屽吋瀹?Canvas rgba锛?
+  // 粒子颜色（从 CSS 变量读取锛屽吋容Canvas rgba锛?
 
   function getParticleColor() {
 
@@ -6602,7 +6602,7 @@ function initParticles() {
 
     const raw = style.getPropertyValue('--neon-cyan').trim() || '#00f0ff';
 
-    // 解析 hex 鎴?rgb
+    // 解析 hex 或 rgb
 
     if (raw.startsWith('#')) {
 
@@ -6852,7 +6852,7 @@ let heartbeatFailCount = 0;
 
 let heartbeatStopped = false;  // 用户触发重连标记
 
-const HEARTBEAT_MAX_FAIL = 5;  // 连续失败5娆″垽瀹氫负鏂紑锛屾殏鍋滃績璺
+const HEARTBEAT_MAX_FAIL = 5;  // 连续失败5次判定为断开，暂鍋滃績璺
 
 
 
@@ -6986,7 +6986,7 @@ function updateConnBanner(show, paused) {
 
       banner.className = 'conn-banner retrying';
 
-      banner.querySelector('.conn-banner-msg').textContent = '杩炴帴宸叉柇寮€ · 输入消息自动重连';
+      banner.querySelector('.conn-banner-msg').textContent = '连接已断开 · 输入消息自动重连';
 
     } else {
 
@@ -7052,7 +7052,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
 
 
-// 椤甸潰鍔犺浇鍗冲惎鍔ㄥ績璺?
+// 页面鍔犺浇鍗冲惎鍔ㄥ績璺?
 
 startHeartbeat();
 

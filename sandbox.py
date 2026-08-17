@@ -356,6 +356,38 @@ def run_local(code: str, timeout: int = 60) -> Dict:
             pass
 
 
+def run_tool(code: str, timeout: int = 60) -> Dict:
+    """受信工具层专用：执行项目自带工具模块（image_tools/pdf_tools/tts_tools/data_tools 等）。
+
+    与 run_local 的区别：不注入 light guard（工具模块内部依赖 os/subprocess/csv/sqlite3 等）。
+    仅用于项目白名单工具模块的包装调用，不开放给用户代码。
+    """
+    script = tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False, dir=_SANDBOX_BASE)
+    script.write(code)
+    script.close()
+    try:
+        proc = subprocess.run(
+            [sys.executable, script.name],
+            capture_output=True, text=True, timeout=timeout, cwd=_WS,
+        )
+        return {
+            "stdout": proc.stdout[:10000],
+            "stderr": proc.stderr[:3000],
+            "exit_code": proc.returncode,
+            "timed_out": False,
+            "error": None,
+        }
+    except subprocess.TimeoutExpired:
+        return {"stdout": "", "stderr": f"执行超时({timeout}s)", "exit_code": -1, "timed_out": True, "error": "timeout"}
+    except Exception as e:
+        return {"stdout": "", "stderr": str(e), "exit_code": -1, "timed_out": False, "error": str(e)}
+    finally:
+        try:
+            os.unlink(script.name)
+        except Exception:
+            pass
+
+
 def create_venv(venv_path: str = None, packages: list = None) -> Dict:
     """创建虚拟环境并安装依赖包。
 

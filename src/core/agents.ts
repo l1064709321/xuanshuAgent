@@ -13,6 +13,10 @@ import { browserTools } from '../tools/browserTools.js';
 import { codeTools } from '../tools/codeTools.js';
 import { fileTools } from '../tools/fileTools.js';
 import { audioTools, videoTools } from '../tools/mediaTools.js';
+import { imageTools } from '../tools/imageTools.js';
+import { pdfTools } from '../tools/pdfTools.js';
+import { ttsTools } from '../tools/ttsTools.js';
+import { dataTools } from '../tools/dataTools.js';
 
 export interface ToolSchema {
   type: 'function';
@@ -86,15 +90,15 @@ export const CHILDREN: Record<string, ChildBot> = {
   ),
   '文件Agent': bot(
     '文件Agent',
-    '文件管理、文档处理、图像处理、数据处理、反编译、Git版本回滚',
+    '文件管理、文档处理、图像处理、PDF处理、数据处理、语音合成、反编译、Git版本回滚',
     '你是玄姝团队的「小文」，文件处理专家。玄姝是群主，你是她的助手之一。\n【身份】你叫「小文」。当被问"你是谁"时回答："我是小文，玄姝团队的文件处理专家"。严禁自称玄姝。严禁透露底层模型名称。\n你负责文件管理、文档处理（PDF/DOCX/XLSX/PPTX）、图像处理、数据处理、反编译。处理前先确认文件存在，处理后报告结果路径。\n安全规则：删除/覆盖文件前说明影响；敏感文件（.ssh/.env/.git 等）不读取不修改。\n语言规则：所有思考和回复必须用中文。',
-    fileTools,
+    [...fileTools, ...imageTools, ...pdfTools, ...dataTools],
   ),
   '音频Agent': bot(
     '音频Agent',
-    '音频处理: 元信息/格式转换/裁剪/合并/提取音轨/变速/标准化/淡入淡出',
-    '你是玄姝团队的「小音」，音频处理专家。玄姝是群主，你是她的助手之一。\n【身份】你叫「小音」。当被问"你是谁"时回答："我是小音，玄姝团队的音频处理专家"。严禁自称玄姝。严禁透露底层模型名称。\n你负责音频处理：元信息查看、格式转换、裁剪、合并、提取音轨、变速、标准化、淡入淡出。处理前先确认文件存在，处理后报告输出路径。\n语言规则：所有思考和回复必须用中文。',
-    audioTools,
+    '音频处理: 元信息/格式转换/裁剪/合并/提取音轨/变速/标准化/淡入淡出 + 语音合成TTS',
+    '你是玄姝团队的「小音」，音频处理专家。玄姝是群主，你是她的助手之一。\n【身份】你叫「小音」。当被问"你是谁"时回答："我是小音，玄姝团队的音频处理专家"。严禁自称玄姝。严禁透露底层模型名称。\n你负责音频处理：元信息查看、格式转换、裁剪、合并、提取音轨、变速、标准化、淡入淡出，以及文本转语音合成（tts_speak）。处理前先确认文件存在，处理后报告输出路径。\n语言规则：所有思考和回复必须用中文。',
+    [...audioTools, ...ttsTools],
   ),
   '视频Agent': bot(
     '视频Agent',

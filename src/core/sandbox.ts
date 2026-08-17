@@ -33,7 +33,7 @@ function runPython(args: string[], timeoutMs: number): Promise<SandboxResult> {
       ['-c', `
 import sys, json
 sys.path.insert(0, ${JSON.stringify(PROJECT_ROOT)})
-from sandbox import run_sandboxed, run_in_venv, run_local, create_venv, get_env_info
+from sandbox import run_sandboxed, run_in_venv, run_local, run_tool, create_venv, get_env_info
 op = sys.argv[1]
 if op == "sandboxed":
     code, timeout, network = sys.argv[2], int(sys.argv[3]), sys.argv[4] == "1"
@@ -44,6 +44,9 @@ elif op == "venv":
 elif op == "local":
     code, timeout = sys.argv[2], int(sys.argv[3])
     print(json.dumps(run_local(code, timeout=timeout), ensure_ascii=False))
+elif op == "tool":
+    code, timeout = sys.argv[2], int(sys.argv[3])
+    print(json.dumps(run_tool(code, timeout=timeout), ensure_ascii=False))
 elif op == "create_venv":
     pkgs = sys.argv[2].split("\\x1f") if sys.argv[2] else []
     print(json.dumps(create_venv(packages=pkgs), ensure_ascii=False))
@@ -98,6 +101,11 @@ export function runInVenv(code: string, venvPath = '', timeout = 60): Promise<Sa
 /** 本地执行（无隔离，信任代码时使用） */
 export function runLocal(code: string, timeout = 60): Promise<SandboxResult> {
   return runPython(['local', code, String(timeout)], timeout * 1000 + 5000);
+}
+
+/** 受信工具层专用：执行项目自带工具模块（不注入 light guard） */
+export function runTool(code: string, timeout = 60): Promise<SandboxResult> {
+  return runPython(['tool', code, String(timeout)], timeout * 1000 + 5000);
 }
 
 export interface VenvResult {

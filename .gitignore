@@ -27,3 +27,11 @@ temp/
 .browser_state.json
 .openclaw/
 preview_server.py
+
+# Node
+node_modules/
+dist/
+*.bak
+*.bak_*
+*.bak_p0_*
+*.mp3

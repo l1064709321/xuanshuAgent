@@ -4,4 +4,7 @@ openai>=1.0
 wikipedia
 numpy
 scikit-learn
+edge-tts
+pypdf
+Pillow
 alibabacloud_dysmsapi20170525

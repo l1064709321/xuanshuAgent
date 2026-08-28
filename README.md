@@ -14,17 +14,21 @@
 
 | 源 | 克隆地址 |
 |---|---------|
-| 华为云 CodeHub（推荐国内） | `https://codehub.devcloud.cn-north-4.huaweicloud.com/8965d3a4483445cca386477c8d9dd196/xuanshu-agent.git` |
-| Gitee | `https://gitee.com/l1064709321/xuanshuAgent.git` |
-| GitHub | `https://github.com/l1064709321/xuanshuAgent.git` |
+| **GitHub** | `https://github.com/l1064709321/xuanshuAgent.git` |
+| Gitee（国内镜像） | `https://gitee.com/l1064709321/xuanshuAgent.git` |
+| 华为云 CodeHub | `https://codehub.devcloud.cn-north-4.huaweicloud.com/8965d3a4483445cca386477c8d9dd196/xuanshu-agent.git` |
 
-### 一键启动（推荐）
+📥 **GitHub Release 下载**：https://github.com/l1064709321/xuanshuAgent/releases
+
+### 启动方式
+
+#### 方式一：Docker 启动（推荐）
 
 **华为云 CodeHub（首选，国内最快）：**
 
 ```bash
-git clone https://codehub.devcloud.cn-north-4.huaweicloud.com/8965d3a4483445cca386477c8d9dd196/xuanshu-agent.git
-cd xuanshu-agent
+git clone https://github.com/l1064709321/xuanshuAgent.git
+cd xuanshuAgent
 docker compose up -d
 ```
 
@@ -62,14 +66,16 @@ xuanshu.bat
 
 - 启动脚本会自动创建虚拟环境、安装依赖并启动服务。端口默认 8901，浏览器打开 http://localhost:8901 即可使用。首次运行若遇权限问题执行 `chmod +x xuanshu`。
 
-### 手动安装
+#### 方式三：手动安装
 
 ```bash
-git clone https://gitee.com/l1064709321/xuanshuAgent.git
+git clone https://github.com/l1064709321/xuanshuAgent.git
 cd xuanshuAgent
 pip install -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple
 python frontend.py
 ```
+
+访问 http://localhost:8901
 
 ### 环境要求
 
@@ -310,7 +316,7 @@ bash xuanshu
 | 端点 | 方法 | 说明 |
 |------|------|------|
 | `/chat` | POST | 同步对话 |
-| `/chat/stream` | POST | SSE 流式对话 |
+| `/chat/stream` | GET/POST | SSE 流式对话（支持实时思考链展示） |
 
 ### 模型 & Key
 
@@ -434,6 +440,28 @@ d.detect_format("target.bin")                      # 仅格式检测
 支持：pyc / APK / DEX / JAR / PE / ELF / Mach-O / WASM / Lua / .NET。无外部工具时自动降级到 Python `dis` 反汇编。
 
 ---
+
+
+---
+
+## 更新日志
+
+### v0.0.0.4 (2025-08-14)
+
+- **新增**：SSE 流式实时思考链展示
+- **新增**：前端支持 `EventSource` 连接 `/chat/stream?msg=`
+- **新增**：思考链折叠面板逐轮展示工具调用过程
+- **修复**：多处中文编码乱码问题
+- **优化**：`/chat/stream` 端点支持 GET/POST 双协议
+- **优化**：工具调用状态实时反馈（搜索/浏览器/代码/文件/系统/记忆）
+
+### v0.0.0.3 (2026-07-27)
+
+- toast CSS 修复
+- config/logger 模块补充
+- 注册 API 全链路验证
+
+
 
 ## 许可证
 

@@ -412,7 +412,7 @@ def _dispatch_tool_call(child, tc: dict) -> Tuple[str, str]:
         code = validated_args.get("code", validated_args.get("command", validated_args.get("script", "")))
         if code:
             try:
-                from .sandbox import run_sandboxed
+                from sandbox import run_sandboxed
                 sandbox_result = run_sandboxed(code)
                 return matched_name, f"[沙箱执行]\n{sandbox_result}"
             except Exception as e:

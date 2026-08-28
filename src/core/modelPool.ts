@@ -315,8 +315,8 @@ export class ModelPool {
           };
           if (tcList) (d['choices'] as { message: { tool_calls?: unknown } }[])[0].message.tool_calls = tcList;
         } else {
-          const resp = client.chat.completions.create(params as never) as unknown as { model_dump: () => Record<string, unknown> };
-          d = resp.model_dump();
+          const resp = await client.chat.completions.create(params as never);
+          d = resp as unknown as Record<string, unknown>;
         }
         d['_model'] = model.name;
         d['_tried'] = tried;
@@ -346,13 +346,13 @@ export class ModelPool {
   }
 
   /** 流式调用（聚合返回 async iterable，供 SSE 转发） */
-  streamLlm(
+  async streamLlm(
     agent: string,
     messages: unknown[],
     tools?: ToolDef[],
     modelOverride = '',
     stop?: string[],
-  ): { stream: AsyncIterable<unknown>; modelName: string; client: OpenAI } | null {
+  ): Promise<{ stream: AsyncIterable<unknown>; modelName: string; client: OpenAI } | null> {
     const primaryKey = modelOverride && this.allModels.has(modelOverride)
       ? modelOverride : this.getKey(agent);
     const model = this.allModels.get(primaryKey);
@@ -370,7 +370,7 @@ export class ModelPool {
       params.tool_choice = 'auto';
     }
     if (stop) params.stop = stop;
-    const stream = client.chat.completions.create(params as never) as unknown as AsyncIterable<unknown>;
+    const stream = await client.chat.completions.create(params as never) as unknown as AsyncIterable<unknown>;
     return { stream, modelName: model.name, client };
   }
 

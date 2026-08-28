@@ -3,10 +3,26 @@
  *
  * 对齐 Python core.py 的记忆机制：每个 Agent 在 .memdir 下有专属记忆文件，
  * 支持 list/read/write/search/snapshot。记忆写入走追加模式，不覆盖历史。
+ *
+ * 正确性保障（统一走 src/core/memGuard.ts）：
+ * - 扩展名白名单：只允许 .md/.txt/.json/.yaml/.yml
+ * - 路径安全：防穿越、防绝对路径、防内部目录（.backup/.trash）
+ * - 原子写入：tmp + rename，避免半截文件
+ * - 写前备份：覆盖前自动备份到 .backup（保留 MEM_BACKUP_KEEP 份）
+ * - 大小上限：单文件写入 ≤1MB、读取 ≤5MB
  */
 import fs from 'node:fs';
 import path from 'node:path';
 import { PROJECT_ROOT } from '../core/sandbox.js';
+import {
+  MEM_ALLOWED_EXT,
+  MEM_MAX_READ,
+  MEM_MAX_WRITE,
+  isValidMemRel,
+  safeResolve,
+  atomicWrite,
+  backupBeforeWrite,
+} from '../core/memGuard.js';
 
 // ── 本地工具类型（避免与 agents.ts 循环引用）──
 type FnSchema = { type: 'function'; function: { name: string; description: string; parameters: Record<string, unknown> } };
@@ -14,6 +30,8 @@ type ToolDef = { schema: FnSchema; handler: (args: Record<string, unknown>, ctx?
 
 
 const MEMDIR = path.join(PROJECT_ROOT, '.memdir');
+const MEM_BACKUP_DIR = path.join(MEMDIR, '.backup');
+const MEM_TRASH_DIR = path.join(MEMDIR, '.trash');
 
 /** Agent 记忆文件名映射：Agent 名 → 记忆文件（对齐 Python agent_memdir 命名） */
 export function memFileName(agent: string): string {
@@ -30,10 +48,14 @@ export function memFileName(agent: string): string {
   return names[agent] ?? `${agent}.md`;
 }
 
-function safeResolve(rel: string, agent: string): string | null {
-  if (rel && (rel.includes('..') || rel.startsWith('/') || rel.includes(':'))) return null;
-  const file = rel.includes('.') && !rel.endsWith('.md') ? rel : memFileName(agent);
-  return path.join(MEMDIR, file);
+/** 解析记忆文件路径：优先校验用户指定 rel（白名单+防穿越），否则落到自己的记忆文件 */
+function resolveMemFile(rel: string, agent: string): string | null {
+  if (rel) {
+    const clean = rel.replace(/^\/+/, '');
+    if (!isValidMemRel(clean)) return null;
+    return safeResolve(MEMDIR, clean);
+  }
+  return path.join(MEMDIR, memFileName(agent));
 }
 
 export const memTools: ToolDef[] = [
@@ -58,9 +80,11 @@ export const memTools: ToolDef[] = [
     handler: (args: Record<string, unknown>, ctx) => {
       try {
         const rel = String(args.rel ?? '');
-        const fp = safeResolve(rel, ctx?.agent ?? "未知Agent");
+        const fp = resolveMemFile(rel, ctx?.agent ?? "未知Agent");
         if (!fp) return '[memdir_read 失败] 非法路径';
         if (!fs.existsSync(fp)) return '[记忆文件不存在]';
+        const st = fs.statSync(fp);
+        if (st.size > MEM_MAX_READ) return `[memdir_read 失败] 文件过大(${st.size}B，上限 ${MEM_MAX_READ}B)`;
         const content = fs.readFileSync(fp, 'utf8');
         return content.slice(0, 6000) + (content.length > 6000 ? '\n...(截断)' : '');
       } catch (e) {
@@ -74,13 +98,21 @@ export const memTools: ToolDef[] = [
       try {
         const rel = String(args.rel ?? '');
         const content = String(args.content ?? '');
-        const fp = safeResolve(rel, ctx?.agent ?? "未知Agent");
-        if (!fp) return '[memdir_write 失败] 非法路径';
-        fs.mkdirSync(path.dirname(fp), { recursive: true });
+        const agent = ctx?.agent ?? "未知Agent";
+        const fp = resolveMemFile(rel, agent);
+        if (!fp) return '[memdir_write 失败] 非法路径（仅允许 .md/.txt/.json/.yaml/.yml，禁止路径穿越）';
         const ts = new Date().toISOString().slice(0, 16);
         const block = `\n## ${ts}\n${content.trim()}\n`;
-        fs.appendFileSync(fp, block, 'utf8');
-        return `[已写入记忆] ${path.relative(MEMDIR, fp)} (+${content.length}字符)`;
+        // 大小上限：现有内容 + 新块不得超过 1MB
+        const existing = fs.existsSync(fp) ? fs.readFileSync(fp, 'utf8') : '';
+        if (Buffer.byteLength(existing + block, 'utf-8') > MEM_MAX_WRITE) {
+          return `[memdir_write 失败] 内容过大(上限 ${MEM_MAX_WRITE}B)，请精简或归档旧记忆`;
+        }
+        // 原子写入 + 写前备份（统一加固）
+        fs.mkdirSync(path.dirname(fp), { recursive: true });
+        backupBeforeWrite(fp, MEMDIR, MEM_BACKUP_DIR);
+        atomicWrite(fp, existing + block);
+        return `[已写入记忆] ${path.relative(MEMDIR, fp)} (+${block.length}字符)`;
       } catch (e) {
         return `[memdir_write 失败] ${(e as Error).message}`;
       }

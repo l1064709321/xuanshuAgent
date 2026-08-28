@@ -1,5 +1,7 @@
 import Fastify from "fastify";
 import cors from "@fastify/cors";
+import fastifyStatic from "@fastify/static";
+import { resolve } from "node:path";
 import { config } from "./config.js";
 import { logger } from "./core/logger.js";
 import { healthRoutes } from "./routes/health.js";
@@ -7,6 +9,10 @@ import { pingRoutes } from "./routes/ping.js";
 import { modelRoutes } from "./routes/models.js";
 import { agentRoutes } from "./routes/agents.js";
 import { chatRoutes } from "./routes/chat.js";
+import { vmRoutes } from "./routes/vm.js";
+import { vm2Routes } from "./routes/vm2.js";
+import { miscRoutes } from "./routes/misc.js";
+import { ttsRoutes } from "./routes/tts.js";
 
 async function main() {
   const app = Fastify({
@@ -16,6 +22,12 @@ async function main() {
   });
 
   await app.register(cors, { origin: true, credentials: true });
+
+  // 静态前端（同源：页面与 API 共用 8901）
+  await app.register(fastifyStatic, {
+    root: resolve(import.meta.dirname, ".."),
+    wildcard: false,
+  });
 
   // 基础探针
   await app.register(healthRoutes);
@@ -27,6 +39,14 @@ async function main() {
   // 多 Agent 调度层
   await app.register(agentRoutes, { prefix: "/api" });
   await app.register(chatRoutes, { prefix: "/api" });
+
+  // Linux 虚拟机模块
+  await app.register(vmRoutes, { prefix: "/api" });
+  await app.register(vm2Routes, { prefix: "/api" });
+
+  // 前端配套路由（Key/Token统计/记忆/技能/工作流/上传等）
+  await app.register(miscRoutes, { prefix: "/api" });
+  await app.register(ttsRoutes, { prefix: "/api" });
 
   // 统一错误处理
   app.setErrorHandler((err, _req, reply) => {

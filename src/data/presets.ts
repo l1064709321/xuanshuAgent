@@ -11,6 +11,26 @@ export interface ModelPreset {
 }
 
 export const BUILTIN_MODELS: Record<string, ModelPreset> = {
+  "agnes-2.0-flash": {
+    key: "agnes-2.0-flash",
+    name: "Agnes 2.0 Flash",
+    modelId: "agnes-2.0-flash",
+    baseUrl: "https://apihub.agnes-ai.com/v1",
+    provider: "Agnes AI",
+    description: "agnes 稳定对话/代码/Agent 主力模型",
+    aliases: ["agnes", "agnes2", "agnes-2.0"],
+    custom: false,
+  },
+  "agnes-2.5-flash": {
+    key: "agnes-2.5-flash",
+    name: "Agnes 2.5 Flash",
+    modelId: "agnes-2.5-flash",
+    baseUrl: "https://apihub.agnes-ai.com/v1",
+    provider: "Agnes AI",
+    description: "agnes 灰度新模型",
+    aliases: ["agnes25", "agnes-2.5"],
+    custom: false,
+  },
   "gpt-5.5": {
     key: "gpt-5.5",
     name: "GPT-5.5",

@@ -35,3 +35,4 @@ dist/
 *.bak_*
 *.bak_p0_*
 *.mp3
+.data/

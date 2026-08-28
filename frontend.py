@@ -59,7 +59,7 @@ def _after_request(resp):
     elapsed = (time.time() - getattr(request, "_start_ms", time.time())) * 1000
     slog.request_end(resp.status_code, elapsed)
     resp.headers["Access-Control-Allow-Origin"] = "*"
-    resp.headers["Access-Control-Allow-Headers"] = "Content-Type"
+    resp.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization"
     resp.headers["Access-Control-Allow-Methods"] = "GET,POST,OPTIONS,DELETE"
     return resp
 

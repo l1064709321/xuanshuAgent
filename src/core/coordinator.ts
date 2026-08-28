@@ -7,9 +7,18 @@
  * - 多模型兜底链 + 失败冷却
  * - Token 预算追踪（阶段4强化）
  */
+import fs from 'node:fs';
+import path from 'node:path';
 import { ModelPool, type LlmResponse, type Modality } from './modelPool.js';
 import { injectCacheHints } from '../vendors/index.js';
 import { getChild, type ChildBot, type ToolHandler, type ToolSchema } from './agents.js';
+import { memFileName } from '../tools/memTools.js';
+import { PROJECT_ROOT } from './sandbox.js';
+
+/** Agent 记忆目录（与 memTools / API 层一致） */
+const MEM_DIR = path.join(PROJECT_ROOT, '.memdir');
+/** 注入上下文的记忆上限（字符），防上下文爆炸 */
+const MEM_INJECT_LIMIT = 4000;
 
 /** 工具循环最大轮数（对齐 Python 4 轮） */
 const MAX_TOOL_ROUNDS = 4;
@@ -192,11 +201,30 @@ export class Coordinator {
     };
   }
 
+  /** 读取 Agent 专属记忆文件（自动注入上下文，无需 Agent 自觉调用） */
+  private loadAgentMemory(agent: string): string {
+    try {
+      const fp = path.join(MEM_DIR, memFileName(agent));
+      if (!fs.existsSync(fp)) return '';
+      const content = fs.readFileSync(fp, 'utf8').trim();
+      if (!content) return '';
+      return content.length > MEM_INJECT_LIMIT ? content.slice(0, MEM_INJECT_LIMIT) + '\n...(截断)' : content;
+    } catch {
+      return '';
+    }
+  }
+
   /** 构建子 Agent 消息列表 — v6 前缀冻结（对齐 Python _build_child_msgs 骨架） */
   buildChildMessages(child: ChildBot, userInput: string, extraContext = ''): unknown[] {
+    const memBlock = this.loadAgentMemory(child.name);
     const frozen = [
-      `${child.system_prompt}\n\n## 启动指令\n你的长期经验（MEMORY.md）已自动注入到下方的「Agent 自主记忆」章节，无需主动读取。只有当你想更新 MEMORY.md 时才用 memdir_write。\n如需查询记忆文件夹现有文件，可选调用 memdir_list/memdir_search。`,
+      `${child.system_prompt}\n\n## 启动指令\n你的长期经验已自动注入到下方的「Agent 自主记忆」章节，无需主动读取。只有当你想更新记忆时才用 memdir_write。\n如需查询记忆文件夹现有文件，可选调用 memdir_list/memdir_search。`,
     ];
+    if (memBlock) {
+      frozen.push('## Agent 自主记忆\n' + memBlock);
+    } else {
+      frozen.push('## Agent 自主记忆\n（暂无长期记忆。任务完成后若有值得沉淀的事实/偏好/经验，用 memdir_write 写入自己的记忆文件。）');
+    }
     if (child.knowledge.length) {
       frozen.push('[知识库]\n' + child.knowledge.join('\n\n'));
     }

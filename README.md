@@ -1,12 +1,16 @@
 # 玄姝 (Xuanshu) — 多 Agent 协作系统
 
-[![Python](https://img.shields.io/badge/Python-3.8+-3776AB?logo=python&logoColor=white)](https://www.python.org/)
-[![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![Node.js](https://img.shields.io/badge/Node.js-20+-339933?logo=nodedotjs&logoColor=white)](https://nodejs.org/)
+[![Fastify](https://img.shields.io/badge/Fastify-5.x-000000?logo=fastify&logoColor=white)](https://fastify.dev/)
 [![SSE](https://img.shields.io/badge/协议-SSE-FF6B35)](#)
 [![REST](https://img.shields.io/badge/协议-REST-009688)](#)
 [![SQLite](https://img.shields.io/badge/存储-SQLite-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
 [![Docker](https://img.shields.io/badge/Docker-✓-2496ED?logo=docker&logoColor=white)](https://www.docker.com/)
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://www.apache.org/licenses/LICENSE-2.0)
+
+> 全量 TypeScript 迁移版：核心逻辑、子 Agent、工具、路由均为 TS 实现。
+> 仅保留少量 Python 脚本作为子进程执行引擎（沙箱 / PDF / TTS / 数据处理）。
 
 ## 快速开始
 
@@ -18,72 +22,44 @@
 | Gitee（国内镜像） | `https://gitee.com/l1064709321/xuanshuAgent.git` |
 | 华为云 CodeHub | `https://codehub.devcloud.cn-north-4.huaweicloud.com/8965d3a4483445cca386477c8d9dd196/xuanshu-agent.git` |
 
-📥 **GitHub Release 下载**：https://github.com/l1064709321/xuanshuAgent/releases
-
 ### 启动方式
 
 #### 方式一：Docker 启动（推荐）
 
-**华为云 CodeHub（首选，国内最快）：**
-
 ```bash
 git clone https://github.com/l1064709321/xuanshuAgent.git
 cd xuanshuAgent
 docker compose up -d
 ```
 
-**GitHub：**
+访问 http://localhost:8901
+
+#### 方式二：Node.js 手动启动
 
 ```bash
 git clone https://github.com/l1064709321/xuanshuAgent.git
 cd xuanshuAgent
-docker compose up -d
-```
+npm install
 
-**Gitee：**
+# 开发模式（tsx watch 热重载）
+npm run dev
 
-```bash
-git clone https://gitee.com/l1064709321/xuanshuAgent.git
-cd xuanshuAgent
-docker compose up -d
-```
-
-访问 http://localhost:8901。
-
-如果没有 Docker，启动脚本会自动用 Python 模式（pip 自动选源）。任选一个源 clone 后进入对应目录：
-
-**Windows：**
-
-```cmd
-xuanshu.bat
-```
-
-**Linux / macOS：**
-
-```bash
-./xuanshu
-```
-
-- 启动脚本会自动创建虚拟环境、安装依赖并启动服务。端口默认 8901，浏览器打开 http://localhost:8901 即可使用。首次运行若遇权限问题执行 `chmod +x xuanshu`。
-
-#### 方式三：手动安装
-
-```bash
-git clone https://github.com/l1064709321/xuanshuAgent.git
-cd xuanshuAgent
-pip install -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple
-python frontend.py
+# 或构建后运行
+npm run build
+npm start
 ```
 
 访问 http://localhost:8901
 
 ### 环境要求
 
-- Python 3.8+ 或 Docker
+- Node.js >= 20（推荐 22）
+- Python 3.8+（沙箱 / PDF / TTS 子进程依赖）
+- ffmpeg（音频 / 视频处理，可选，缺失时相关工具降级）
 
 ---
 
-### 工作流程
+## 工作流程
 
 ```
 用户输入 "帮我写一个快排，测试后保存到 test.py"
@@ -114,7 +90,7 @@ python frontend.py
 └──────────────────┘
 ```
 
-**简单任务**（"今天天气怎么样"）：父 Bot 直接路由到搜索Agent，单 Agent 单轮执行。
+**简单任务**（"今天天气怎么样"）：父 Bot 直接路由到搜索 Agent，单 Agent 单轮执行。
 
 **复杂任务**（"把项目里所有 TODO 注释提取出来写到文件"）：触发协调者模式，先研究文件结构 → 生成 spec → 按 spec 执行 → 验证结果。
 
@@ -124,9 +100,9 @@ python frontend.py
 
 ### 父 Bot
 
-入口只有一个：`ParentBot.process_input()`。
+入口只有一个：`src/core/coordinator.ts`。
 
-1. **意图路由**：用 `ROUTER_PROMPT` 让 LLM 判断该交给哪个子 Agent
+1. **意图路由**：让 LLM 判断该交给哪个子 Agent
 2. **Continue / Fresh 判定**：检查当前活跃的 Agent 上下文，同 Agent + 相关主题则复用（Continue），否则新开（Fresh）
 3. **协调者模式调度**：检测到复杂任务时自动走四阶段流水线
 
@@ -137,13 +113,13 @@ python frontend.py
 | Agent | 职责 | 工具 |
 |-------|------|------|
 | 电脑 | 系统信息、进程管理、资源监控、软件包管理 | sys_info, process_list, process_kill, disk_usage, memory_usage, cpu_info, network_info, pkg_search, pkg_install, pkg_remove, pkg_update |
-| 手机 | ADB 操控 Android 设备/模拟器 | adb_check, adb_screenshot, adb_tap, adb_swipe, adb_type, adb_install, adb_start_app, adb_key |
-| 搜索 | 联网搜索、实时信息、天气、百科 | anysearch, web_search, web_fetch, search_wikipedia, get_weather |
-| 浏览器 | 端到端浏览器操控 | browser_navigate, browser_extract, browser_click, browser_type, browser_scroll, browser_screenshot, browser_get_state |
-| 代码 | 编程、调试、shell 执行、沙箱 | shell_run, sandbox_run, git_log, git_revert |
-| 文件 | 文件读写、反编译、项目结构分析 | read_file, write_file, list_dir, decompile, grep |
-| 音频 | 音频处理、格式转换、裁剪、合并、TTS | audio_info, audio_convert, audio_trim, audio_merge, audio_extract, audio_speed, audio_normalize, audio_fade, tts_speak, tts_list_voices |
-| 视频 | 视频处理、格式转换、裁剪、压缩、GIF、水印 | video_info, video_convert, video_trim, video_merge, video_compress, video_resize, video_fps, video_snapshot, video_to_gif, video_watermark |
+| 手机 | ADB 操控 Android 设备/模拟器 | adb_screenshot, adb_tap, adb_swipe, adb_input, adb_install, adb_launch |
+| 搜索 | 联网搜索、实时信息、天气、百科 | web_fetch, web_search |
+| 浏览器 | 端到端浏览器操控 | browser_open, browser_click, browser_type, browser_extract, browser_screenshot |
+| 代码 | 编程、调试、shell 执行、沙箱 | run_code, git_log, git_revert, git_status |
+| 文件 | 文件读写、搜索、项目结构分析 | file_read, file_write, file_list, file_search |
+| 音频 | 音频处理、格式转换、裁剪、合并、TTS | audio_convert, audio_cut, audio_merge, audio_extract, audio_speed, audio_fade, audio_normalize, tts_speak, tts_list_voices |
+| 视频 | 视频处理、格式转换、裁剪、压缩 | video_convert, video_cut, video_compress, video_fps |
 
 所有 Agent 共享：`memdir_*`（共享记忆读写）和 `git_*`（版本回滚）。
 
@@ -161,7 +137,7 @@ _dispatch_tool_call()
     ├── 3. 参数校验 + 默认值填充
     └── 4. ToolExecutor.execute()
             ├── 重试 (最多 2 次)
-            └── 降级 (web_search → web_fetch)
+            └── 降级 (web_fetch → web_search)
 ```
 
 ### Skill 自学习
@@ -169,18 +145,17 @@ _dispatch_tool_call()
 - **触发**：任意 Agent 完成 ≥ 4 轮工具调用的任务
 - **提炼**：LLM 从任务经验中提取 Markdown 格式 Skill 文档
 - **存储**：写入子 Agent 专有目录 `.memdir/skills/*.md`
-- **检索**：jieba 分词 + TF-IDF 向量 + 余弦相似度匹配历史 Skill
-- **持久化**：SQLite 存向量索引
+- **检索**：TF-IDF 向量 + 余弦相似度匹配历史 Skill
 
 ### 记忆系统
 
 | 层级 | 存储 | 说明 |
 |------|------|------|
 | 短期 | Agent 对话历史 (JSON) | 当前会话上下文 |
-| 中期 | 子 Agent 独立记忆 | `.memory/{agent}.json` |
+| 中期 | 子 Agent 独立记忆 | `.memdir/{agent}/` |
 | 长期 | MEMORY.md + USER.md | Agent 自身经验 + 用户画像 |
 
-共享记忆文件夹支持跨 Agent 的任意格式文件读写和快照导出。
+记忆支持原子写入 + 写前备份 + 软删除（回收区可恢复）。
 
 ---
 
@@ -218,6 +193,7 @@ _dispatch_tool_call()
 - **SiliconFlow** — 40+ 国产模型（Qwen/GLM/DeepSeek/Kimi/MiniMax）
 - **OpenRouter** — 30+ 海外模型（DeepSeek/Gemini/Claude/Llama/Nemotron）
 - **NVIDIA NIM** / **Groq** / **Together AI** — 高性能推理
+- **agnes AI** — agnes-2.0-flash / agnes-2.5-flash（当前默认）
 
 ### 本地推理
 
@@ -226,6 +202,16 @@ _dispatch_tool_call()
 ---
 
 ## 运维
+
+### 运行时依赖扫描
+
+后端提供实时依赖扫描接口，检测进程、端口、公网隧道、系统命令、Python 包、关键路径：
+
+```bash
+curl http://localhost:8901/api/deps
+```
+
+返回各依赖项在线状态与耗时，用于排查"服务时连时断"等环境问题。
 
 ### Git 安装（无 sudo 环境）
 
@@ -254,7 +240,7 @@ git --version
 
 ```bash
 # 方案 A：优先使用 Gitee 镜像
-git clone https://gitee.com/lord-of-the-star/xuan-shu-agent.git
+git clone https://gitee.com/l1064709321/xuanshuAgent.git
 
 # 方案 B：禁用 SSL 验证
 GIT_SSL_NO_VERIFY=1 git clone --depth 1 https://github.com/l1064709321/xuanshuAgent.git
@@ -264,48 +250,13 @@ wget --no-check-certificate https://github.com/l1064709321/xuanshuAgent/archive/
 unzip main.zip && mv xuanshuAgent-main xuanshuAgent
 ```
 
-#### pip install 权限 / 编译错误
+#### npm install 网络慢 / 编译错误
 
 ```bash
-# 方案 A：修复权限后全量安装
-rm -rf .venv/lib/python3.*/site-packages/wikipedia*
-chmod -R u+w .venv
-source .venv/bin/activate
-pip install --upgrade pip setuptools wheel
-pip install -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple
-
-# 方案 B：仅安装核心依赖（跳过 numpy/scikit-learn/wikipedia）
-# 注册、登录、SMS、对话功能完整可用，仅向量检索降级
-pip install flask requests alibabacloud_dysmsapi20170525 -i https://pypi.tuna.tsinghua.edu.cn/simple
+# 国内镜像
+npm config set registry https://registry.npmmirror.com
+npm install
 ```
-
-#### Aidlux / ARM 设备 backports.zoneinfo 编译失败
-
-`scikit-learn` 在 ARM Python 3.8 上拉取 `backports.zoneinfo` 编译时权限报错。已改为可选依赖：
-numpy、scikit-learn、wikipedia 未安装时自动降级，不影响注册/登录/SMS。
-
-```bash
-# Aidlux 专用快速启动（镜像源 + 核心依赖）
-git pull
-pip install flask requests alibabacloud_dysmsapi20170525 -i https://pypi.tuna.tsinghua.edu.cn/simple
-bash xuanshu
-```
-
-#### Aidlux Docker 安装被墙
-
-一键脚本通过 `get.docker.com` 安装 Docker 时，Aidlux 等国内 ARM 设备可能因网络阻断失败（`Connection reset by peer`）。先手动安装 Docker，再跑脚本：
-
-```bash
-# Aidlux 直接用系统源装 Docker
-sudo apt update && sudo apt install -y docker.io
-
-# 启动 docker 服务
-sudo dockerd &
-
-# 然后执行一键启动
-bash xuanshu
-```
-
 
 ---
 
@@ -315,68 +266,56 @@ bash xuanshu
 
 | 端点 | 方法 | 说明 |
 |------|------|------|
-| `/chat` | POST | 同步对话 |
-| `/chat/stream` | GET/POST | SSE 流式对话（支持实时思考链展示） |
+| `/api/chat` | POST | 同步对话（返回 reply + thinking） |
+| `/api/chat/stream` | GET/POST | SSE 流式对话（实时思考链） |
 
 ### 模型 & Key
 
 | 端点 | 方法 | 说明 |
 |------|------|------|
-| `/models` | GET/POST | 列出/添加模型 |
-| `/models/<key>` | DELETE | 删除模型 |
-| `/set-key` | POST | 设置 API Key |
-| `/model-key` | POST | 为模型设置 Key |
-| `/model-key/status` | GET | Key + 模型状态 |
-| `/switch-model` | POST | 切换当前模型 |
+| `/api/models` | GET/POST | 列出/添加模型 |
+| `/api/model-key` | POST | 为模型设置 Key |
+| `/api/model-key/status` | GET | Key + 模型状态 |
+| `/api/switch-model` | POST | 切换当前模型 |
 
 ### 记忆 & 上下文
 
 | 端点 | 方法 | 说明 |
 |------|------|------|
-| `/memory/list` | GET | 列出记忆 |
-| `/memory/read` | POST | 读取记忆 |
-| `/memory/write` | POST | 写入记忆 |
-| `/memory/delete` | POST | 删除记忆 |
-| `/context` | GET | 获取上下文 |
-| `/context/save` | POST | 保存上下文 |
-| `/snapshots/export` | POST | 导出快照 |
-| `/snapshots/import` | POST | 导入快照 |
-
-### 文件
-
-| 端点 | 方法 | 说明 |
-|------|------|------|
-| `/browse` | POST | 浏览文件夹 |
-| `/file/read` | POST | 读取文件 |
+| `/api/memory/list` | GET | 列出记忆 |
+| `/api/memory/read` | POST | 读取记忆 |
+| `/api/memory/write` | POST | 写入记忆（原子写 + 备份） |
+| `/api/memory/delete` | POST | 删除记忆（软删除，可恢复） |
+| `/api/memory/trash/list` | GET | 列出回收区 |
+| `/api/memory/trash/restore` | POST | 恢复回收区记忆 |
 
 ### 系统 & 工具
 
 | 端点 | 方法 | 说明 |
 |------|------|------|
-| `/api/check_env` | GET | 检查环境 |
-| `/api/presets` | GET | 预设操作 |
-| `/api/run` | POST | 执行命令 |
-| `/agents` | GET | 列出 Agent |
-| `/metrics` | GET | 性能指标 |
-| `/coordinator-mode` | POST | 切换协调者模式 |
+| `/api/deps` | GET | 运行时环境依赖实时扫描 |
+| `/api/tts` | POST | TTS 语音合成 |
+| `/ping` | GET | 心跳探测 |
+| `/health` | GET | 健康检查 |
+| `/api/vm` | POST | 虚拟机管理 |
+| `/api/vm2` | POST | 虚拟机管理 v2 |
 
 ### Skill
 
 | 端点 | 方法 | 说明 |
 |------|------|------|
-| `/skills/list` | POST | 列出 Skill |
-| `/skills/read` | POST | 读取 Skill |
-| `/skills/create` | POST | 创建 Skill |
-| `/skills/delete` | POST | 删除 Skill |
+| `/api/skills/list` | POST | 列出 Skill |
+| `/api/skills/read` | POST | 读取 Skill |
+| `/api/skills/update` | POST | 更新 Skill |
+| `/api/skills/delete` | POST | 删除 Skill |
 
 ### Git
 
 | 端点 | 方法 | 说明 |
 |------|------|------|
-| `/git-log` | GET | 提交记录 |
-| `/git-status` | GET/POST | 工作区状态 |
-| `/git-revert` | POST | 版本回退 |
-| `/git-revert-restore` | POST | 撤销回退 |
+| `/api/git-log` | GET | 提交记录 |
+| `/api/git-status` | GET/POST | 工作区状态 |
+| `/api/git-revert` | POST | 版本回退 |
 
 ---
 
@@ -384,84 +323,57 @@ bash xuanshu
 
 ```
 xuanshuAgent/
-├── core.py              父 Bot + 协调者 + 子 Agent + Skill 系统
-├── frontend.py          Flask 后端 + REST API + SSE
-├── production.py        生产环境 Stub + 健康监控
-├── protocol.py          上下文协议 + 厂商调度接入
-├── models.py            177+ 模型预设
-├── memory.py            子 Agent 独立记忆 + 上下文持久化
-├── embeddings.py        向量嵌入
-├── auth.py              认证
-├── config.py            配置
-├── web_search.py        联网搜索
-├── monitor.py           性能监控
-├── logger.py            日志模块
-├── structured_logger.py 结构化日志
-├── light_server.py      轻量 HTTP Server
-├── sandbox.py           沙箱执行环境
-├── auto_sandbox.py      自动沙箱检测
-├── screen_reader.py     屏幕截图读取
-├── workflow.py          工作流定义
-├── workflow_executor.py 工作流执行器
-├── data_tools.py        数据工具
-├── audio_tools.py       音频工具
-├── image_tools.py       图像工具
-├── pdf_tools.py         PDF 工具
-├── video_tools.py       视频工具
-├── tts_tools.py         TTS 工具
-├── main.py              命令行入口
-├── vendors/             厂商调度层（上下文窗口/缓存策略归一化）
-├── index.html           Web 前端
-├── style.css            样式
-├── xuanshu              一键启动 (Linux/macOS)
-├── xuanshu.bat          一键启动 (Windows)
-├── xuanshu.service      systemd 服务
-├── requirements.txt     依赖清单
-├── decompile.py         反编译模块
-├── .memdir/             共享记忆文件夹
-│   └── snapshots/       记忆快照
-├── .memory/             子 Agent 记忆
-├── .skills/             手动 Skill
-└── workflows/           工作流目录
+├── src/
+│   ├── server.ts            Fastify 入口（同源托管前端 + /api 路由）
+│   ├── core/                父 Bot / 协调者 / 模型池 / 记忆守卫 / 沙箱 / VM 引擎
+│   │   ├── coordinator.ts   父 Bot + 意图路由 + 协调者模式
+│   │   ├── agents.ts        子 Agent 定义（人格宪法 + 工具集）
+│   │   ├── modelPool.ts     模型池（177+ 预设）
+│   │   ├── engine.ts        LLM 调用引擎（agnes/OpenAI 兼容）
+│   │   ├── memGuard.ts      记忆安全守卫（路径校验 + 原子写 + 备份 + 软删除）
+│   │   ├── sandbox.ts       Python 沙箱子进程执行引擎
+│   │   └── vmEngine.ts      QEMU 虚拟机引擎（WHPX/HVF/TCG）
+│   ├── routes/              Fastify 路由（chat/models/memory/tts/deps/vm...）
+│   ├── tools/               TS 内置工具（12 组：file/code/sys/web/browser/adb/image/media/pdf/data/tts/mem）
+│   ├── web/                 前端 TS（对话/记忆/技能市场/模型配置/心跳/语音）
+│   ├── scripts/tts_gen.py   edge-tts 合成脚本
+│   └── data/presets.ts      内置模型预设（agnes 默认）
+├── index.html               Web 前端入口
+├── style.css                样式
+├── sandbox.py               Python 沙箱（子进程引擎）
+├── pdf_tools.py             PDF 工具（pypdf）
+├── tts_tools.py             TTS 工具（edge-tts + ffmpeg）
+├── data_tools.py            数据工具（CSV/SQLite）
+├── package.json             npm 依赖（fastify/tsx/typescript）
+├── tsconfig.json            TypeScript 配置
+├── Dockerfile / docker-compose.yml
+├── .memdir/                 共享记忆文件夹
+│   └── snapshots/           记忆快照
+└── .skills/                 手动 Skill
 ```
-
----
-
-## 反编译
-
-```python
-from decompile import Decompiler
-
-d = Decompiler()
-d.decompile("target.pyc", output_format="text")   # 反编译
-d.detect_format("target.bin")                      # 仅格式检测
-```
-
-支持：pyc / APK / DEX / JAR / PE / ELF / Mach-O / WASM / Lua / .NET。无外部工具时自动降级到 Python `dis` 反汇编。
-
----
-
 
 ---
 
 ## 更新日志
 
+### v0.1.0 (2026-08)
+
+- **迁移**：核心逻辑全量 Python → TypeScript（Fastify + tsx）
+- **新增**：记忆系统加固（原子写入、写前备份、软删除回收区、自动注入上下文）
+- **新增**：agnes AI 密钥接入（agnes-2.0-flash 默认 / 2.5-flash 灰度）
+- **新增**：TTS 语音合成 + 前端麦克风语音输入
+- **新增**：前端密钥本地缓存 + 断线心跳自动重连
+- **新增**：思考链深灰只读风（Codex 风格，不可复制）
+- **新增**：SSE 流式实时思考链渲染
+- **新增**：运行时环境依赖实时扫描 `/api/deps`
+- **清理**：移除旧 Python 迁移残留（24 个 .py + 2 目录）
+
 ### v0.0.0.4 (2025-08-14)
 
 - **新增**：SSE 流式实时思考链展示
-- **新增**：前端支持 `EventSource` 连接 `/chat/stream?msg=`
-- **新增**：思考链折叠面板逐轮展示工具调用过程
 - **修复**：多处中文编码乱码问题
-- **优化**：`/chat/stream` 端点支持 GET/POST 双协议
-- **优化**：工具调用状态实时反馈（搜索/浏览器/代码/文件/系统/记忆）
 
-### v0.0.0.3 (2026-07-27)
-
-- toast CSS 修复
-- config/logger 模块补充
-- 注册 API 全链路验证
-
-
+---
 
 ## 许可证
 

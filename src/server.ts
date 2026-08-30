@@ -13,6 +13,7 @@ import { vmRoutes } from "./routes/vm.js";
 import { vm2Routes } from "./routes/vm2.js";
 import { miscRoutes } from "./routes/misc.js";
 import { ttsRoutes } from "./routes/tts.js";
+import { depsRoutes } from "./routes/deps.js";
 
 async function main() {
   const app = Fastify({
@@ -47,6 +48,7 @@ async function main() {
   // 前端配套路由（Key/Token统计/记忆/技能/工作流/上传等）
   await app.register(miscRoutes, { prefix: "/api" });
   await app.register(ttsRoutes, { prefix: "/api" });
+  await app.register(depsRoutes, { prefix: "/api" });
 
   // 统一错误处理
   app.setErrorHandler((err, _req, reply) => {

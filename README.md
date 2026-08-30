@@ -51,6 +51,27 @@ npm start
 
 访问 http://localhost:8901
 
+### npm 打包与发布
+
+项目已完整 npm 化，可直接构建为标准 npm 安装包（含 `bin/xuanshu` 全局命令）：
+
+```bash
+# 构建 + 打包（产出 xuanshu-agent-<version>.tgz）
+npm run pack
+
+# 本地/全局安装
+npm install -g ./xuanshu-agent-<version>.tgz
+xuanshu                # 全局命令启动，默认 0.0.0.0:8901
+
+# 或通过 npx 直接运行
+npx xuanshu-agent
+
+# 发布到 npm registry（需先 npm login）
+npm publish
+```
+
+打包白名单由 `package.json` 的 `files` 字段控制，包含：`dist/`（TS 编译产物）、`bin/`（CLI 入口）、前端静态资源（`index.html` / `style.css`）、运行时 Python 依赖（`sandbox.py` / `pdf_tools.py` / `tts_tools.py` / `data_tools.py` / `src/scripts/tts_gen.py`）、README 与 LICENSE。
+
 ### 环境要求
 
 - Node.js >= 20（推荐 22）
@@ -356,7 +377,7 @@ xuanshuAgent/
 
 ## 更新日志
 
-### v0.1.0 (2026-08)
+### v0.0.0.5 (2026-08-30)
 
 - **迁移**：核心逻辑全量 Python → TypeScript（Fastify + tsx）
 - **新增**：记忆系统加固（原子写入、写前备份、软删除回收区、自动注入上下文）

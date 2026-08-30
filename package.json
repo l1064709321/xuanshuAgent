@@ -1,18 +1,53 @@
 {
   "name": "xuanshu-agent",
-  "version": "1.0.0",
-  "description": "玄姝多Agent协作系统 — TypeScript 迁移版",
+  "version": "0.0.5",
+  "description": "玄姝 (Xuanshu) — 多 Agent 协作系统：TS + Fastify 全量迁移版，含子 Agent、工具链、记忆系统、技能市场、SSE 流式思考链",
   "type": "module",
   "main": "dist/server.js",
+  "bin": {
+    "xuanshu": "bin/xuanshu.js"
+  },
+  "files": [
+    "bin",
+    "dist",
+    "index.html",
+    "style.css",
+    "sandbox.py",
+    "pdf_tools.py",
+    "tts_tools.py",
+    "data_tools.py",
+    "src/scripts",
+    "README.md",
+    "LICENSE",
+    "LICENSE-apache"
+  ],
   "scripts": {
     "dev": "tsx watch src/server.ts",
     "start": "node dist/server.js",
     "build": "tsc",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "pack": "npm run build && npm pack"
   },
   "engines": {
     "node": ">=20"
   },
+  "keywords": [
+    "agent",
+    "ai",
+    "mult-agent",
+    "llm",
+    "fastify",
+    "typescript",
+    "skill",
+    "memory",
+    "tts",
+    "sse"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/l1064709321/xuanshuAgent.git"
+  },
+  "license": "Apache-2.0",
   "dependencies": {
     "@fastify/cors": "^10.0.1",
     "@fastify/multipart": "^10.1.1",

@@ -1,0 +1,2 @@
+# 保留的 Python 子进程引擎脚本（sandbox/pdf/tts/data）不参与语言统计
+*.py linguist-vendored=true

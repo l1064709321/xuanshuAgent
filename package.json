@@ -59,7 +59,6 @@
     "pino-pretty": "^13.0.0"
   },
   "devDependencies": {
-    "@types/better-sqlite3": "^7.6.12",
     "@types/jsonwebtoken": "^9.0.7",
     "@types/node": "^22.10.2",
     "tsx": "^4.19.2",

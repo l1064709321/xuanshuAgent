@@ -36,3 +36,9 @@ dist/
 *.bak_p0_*
 *.mp3
 .data/
+
+# 压缩包不入库
+*.tgz
+*.tar
+*.zip
+*.gz

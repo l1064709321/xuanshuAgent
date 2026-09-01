@@ -8,7 +8,7 @@ import { promisify } from 'node:util';
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
-import { PROJECT_ROOT } from '../core/sandbox.js';
+import { PROJECT_ROOT, getPythonCmd } from '../core/sandbox.js';
 
 // ── 本地工具类型（避免与 agents.ts 循环引用）──
 type FnSchema = { type: 'function'; function: { name: string; description: string; parameters: Record<string, unknown> } };
@@ -414,7 +414,7 @@ export const videoTools: ToolDef[] = [
           `img.save(${JSON.stringify(png)})`,
           'print("OK")',
         ].join('\n');
-        await exec('python3', ['-c', pyCode], { timeout: 30000 });
+        await exec(getPythonCmd(), ['-c', pyCode], { timeout: 30000 });
         const posExp: Record<string, string> = {
           'top-left': '10:10',
           'top-right': 'W-w-10:10',

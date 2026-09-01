@@ -6,6 +6,7 @@ import { tmpdir } from 'node:os';
 import { join, dirname } from 'node:path';
 import { randomBytes } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
+import { getPythonCmd } from '../core/sandbox.js';
 
 const execFileP = promisify(execFile);
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '../..');
@@ -26,7 +27,7 @@ export const ttsRoutes: FastifyPluginAsync = async (app) => {
     const speed = typeof body.speed === 'number' && body.speed > 0 ? body.speed : 1.0;
     const out = join(tmpdir(), `xuanshu_tts_${Date.now()}_${randomBytes(4).toString('hex')}.mp3`);
     try {
-      await execFileP('python3', [TTS_SCRIPT, '--text', text, '--out', out, '--speed', String(speed)], { timeout: 30000 });
+      await execFileP(getPythonCmd(), [TTS_SCRIPT, '--text', text, '--out', out, '--speed', String(speed)], { timeout: 30000 });
       const buf = await readFile(out);
       return reply
         .header('Content-Type', 'audio/mpeg')

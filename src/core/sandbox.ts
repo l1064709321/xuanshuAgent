@@ -17,6 +17,17 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 // src/core/sandbox.ts → 项目根（含 sandbox.py）
 export const PROJECT_ROOT = path.resolve(__dirname, '..', '..');
 
+/**
+ * 跨平台 Python 命令解析：
+ * - Windows 使用 `python`（无 python3 命令）
+ * - Linux/macOS 使用 `python3`
+ * - 环境变量 PYTHON 可显式覆盖
+ */
+export function getPythonCmd(): string {
+  if (process.env.PYTHON) return process.env.PYTHON;
+  return process.platform === 'win32' ? 'python' : 'python3';
+}
+
 export interface SandboxResult {
   stdout: string;
   stderr: string;
@@ -29,7 +40,7 @@ export interface SandboxResult {
 function runPython(args: string[], timeoutMs: number): Promise<SandboxResult> {
   return new Promise((resolve) => {
     const child = execFile(
-      'python3',
+      getPythonCmd(),
       ['-c', `
 import sys, json
 sys.path.insert(0, ${JSON.stringify(PROJECT_ROOT)})

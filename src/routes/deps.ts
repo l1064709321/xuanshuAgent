@@ -7,6 +7,7 @@ import type { FastifyInstance } from "fastify";
 import { spawnSync } from "node:child_process";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
+import { getPythonCmd } from "../core/sandbox.js";
 
 const PORT = 8901;
 const TUNNEL_URL = "https://relation-dean-monitoring-print.trycloudflare.com";
@@ -68,7 +69,7 @@ export async function depsRoutes(app: FastifyInstance) {
       httpProbe(`${TUNNEL_URL}/ping`, 6000),
     ]);
 
-    const commands = ["node", "python3", "ffmpeg", "git", "cloudflared", "qemu-system-x86_64"].map((cmd) => {
+    const commands = ["node", getPythonCmd(), "ffmpeg", "git", "cloudflared", "qemu-system-x86_64"].map((cmd) => {
       const bin = findBin(cmd);
       return { name: cmd, ok: bin !== null, path: bin };
     });

@@ -74,6 +74,111 @@ function buildThinkingChainHtml(thinkings: ThinkingStep[]): string {
     '<div class="thinking-timeline">' + steps + "</div></details>";
 }
 
+// ── 思考过程按钮：位于气泡头「玄姝」右侧，点击展开/收起独立思考面板 ──
+function buildThinkToggleHtml(): string {
+  return '<button class="btn-think-toggle" type="button" aria-label="展开/收起思考过程">' +
+    '<span class="btn-think-label">思考过程</span><span class="btn-think-arrow">▸</span></button>';
+}
+
+// 绑定按钮 ↔ 思考链展开状态；思考面板独立于回复正文（默认折叠，点击才展开）
+function wireThinkToggle(d: HTMLElement): void {
+  const btn = d.querySelector(".btn-think-toggle") as HTMLButtonElement | null;
+  const details = d.querySelector("details.thinking-chain") as HTMLDetailsElement | null;
+  if (!btn || !details) return;
+  const arrow = btn.querySelector(".btn-think-arrow") as HTMLElement | null;
+  const sync = () => {
+    const open = details.open;
+    if (arrow) arrow.textContent = open ? "▾" : "▸";
+    btn.classList.toggle("think-open", open);
+  };
+  btn.disabled = false;
+  sync();
+  btn.addEventListener("click", (ev) => {
+    ev.stopPropagation();
+    details.open = !details.open;
+    sync();
+  });
+}
+
+// ── 询问弹窗：Agent 需要用户拍板时弹出（[ASK:问题] 协议） ──
+let _askResolve: ((answer: string | null) => void) | null = null;
+
+function showAskDialog(question: string): Promise<string | null> {
+  const overlay = $("#askOverlay") as HTMLElement | null;
+  const qEl = $("#askQuestion") as HTMLElement | null;
+  const inp = $("#askInput") as HTMLTextAreaElement | null;
+  if (!overlay || !qEl || !inp) return Promise.resolve(null);
+  qEl.textContent = question;
+  inp.value = "";
+  overlay.classList.add("show");
+  return new Promise<string | null>((resolve) => {
+    _askResolve = resolve;
+    setTimeout(() => inp.focus(), 50);
+  });
+}
+
+export function askSubmit(): void {
+  const overlay = $("#askOverlay") as HTMLElement | null;
+  const inp = $("#askInput") as HTMLTextAreaElement | null;
+  const r = _askResolve;
+  _askResolve = null;
+  if (overlay) overlay.classList.remove("show");
+  const ans = inp?.value.trim() || "";
+  if (r) r(ans);
+}
+
+export function askCancel(): void {
+  const overlay = $("#askOverlay") as HTMLElement | null;
+  const r = _askResolve;
+  _askResolve = null;
+  if (overlay) overlay.classList.remove("show");
+  if (r) r(null);
+}
+
+// 检测回复中的 [ASK:...] 标记，弹出询问弹窗；用户答复后自动续问
+async function handleAskIfAny(content: string): Promise<boolean> {
+  const m = content.match(/\[ASK:([\s\S]*?)\]/);
+  if (!m) return false;
+  const question = m[1].trim();
+  const answer = await showAskDialog(question);
+  if (answer) {
+    inpEl().value = answer;
+    void send();
+  }
+  return true;
+}
+
+// ── 超长消息自动转 txt：>3000 字时生成 txt 文件卡片，完整内容交给 Agent 读取 ──
+async function autoLongMsgToTxt(raw: string): Promise<string> {
+  const name = "long-msg-" + Date.now() + ".txt";
+  // 1) 前端生成可下载 txt 文件
+  const blob = new Blob([raw], { type: "text/plain;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  // 2) 上传到后端 workspace，供 Agent 读取完整内容
+  let filePath = "";
+  try {
+    const fd = new FormData();
+    fd.append("files", new File([raw], name, { type: "text/plain;charset=utf-8" }));
+    const r = await fetch(state.API + "/api/workspace/upload-batch", { method: "POST", body: fd });
+    const d = (await r.json()) as { ok?: boolean; uploaded?: { path: string }[]; error?: string };
+    if (d.ok && d.uploaded && d.uploaded[0]) filePath = d.uploaded[0].path;
+  } catch { /* 上传失败则仅前端展示 */ }
+
+  // 3) 前端气泡显示 txt 文件卡片（可下载）
+  const d = document.createElement("div");
+  d.className = "bubble user longmsg-card";
+  d.innerHTML = '<div class="longmsg-head">📄 长消息已转 txt（' + raw.length + ' 字）</div>' +
+    '<div class="longmsg-file"><span class="longmsg-name">' + name + '</span>' +
+    '<a class="longmsg-dl" href="' + url + '" download="' + name + '">下载</a></div>' +
+    (filePath ? '<div class="longmsg-path">' + filePath + "</div>" : "");
+  convEl().appendChild(d);
+  scrollConvToBottom(true);
+
+  // 4) 发给 Agent 的消息：文件路径 + 简短摘要
+  const preview = raw.slice(0, 120);
+  return "[用户发送了超长文本，已保存为文件 " + name + (filePath ? "（" + filePath + "）" : "（前端附件）") + "，共 " + raw.length + " 字。请先读取该文件获取完整内容再作答。文件开头预览：" + preview + "...]";
+}
+
 // ── 对话区滚动：显式 scrollTop 方案，兼容移动端 WebView，避免 scrollIntoView 失效/动画被打断 ──
 export function scrollConvToBottom(smooth = false): void {
   requestAnimationFrame(() => {
@@ -217,11 +322,18 @@ export function startVoiceInput(): void {
 
 // ── 发送消息 ──
 export async function send(): Promise<void> {
-  const text = inpEl().value.trim();
+  const raw = inpEl().value.trim();
   const btn = document.querySelector(".pill-send") as HTMLButtonElement | null;
-  if (!text) { showToast("请输入消息内容"); return; }
+  if (!raw) { showToast("请输入消息内容"); return; }
   inpEl().value = "";
   inpEl().style.height = "auto";
+
+  // 超长消息（>3000 字）自动转为 txt 文件：前端生成下载文件并显示为文件卡片
+  let text = raw;
+  if (raw.length > 3000) {
+    text = await autoLongMsgToTxt(raw);
+    if (!text) { showToast("长文本处理失败"); return; }
+  }
   addBubble("user", text);
   if (!state.hasKey) {
     addBubble("system", "未配置 API Key，请先在设置面板中填写 Key");
@@ -260,18 +372,36 @@ export async function send(): Promise<void> {
 // ── SSE 流式对话：思考实时展示（无警号，正常推导过程） ──
 async function streamSend(text: string, img: string | null | undefined): Promise<boolean> {
   const typingEl = addTyping();
+  // 外层 .agent-msg：三层分离 —— 名字行(玄姝+思考过程按钮) / 思考面板(灰块) / 正文气泡
   const d = document.createElement("div");
-  d.className = "bubble agent";
-  d.innerHTML = '<div class="agent-label"><span class="agent-name">玄姝</span><button class="btn-tts-read" title="朗读" onclick="readAloud(this)" data-text=""></button></div><div class="agent-body"></div>';
+  d.className = "agent-msg";
+  // 思考中按钮呈展开态（▾ 灰块实时可见），可点击折叠/展开实时面板；收尾后由 wireThinkToggle 接管
+  const liveToggleHtml = buildThinkToggleHtml()
+    .replace('class="btn-think-toggle"', 'class="btn-think-toggle think-open"')
+    .replace('>▸<', '>▾<');
+  d.innerHTML = '<div class="agent-label"><span class="agent-name">玄姝</span>' + liveToggleHtml + '<button class="btn-tts-read" title="朗读" onclick="readAloud(this)" data-text=""></button></div>' +
+    '<div class="agent-think-slot"></div>' +
+    '<div class="bubble agent"><div class="agent-body"></div></div>';
   convEl().appendChild(d);
   typingEl.remove();
 
-  const bodyEl = d.querySelector(".agent-body") as HTMLElement;
+  const bodyEl = d.querySelector(".bubble.agent .agent-body") as HTMLElement;
+  const thinkSlot = d.querySelector(".agent-think-slot") as HTMLElement;
   const thinkEl = document.createElement("div");
   thinkEl.className = "thinking-live";
   thinkEl.innerHTML = '<div class="tc-live-header"><span class="tc-live-dot"></span><span>思考中</span></div><div class="tc-thought-live"></div>';
-  bodyEl.appendChild(thinkEl);
+  thinkSlot.appendChild(thinkEl);
   const liveText = thinkEl.querySelector(".tc-thought-live") as HTMLElement;
+  // 思考中：按钮已呈展开态，点击折叠/展开实时灰块（收尾后 details 替换 live，isConnected=false 即失效）
+  const liveBtn = d.querySelector(".btn-think-toggle") as HTMLButtonElement | null;
+  const liveArrow = liveBtn?.querySelector(".btn-think-arrow") as HTMLElement | null;
+  liveBtn?.addEventListener("click", () => {
+    if (!thinkEl.isConnected) return;
+    const hidden = thinkEl.style.display === "none";
+    thinkEl.style.display = hidden ? "" : "none";
+    liveBtn.classList.toggle("think-open", hidden);
+    if (liveArrow) liveArrow.textContent = hidden ? "▾" : "▸";
+  });
   const replyEl = document.createElement("div");
   replyEl.className = "stream-reply";
   bodyEl.appendChild(replyEl);
@@ -287,10 +417,19 @@ async function streamSend(text: string, img: string | null | undefined): Promise
     const now = Date.now();
     if (now - lastRender > 120) {
       lastRender = now;
-      replyEl.innerHTML = renderMarkdown(content);
+      replyEl.innerHTML = renderMarkdown(content.replace(/\[ASK:[\s\S]*?\](?=\n|$)/g, ""));
     }
-    scrollConvToBottom();
+    // 流式期间强制置底（非平滑），确保气泡随内容实时增高并始终可见最新文字
+    convEl().scrollTop = convEl().scrollHeight;
   };
+
+  // 断流看门狗：模型思考链与正文之间可能长时间无数据（隧道/移动网络还可能静默断连），
+  // 超过 60s 无任何 SSE 数据即 abort，回退非流式，避免界面永久卡死。
+  const ctrl = new AbortController();
+  let lastDataAt = Date.now();
+  const watchdog = setInterval(() => {
+    if (Date.now() - lastDataAt > 60000) ctrl.abort();
+  }, 5000);
 
   try {
     const headers: Record<string, string> = { "Content-Type": "application/json" };
@@ -298,14 +437,15 @@ async function streamSend(text: string, img: string | null | undefined): Promise
     if (auth) headers["Authorization"] = "Bearer " + auth;
     const body: Record<string, string> = { msg: text, stream: "true" };
     if (img) body.image = img;
-    const r = await fetch(state.API + "/api/chat", { method: "POST", headers, body: JSON.stringify(body) });
-    if (!r.ok || !r.body) return false;
+    const r = await fetch(state.API + "/api/chat", { method: "POST", headers, body: JSON.stringify(body), signal: ctrl.signal });
+    if (!r.ok || !r.body) { clearInterval(watchdog); return false; }
     const reader = r.body.getReader();
     const decoder = new TextDecoder("utf-8");
     let buf = "";
     outer: for (;;) {
       const { done, value } = await reader.read();
       if (done) break;
+      lastDataAt = Date.now();
       buf += decoder.decode(value, { stream: true });
       const lines = buf.split("\n");
       buf = lines.pop() || "";
@@ -330,34 +470,44 @@ async function streamSend(text: string, img: string | null | undefined): Promise
     }
     if (!rafPending) requestAnimationFrame(render);
 
-    // 收尾：思考块转为折叠思考链（单步推导）
+    // 收尾：思考块转为折叠思考链（单步推导），激活「思考过程」按钮
     if (reasoning.trim()) {
       const wrap = document.createElement("div");
       wrap.innerHTML = buildThinkingChainHtml([{ round: 1, thought: reasoning.trim() }]);
-      const details = wrap.firstElementChild as HTMLElement;
+      const details = wrap.firstElementChild as HTMLDetailsElement;
       thinkEl.replaceWith(details);
-      setTimeout(() => { (details as HTMLDetailsElement).open = false; }, 2500);
+      details.open = false;
+      wireThinkToggle(d);
     } else {
       thinkEl.remove();
+      const btn = d.querySelector(".btn-think-toggle") as HTMLElement | null;
+      if (btn) btn.remove();
     }
-    replyEl.innerHTML = renderMarkdown(content) || "";
+    // 收尾：剥离 [ASK:...] 标记后再渲染正文（问题由弹窗展示）
+    const cleanContent = content.replace(/\[ASK:[\s\S]*?\]/g, "").trim();
+    replyEl.innerHTML = renderMarkdown(cleanContent) || "";
     const ttsBtn = d.querySelector(".btn-tts-read") as HTMLElement | null;
-    if (ttsBtn && content) {
-      ttsBtn.dataset.text = encodeURIComponent(content);
+    if (ttsBtn && cleanContent) {
+      ttsBtn.dataset.text = encodeURIComponent(cleanContent);
       if (state.ttsEnabled) {
         const lastBubble = convEl().lastElementChild;
         const b = lastBubble?.querySelector(".btn-tts-read") as HTMLElement | null;
         if (b) void readAloud(b);
       }
     }
-    foldLongBubble(d);
     scrollConvToBottom(true);
     state.totalTokens += text.length + content.length;
     updateTokenBadge();
     saveConv();
+    // Agent 需要用户拍板时弹出询问弹窗
+    if (/\[ASK:/.test(content)) {
+      void handleAskIfAny(content);
+    }
+    clearInterval(watchdog);
     return true;
   } catch (e) {
     // 流式失败：移除半成品，交由调用方回退非流式
+    clearInterval(watchdog);
     d.remove();
     return false;
   }
@@ -368,6 +518,10 @@ function renderChatResponse(d: ChatResponse): void {
   if (d.reply && d.reply.startsWith("[PERM:")) {
     const m = d.reply.match(/^\[PERM:(\w+)\]([\s\S]*)/);
     if (m) showPermission(m[1], m[2].trim());
+    return;
+  }
+  if (d.reply && /\[ASK:/.test(d.reply)) {
+    void handleAskIfAny(d.reply);
     return;
   }
   const thinkings = d.thinking || [];
@@ -396,47 +550,40 @@ export function addBubble(role: "user" | "agent" | "system", content: string, ag
   const welcome = $("#welcome");
   if (welcome) welcome.style.display = "none";
   const d = document.createElement("div");
-  d.className = "bubble " + role;
   let html = renderMarkdown(content);
   if (agentName) {
+    d.className = "agent-msg";
     const thinkingHtml = buildThinkingChainHtml(thinkings || []);
     if (thinkingHtml) {
       setTimeout(() => {
         const details = d.querySelector("details.thinking-chain") as HTMLDetailsElement | null;
         if (details && details.open) details.open = false;
+        const btn = d.querySelector(".btn-think-toggle") as HTMLElement | null;
+        const arrow = btn?.querySelector(".btn-think-arrow");
+        if (btn) btn.classList.remove("think-open");
+        if (arrow) arrow.textContent = "▸";
       }, 2500);
     }
-    d.innerHTML = '<div class="agent-label"><span class="agent-name">' + agentName + '</span><button class="btn-tts-read" title="朗读" onclick="readAloud(this)" data-text="' + encodeURIComponent(content) + '">&#x1f50a;</button></div><div class="agent-body">' + thinkingHtml + html + "</div>";
-  } else if (role === "system") {
-    d.innerHTML = '<div style="text-align:center;color:var(--text-muted)">' + html + "</div>";
+    // 三层分离：名字行(玄姝+思考按钮) / 思考面板灰块(agent-think-slot) / 正文气泡(bubble.agent)
+    d.innerHTML = '<div class="agent-label"><span class="agent-name">' + agentName + '</span>' + (thinkingHtml ? buildThinkToggleHtml() : '') + '<button class="btn-tts-read" title="朗读" onclick="readAloud(this)" data-text="' + encodeURIComponent(content) + '">&#x1f50a;</button></div>' +
+      '<div class="agent-think-slot">' + (thinkingHtml || "") + "</div>" +
+      '<div class="bubble agent"><div class="agent-body">' + html + "</div></div>";
+    if (thinkingHtml) wireThinkToggle(d);
   } else {
-    d.innerHTML = html;
+    d.className = "bubble " + role;
+    if (role === "system") {
+      d.innerHTML = '<div style="text-align:center;color:var(--text-muted)">' + html + "</div>";
+    } else {
+      d.innerHTML = html;
+    }
   }
   convEl().appendChild(d);
-  foldLongBubble(d);
   scrollConvToBottom(true);
   saveConv();
 }
 
-// ── 长消息自动收放（移动端优先）：内容过高时默认折叠，点击展开/收起 ──
-function foldLongBubble(d: HTMLElement): void {
-  if (window.innerWidth > 768) return; // 桌面端不折叠
-  const body = d.querySelector(".agent-body") as HTMLElement | null;
-  const target = body || d;
-  if (target.scrollHeight <= 220) return; // 短消息不处理
-  target.classList.add("bubble-collapsed");
-  const btn = document.createElement("button");
-  btn.className = "bubble-expand";
-  btn.textContent = "展开全文";
-  btn.type = "button";
-  btn.setAttribute("aria-label", "展开/收起全文");
-  btn.addEventListener("click", (ev) => {
-    ev.stopPropagation();
-    const collapsed = target.classList.toggle("bubble-collapsed");
-    btn.textContent = collapsed ? "展开全文" : "收起";
-  });
-  target.appendChild(btn);
-}
+// ── 长消息策略：不折叠截断，气泡随文字自适应增高 ──
+// 超长内容（>3000字）由 autoLongMsgToTxt 转 txt 文件卡片展示，正文保持完整可读
 
 export function renderMarkdown(text: string): string {
   let html = escapeHtml(text);
@@ -501,11 +648,13 @@ export function saveConv(): void {
   bubbles.forEach(b => {
     if (b.classList.contains("user")) msgs.push({ r: "user", c: b.innerHTML });
     else if (b.classList.contains("agent")) {
-      const label = b.querySelector(".agent-label");
+      // 新结构：label 在 .agent-msg 顶层（.bubble.agent 之外），取 .agent-name 纯文本
+      const msgWrap = b.closest(".agent-msg");
+      const nameEl = msgWrap?.querySelector(".agent-name");
       const content = b.querySelector("div:last-child");
       const txt = content ? content.textContent || "" : "";
       if (!txt.trim()) return; // 跳过空气泡（脏数据）
-      msgs.push({ r: "agent", a: label ? label.textContent || "" : "", c: content ? content.innerHTML : "" });
+      msgs.push({ r: "agent", a: nameEl ? nameEl.textContent || "" : "", c: content ? content.innerHTML : "" });
     } else if (b.classList.contains("system")) {
       const txt = b.textContent || "";
       if (!txt.trim()) return;
@@ -571,15 +720,18 @@ export function renderRestoredMsg(m: RestoredMsg): void {
   const content = (m.c || "").trim();
   if (!content) return; // 跳过空内容脏数据
   const d = document.createElement("div");
-  d.className = "bubble " + (m.r === "agent" ? "agent system" : m.r);
   if (m.r === "agent") {
-    d.innerHTML = '<div class="agent-label">' +
-      '<span class="agent-name">' + m.a + '</span>' +
+    // 与新增消息一致的三层结构：label(顶层) / think-slot(空) / bubble.agent
+    d.className = "agent-msg";
+    d.innerHTML = '<div class="agent-label"><span class="agent-name">' + m.a + '</span>' +
       '<button class="btn-tts-read" title="朗读" onclick="readAloud(this)" data-text="' + encodeURIComponent(content) + '">&#x1f50a;</button></div>' +
-      '<div style="line-height:1.7">' + content + "</div>";
-  } else { d.innerHTML = content; }
+      '<div class="agent-think-slot"></div>' +
+      '<div class="bubble agent"><div class="agent-body" style="line-height:1.7">' + content + "</div></div>";
+  } else {
+    d.className = "bubble " + m.r;
+    d.innerHTML = content;
+  }
   convEl().appendChild(d);
-  foldLongBubble(d);
 }
 
 export function clearConv(): void {

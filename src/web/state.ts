@@ -11,7 +11,7 @@ function resolveApi(): string {
 
 export const state = {
   API: resolveApi(),
-  currentModel: "deepseek-v3",
+  currentModel: "agnes-2.0-flash",
   hasKey: false,
   savedKey: "",
   totalTokens: 0,

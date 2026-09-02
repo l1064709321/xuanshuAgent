@@ -48,7 +48,7 @@ function mountGlobals(): void {
     // chat
     syncTTSButton: chat.syncTTSButton, toggleTTS: chat.toggleTTS, readAloud: chat.readAloud,
     send: chat.send, uploadFiles: chat.uploadFiles, clearConv: chat.clearConv,
-    startVoiceInput: chat.startVoiceInput,
+    startVoiceInput: chat.startVoiceInput, askSubmit: chat.askSubmit, askCancel: chat.askCancel,
     // models
     loadModels: models.loadModels, filterModels: models.filterModels, pickModel: models.pickModel,
     switchChip: models.switchChip, applyKey: models.applyKey, resetKey: models.resetKey,

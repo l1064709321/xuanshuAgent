@@ -64,6 +64,10 @@ async function loadKeyValues(): Promise<void> {
     // 后端 keys 与前端本地缓存合并（本地优先）
     state.modelKeyValues = { ...(d.keys || {}), ...loadLocalKeys() };
     filterModels();
+    // 依据当前模型是否有 key 初始化连接状态（修复：此前 hasKey 恒为 false 导致无法发送）
+    const curModel = state.allModels.find(m => m.key === state.currentModel);
+    state.hasKey = !!(curModel && (curModel.has_key || state.modelKeyValues[curModel.key]));
+    setStatus(state.hasKey ? "online" : "offline", state.hasKey ? ("已连接 " + (curModel ? curModel.name : state.currentModel)) : ("未配Key: " + (curModel ? curModel.name : state.currentModel)));
     // 后端缺 key 但本地有 → 自动推送到后端，恢复"已连接"
     const local = loadLocalKeys();
     const miss = Object.keys(local).filter(m => !(d.keys || {})[m] && local[m]);

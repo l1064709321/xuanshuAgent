@@ -7,13 +7,16 @@
 <meta charset="UTF-8">
 
 <meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover">
+<meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 
 <title>玄姝 Agent</title>
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;500;600;700&family=DM+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=20260827d">
+<link rel="stylesheet" href="style.css?v=20260902i">
 </head>
 
 <body>
@@ -109,6 +112,32 @@
 
 </div>
 -->
+
+
+
+<!-- 询问弹窗：Agent 需要用户拍板时弹出 -->
+
+<div class="permission-overlay" id="askOverlay">
+
+  <div class="permission-dialog ask-dialog">
+
+    <h3 id="askTitle">玄姝需要确认</h3>
+
+    <p class="ask-question" id="askQuestion"></p>
+
+    <textarea class="ask-input" id="askInput" rows="2" placeholder="输入你的选择或补充说明…"></textarea>
+
+    <div class="perm-actions">
+
+      <button class="btn btn-ghost" onclick="askCancel()">跳过</button>
+
+      <button class="btn btn-primary" onclick="askSubmit()">发送</button>
+
+    </div>
+
+  </div>
+
+</div>
 
 
 
@@ -307,6 +336,7 @@
       <span class="conn-banner-icon">&#9888;</span>
 
       <span class="conn-banner-msg">连接已断开，正在重连…</span>
+    </div><!-- /conn-banner -->
 
     <div class="page-stage">
 
@@ -1065,7 +1095,7 @@
 
 </div>
 
-<script type="module" src="./dist/web/main.js?v=20260828c"></script>
+<script type="module" src="./dist/web/main.js?v=20260902i"></script>
 </body>
 
 </html>

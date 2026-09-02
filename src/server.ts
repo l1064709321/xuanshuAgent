@@ -28,6 +28,17 @@ async function main() {
   await app.register(fastifyStatic, {
     root: resolve(import.meta.dirname, ".."),
     wildcard: false,
+    maxAge: 0,
+    setHeaders(res) {
+      // 禁止缓存，确保永远拉到最新版，避免新旧版本冲突
+      res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0");
+    },
+  });
+
+  // 兜底：所有响应强制禁缓存（防止浏览器/网关缓存旧版页面）
+  app.addHook("onSend", (_req, reply, _payload, done) => {
+    reply.header("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0");
+    done();
   });
 
   // 基础探针

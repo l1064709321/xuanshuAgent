@@ -1,15 +1,19 @@
-flask>=3.0
-requests>=2.28
-openai>=1.0
-wikipedia
-numpy
-scikit-learn
-edge-tts
-pypdf
-Pillow
-alibabacloud_dysmsapi20170525
+# 玄姝 (Xuanshu) — Python 子进程工具链依赖
+# 服务本体为 TS/Fastify，以下仅沙箱 / PDF / TTS / 验收 OCR 子进程所需；
+# 不装 Python 时服务可正常启动，对应工具降级。
+# 安装：pip3 install -r requirements.txt   （Debian/Ubuntu 系统 Python 需追加 --break-system-packages）
+
+# ── 核心 ──
+pypdf>=3.9                      # PDF 读取/拆分（pdf_tools.py）
+edge-tts>=6.1                   # TTS 语音合成（tts_tools.py / src/scripts/tts_gen.py），需系统 ffmpeg
 
 # 辅助验收（verifier）：画面文字 OCR 后端，免系统 tesseract 依赖
 # 注意：必须用 opencv-python-headless，opencv-python 依赖 libGL.so.1，容器内会 ImportError
 rapidocr-onnxruntime
 opencv-python-headless
+
+# ── 可选：视频帧亮度/差异分析（src/core/verifier.ts analyzeFrames，缺失时自动降级） ──
+numpy
+Pillow
+
+# ── 可选：语音转写（verifier 探测 faster-whisper，缺省不安装；需要时自行 pip install faster-whisper） ──

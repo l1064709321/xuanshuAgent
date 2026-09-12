@@ -479,6 +479,7 @@ xuanshuAgent/
 - **修复**：Dockerfile 基线由 `python:3.10-slim`（CMD 指向 TS 迁移时已删除的 `frontend.py`）改为 `node:20-bookworm-slim`，镜像内 `npm ci` → `npm run build` → `node dist/server.js`，并内置 Python3 / ffmpeg / Chromium 与基于 `/health` 的健康检查
 - **修复**：`docker-compose.yml` 增补 `.data` 持久化卷（模型 Key 落盘目录），环境变量注释更正为 `XS_API_KEY`
 - **加固**：`.dockerignore` 排除 `.data`、`.github_token`、`.gitee_token`、`*.tgz`、`dist`，避免密钥与旧产物打进镜像
+- **精简**：`requirements.txt` 移除旧 Python 版残留依赖（flask / requests / python-openai / wikipedia / scikit-learn / alibabacloud 短信 SDK，源码零引用），仅保留 pypdf、edge-tts、rapidocr-onnxruntime、opencv-python-headless 与可选 numpy / Pillow
 - **文档**：README 启动章节重写为「源码启动（已实测）/ Docker / npm 打包」三条路径，补充环境要求表、首次配置、端口与环境变量表、启动类常见问题
 
 ### v0.0.0.5 (2026-08-30)

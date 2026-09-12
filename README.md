@@ -22,36 +22,67 @@
 | Gitee（国内镜像） | `https://gitee.com/l1064709321/xuanshuAgent.git` |
 | 华为云 CodeHub | `https://codehub.devcloud.cn-north-4.huaweicloud.com/8965d3a4483445cca386477c8d9dd196/xuanshu-agent.git` |
 
-### 启动方式
+### 环境要求
 
-#### 方式一：Docker 启动（推荐）
+| 组件 | 版本 | 是否必需 | 用途 |
+|------|------|---------|------|
+| Node.js | >= 20（推荐 22 LTS） | 必需 | 服务本体（Fastify + TypeScript） |
+| npm | 随 Node 附带 | 必需 | 依赖安装、构建、启动脚本 |
+| Python | 3.8+，命令为 `python3` | 可选 | 沙箱 / PDF / TTS / 数据处理子进程；缺失时对应工具不可用 |
+| ffmpeg | 较新版本 | 可选 | TTS 音频合成与音视频处理 |
+| Playwright 浏览器内核 | 随 npm 依赖提供 CLI | 可选 | 浏览器类工具，需 `npx playwright install chromium` |
+| Docker + Compose v2 | 20.10+ | 可选 | 仅容器方式需要 |
+
+> 仅启动服务本体只需 Node.js；Python / ffmpeg 缺失不影响服务启动，对应工具降级。可用 `/api/deps` 实时体检运行时依赖。
+
+### 方式一：源码启动（推荐，Node 22 / Linux 实测通过）
 
 ```bash
 git clone https://github.com/l1064709321/xuanshuAgent.git
 cd xuanshuAgent
-docker compose up -d
-```
 
-访问 http://localhost:8901
+npm ci            # 或 npm install；国内网络可先 npm config set registry https://registry.npmmirror.com
+npm run build     # tsc 编译到 dist/（dist/ 不入库，必须执行）
+npm start         # 等价于 node dist/server.js
 
-#### 方式二：Node.js 手动启动
-
-```bash
-git clone https://github.com/l1064709321/xuanshuAgent.git
-cd xuanshuAgent
-npm install
-
-# 开发模式（tsx watch 热重载）
+# 开发模式（免构建，tsx watch 热重载）
 npm run dev
-
-# 或构建后运行
-npm run build
-npm start
 ```
 
-访问 http://localhost:8901
+启动后访问 **http://localhost:8901** ，健康检查：
 
-### npm 打包与发布
+```bash
+curl http://localhost:8901/health     # {"status":"ok","uptime":...}
+```
+
+可选：启用 Python 子进程能力（沙箱 / PDF / TTS / 数据工具）
+
+```bash
+pip3 install -r requirements.txt      # Debian/Ubuntu 系统 Python 需追加 --break-system-packages
+```
+
+可选：启用浏览器工具（Chromium 内核约 150MB）
+
+```bash
+npx playwright install chromium
+# 不需要浏览器工具时，可在安装依赖阶段跳过内核下载：
+# PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 npm ci
+```
+
+### 方式二：Docker 启动
+
+```bash
+git clone https://github.com/l1064709321/xuanshuAgent.git
+cd xuanshuAgent
+docker compose up -d --build
+docker compose logs -f
+```
+
+访问 http://localhost:8901 。镜像基于 `node:20-bookworm-slim`，内置 Node、Python3、ffmpeg、Chromium 与全部 npm / pip 依赖，源码在镜像内编译，宿主无需安装 Node。持久化卷覆盖记忆、模型 Key、工作流与工作区。
+
+> 首次构建需拉取基础镜像与 Chromium 内核，视网络约 3–10 分钟，镜像约 1.2GB。只要服务本体可用 `docker build --build-arg INSTALL_BROWSER=0 -t xuanshu-agent:latest .` 跳过浏览器内核。
+
+### 方式三：npm 打包 / 全局安装
 
 项目已完整 npm 化，可直接构建为标准 npm 安装包（含 `bin/xuanshu` 全局命令）：
 
@@ -72,11 +103,28 @@ npm publish
 
 打包白名单由 `package.json` 的 `files` 字段控制，包含：`dist/`（TS 编译产物）、`bin/`（CLI 入口）、前端静态资源（`index.html` / `style.css`）、运行时 Python 依赖（`sandbox.py` / `pdf_tools.py` / `tts_tools.py` / `data_tools.py` / `src/scripts/tts_gen.py`）、README 与 LICENSE。
 
-### 环境要求
+> 全局安装同样要求 Node >= 20 且能访问 npm 源（生产依赖由 npm 自动安装）；包内只带 Python 脚本、不含 pip 依赖，需要 Python 能力时自行 `pip3 install -r requirements.txt`。
 
-- Node.js >= 20（推荐 22）
-- Python 3.8+（沙箱 / PDF / TTS 子进程依赖）
-- ffmpeg（音频 / 视频处理，可选，缺失时相关工具降级）
+### 首次配置
+
+1. 打开 http://localhost:8901 → 「设置 / 模型」页，选择模型并填入 API Key（Base URL 支持 OpenAI 兼容的聚合平台）；
+2. Key 持久化在 `.data/keys.json`（Docker 方式请确认已挂载 `.data` 卷，见 `docker-compose.yml`）；
+3. 也可用环境变量 `XS_API_KEY` 提供启动默认 Key。
+
+### 监听端口与环境变量
+
+| 环境变量 | 默认值 | 说明 |
+|---------|--------|------|
+| `XS_HOST` | `0.0.0.0` | 监听地址 |
+| `XS_PORT` | `8901` | 监听端口 |
+| `XS_API_KEY` | 空 | 启动默认模型 Key；页面设置的 Key 落盘 `.data/keys.json` |
+| `PYTHON` | Linux/macOS `python3`，Windows `python` | 沙箱子进程解释器路径 |
+| `XS_DEBUG` | `False` | 调试日志 |
+| `XS_LOG_MAX_MB` / `XS_LOG_KEEP_KB` | `2` / `256` | 日志单文件上限与保留尾部 |
+
+```bash
+XS_PORT=9000 npm start        # 换端口启动
+```
 
 ---
 
@@ -299,8 +347,34 @@ unzip main.zip && mv xuanshuAgent-main xuanshuAgent
 ```bash
 # 国内镜像
 npm config set registry https://registry.npmmirror.com
-npm install
+npm ci
 ```
+
+#### 启动报 Cannot find module '.../dist/server.js'
+
+`dist/` 编译产物不入库，`npm start` 前必须先 `npm run build`；或改用免构建的 `npm run dev`。
+
+#### 端口被占用（EADDRINUSE）
+
+```bash
+XS_PORT=9000 npm start        # 换端口启动
+lsof -i:8901                  # 查看占用进程（macOS / Linux）
+```
+
+#### Docker 启动后页面打不开
+
+1. `docker compose logs -f` 查看容器日志，确认出现 `玄姝(TS) 已启动: http://0.0.0.0:8901`；
+2. `docker compose ps` 确认状态为 `healthy`（健康检查打 `/health`）；
+3. 宿主 8901 被占用时改端口映射：`ports: ["9000:8901"]`；
+4. 镜像为旧版（Dockerfile 曾指向已删除的 `frontend.py`）时执行 `docker compose up -d --build` 重建。
+
+#### 浏览器工具报缺少内核
+
+```bash
+npx playwright install chromium
+```
+
+容器方式请保持构建默认 `INSTALL_BROWSER=1`，或进入容器内执行上述命令。
 
 ---
 
@@ -399,6 +473,13 @@ xuanshuAgent/
 ---
 
 ## 更新日志
+
+### 2026-09-12 启动链路修订
+
+- **修复**：Dockerfile 基线由 `python:3.10-slim`（CMD 指向 TS 迁移时已删除的 `frontend.py`）改为 `node:20-bookworm-slim`，镜像内 `npm ci` → `npm run build` → `node dist/server.js`，并内置 Python3 / ffmpeg / Chromium 与基于 `/health` 的健康检查
+- **修复**：`docker-compose.yml` 增补 `.data` 持久化卷（模型 Key 落盘目录），环境变量注释更正为 `XS_API_KEY`
+- **加固**：`.dockerignore` 排除 `.data`、`.github_token`、`.gitee_token`、`*.tgz`、`dist`，避免密钥与旧产物打进镜像
+- **文档**：README 启动章节重写为「源码启动（已实测）/ Docker / npm 打包」三条路径，补充环境要求表、首次配置、端口与环境变量表、启动类常见问题
 
 ### v0.0.0.5 (2026-08-30)
 

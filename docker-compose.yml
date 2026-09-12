@@ -1,9 +1,9 @@
 # ═══════════════════════════════════════════
 #  玄姝 Agent — Docker Compose
-#  一键启动: docker compose up -d
-#  开发模式: docker compose -f docker-compose.yml -f docker-compose.dev.yml up
+#  一键启动: docker compose up -d --build
+#  查看日志: docker compose logs -f
+#  端口映射 8901:8901，容器内持久化卷见下方 volumes
 # ═══════════════════════════════════════════
-version: "3.8"
 services:
   xuanshu:
     build: .
@@ -15,14 +15,17 @@ services:
     environment:
       - XS_HOST=0.0.0.0
       - XS_PORT=8901
-      # 可选：通过环境变量传入 API Key（也可在页面配置）
-      # - AGNES_API_KEY=***
-      # - OPENAI_API_KEY=***
-      # - JWT_SECRET=***
+      # 可选：启动默认模型 Key（也可启动后在页面「设置/模型」中填写，会落盘到 .data/keys.json）
+      # - XS_API_KEY=***
+      # 可选：邮件通知
+      # - SMTP_HOST=
+      # - SMTP_USER=
+      # - SMTP_PASS=
     volumes:
-      # 持久化：记忆、数据库、工作流 不随容器销毁丢失
+      # 持久化：记忆、模型 Key、工作流 不随容器销毁丢失
       - xuanshu-memdir:/app/.memdir
       - xuanshu-memory:/app/.memory
+      - xuanshu-data:/app/.data
       - xuanshu-workflows:/app/workflows
       - xuanshu-workspace:/app/workspace_files
       - xuanshu-skills:/app/.skills
@@ -30,6 +33,7 @@ services:
 volumes:
   xuanshu-memdir:
   xuanshu-memory:
+  xuanshu-data:
   xuanshu-workflows:
   xuanshu-workspace:
   xuanshu-skills:

@@ -6,8 +6,15 @@ __pycache__
 .sandbox
 .memdir
 .memory
+.data
 *.db
 .env
+.github_token
+.github_remote
+.gitee_token
+.gitee_remote
+*.tgz
 node_modules
+dist
 .DS_Store
 *.log

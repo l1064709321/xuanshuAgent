@@ -480,6 +480,7 @@ xuanshuAgent/
 - **修复**：`docker-compose.yml` 增补 `.data` 持久化卷（模型 Key 落盘目录），环境变量注释更正为 `XS_API_KEY`
 - **加固**：`.dockerignore` 排除 `.data`、`.github_token`、`.gitee_token`、`*.tgz`、`dist`，避免密钥与旧产物打进镜像
 - **精简**：`requirements.txt` 移除旧 Python 版残留依赖（flask / requests / python-openai / wikipedia / scikit-learn / alibabacloud 短信 SDK，源码零引用），仅保留 pypdf、edge-tts、rapidocr-onnxruntime、opencv-python-headless 与可选 numpy / Pillow
+- **精简**：`package.json` 移除源码零引用的 `better-sqlite3`（12MB 原生模块，SQLite 查询实际由 Python 标准库 `sqlite3` 经 `callPy` 提供）与 `jsonwebtoken` / `@types/jsonwebtoken`；干净克隆 `npm ci` 安装 111 个包、`tsc` 构建与启动冒烟均通过
 - **文档**：README 启动章节重写为「源码启动（已实测）/ Docker / npm 打包」三条路径，补充环境要求表、首次配置、端口与环境变量表、启动类常见问题
 
 ### v0.0.0.5 (2026-08-30)

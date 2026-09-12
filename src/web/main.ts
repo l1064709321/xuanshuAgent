@@ -24,6 +24,8 @@ import * as permission from "./permission.js";
 import * as theme from "./theme.js";
 // 面板 / 路由
 import * as panels from "./panels.js";
+// 侧栏分区折叠
+import { initSidebarSections, toggleSidebarSection } from "./sidebarSections.js";
 // 菜单
 import * as menu from "./menu.js";
 // 工作流
@@ -91,6 +93,8 @@ function mountGlobals(): void {
     collapseLeft: panels.collapseLeft, toggleLeft: panels.toggleLeft,
     toggleSettings: panels.toggleSettings, closeAllPanels: panels.closeAllPanels,
     navigateTo: panels.navigateTo, switchPanelTab: panels.switchPanelTab,
+    loadExecLimits: panels.loadExecLimits, saveExecLimits: panels.saveExecLimits,
+    resetExecLimits: panels.resetExecLimits,
     toggleMoreMenu: menu.toggleMoreMenu, closeMoreMenu: menu.closeMoreMenu,
     // workflow
     renderCanvas: workflow.renderCanvas, refreshCanvas: workflow.refreshCanvas,
@@ -111,6 +115,8 @@ function mountGlobals(): void {
     startHeartbeat: status.startHeartbeat, stopHeartbeat: status.stopHeartbeat, doPing: status.doPing,
     // particles
     initParticles,
+    // sidebar sections
+    toggleSidebarSection,
   };
   Object.assign(w, g);
 }
@@ -118,6 +124,9 @@ function mountGlobals(): void {
 // ── 初始化 ──
 function init(): void {
   theme.initTheme();
+
+  // 左侧边栏分区折叠（文件 / 记忆 / 技能市场 默认收起，减少滚动）
+  initSidebarSections();
 
   // 移动端视口适配（键盘弹出自动收放输入区）
   initViewport();
@@ -139,6 +148,9 @@ function init(): void {
 
   // 初始化即加载模型列表（保证首次进入 #chat 点闪电按钮时弹层有完整模型数据）
   void models.loadModels();
+
+  // 多轮执行限制（轮数上限 / 无进展熔断阈值）：预取一次，打开「设置 → 工具」时即时回填
+  void panels.loadExecLimits(true);
 
   // 对话恢复
   if (!chat.loadConv()) { void chat.restoreFromServer(); }

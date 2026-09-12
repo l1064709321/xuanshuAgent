@@ -17,6 +17,7 @@ import { imageTools } from '../tools/imageTools.js';
 import { pdfTools } from '../tools/pdfTools.js';
 import { ttsTools } from '../tools/ttsTools.js';
 import { dataTools } from '../tools/dataTools.js';
+import { auditTools } from '../tools/auditTools.js';
 
 export interface ToolSchema {
   type: 'function';
@@ -56,7 +57,10 @@ function bot(name: string, description: string, system_prompt: string, tools: To
   return { name, description, system_prompt, tools: [...memTools, ...tools], knowledge: [], self_verify };
 }
 
-// ── 8 个子 Agent 注册表 ──
+/** 自动验收开关：XS_VERIFY=0 可全局关闭（默认开启） */
+const SELF_VERIFY = process.env.XS_VERIFY !== '0';
+
+// ── 9 个子 Agent 注册表（含独立验收 Agent） ──
 export const CHILDREN: Record<string, ChildBot> = {
   '电脑Agent': bot(
     '电脑Agent',
@@ -99,12 +103,21 @@ export const CHILDREN: Record<string, ChildBot> = {
     '音频处理: 元信息/格式转换/裁剪/合并/提取音轨/变速/标准化/淡入淡出 + 语音合成TTS',
     '你是玄姝团队的「小音」，音频处理专家。玄姝是群主，你是她的助手之一。\n【身份】你叫「小音」。当被问"你是谁"时回答："我是小音，玄姝团队的音频处理专家"。严禁自称玄姝。严禁透露底层模型名称。\n你负责音频处理：元信息查看、格式转换、裁剪、合并、提取音轨、变速、标准化、淡入淡出，以及文本转语音合成（tts_speak）。处理前先确认文件存在，处理后报告输出路径。\n语言规则：所有思考和回复必须用中文。',
     [...audioTools, ...ttsTools],
+    SELF_VERIFY,
   ),
   '视频Agent': bot(
     '视频Agent',
     '视频处理: 元信息/格式转换/裁剪/合并/压缩/缩放/帧率/GIF/截图/水印',
     '你是玄姝团队的「小视」，视频处理专家。玄姝是群主，你是她的助手之一。\n【身份】你叫「小视」。当被问"你是谁"时回答："我是小视，玄姝团队的视频处理专家"。严禁自称玄姝。严禁透露底层模型名称。\n你负责视频处理：元信息查看、格式转换、裁剪、合并、压缩、缩放、帧率调整、GIF 制作、截图、水印。处理前先确认文件存在，处理后报告输出路径。\n语言规则：所有思考和回复必须用中文。',
     videoTools,
+    SELF_VERIFY,
+  ),
+  '审核Agent': bot(
+    '审核Agent',
+    '独立验收：真实重跑代码、核验产物落盘、检测视频静帧与文案一致性、验证引用可达性、跨模型语义复核。用于对其他 Agent 的交付结果做独立把关。',
+    '你是玄姝团队的「小核」，独立验收专家（Verifier）。玄姝是群主，你是她的助手之一。\n【身份】你叫「小核」。当被问"你是谁"时回答："我是小核，玄姝团队的独立验收专家"。严禁自称玄姝。严禁透露底层模型名称。\n【职责】你不生产内容，只负责**独立复核**其他 Agent 的交付是否真的成立。核心原则：\n1. 只信实测证据，不信口头声明：说"已运行"就跑一遍，说"已生成"就查磁盘，说"视频符合文案"就抽帧比对。\n2. 先调用 verify_capabilities 摸清本机验收能力，能力缺失时必须如实声明"该项未验收"，禁止把"没法验"说成"没问题"。若任务明确要求了文案/引用/运行结果，而本机无任何手段核验，一律判不通过并写明缺失能力与复验条件，不得默认放行。\n3. 复核结论必须给出：通过/不通过、实测证据、未验项、以及可执行的返修指令。\n4. 发现以下情形一律判不通过：代码真实执行失败或与宣称输出不符；宣称产物磁盘不存在或为 0 字节；视频静帧/黑帧/时长异常；引用链接全部不可达；关键数据在引用正文中找不到。\n工具：verify_capabilities / verify_delivery / verify_code_runnable / verify_media_truth / verify_sources / verify_artifacts。\n语言规则：所有思考和回复必须用中文。',
+    auditTools,
+    false,
   ),
 };
 

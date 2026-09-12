@@ -8,3 +8,8 @@ edge-tts
 pypdf
 Pillow
 alibabacloud_dysmsapi20170525
+
+# 辅助验收（verifier）：画面文字 OCR 后端，免系统 tesseract 依赖
+# 注意：必须用 opencv-python-headless，opencv-python 依赖 libGL.so.1，容器内会 ImportError
+rapidocr-onnxruntime
+opencv-python-headless

@@ -1,7 +1,7 @@
 import { spawn, type ChildProcess } from "node:child_process";
 import { resolve, sep } from "node:path";
 import {
-  readdirSync, readFileSync, writeFileSync, statSync,
+  readdirSync, readFileSync, writeFileSync, statSync, mkdirSync,
 } from "node:fs";
 import os from "node:os";
 import type { FastifyPluginAsync } from "fastify";
@@ -14,6 +14,14 @@ import type { FastifyPluginAsync } from "fastify";
  */
 const VM_ROOT = resolve(process.cwd());
 const MAX_READ = 1024 * 1024; // 1MB
+/**
+ * 项目工作区根：前端「文件」树与 VM 文件窗口的可见根。
+ * 平台自身工程（src/ dist/ node_modules/ .git/ .data/ 等）不在其中，
+ * 因此浏览器侧无法列出/预览平台源码，只能看到用户项目文件（含上传文件）。
+ */
+const WS_DIRNAME = "workspace_files";
+const WS_ROOT = resolve(VM_ROOT, WS_DIRNAME);
+try { mkdirSync(WS_ROOT, { recursive: true }); } catch { /* ignore */ }
 
 interface VmSession {
   id: string;
@@ -83,6 +91,16 @@ function runCommand(cmd: string, cwd?: string, timeoutMs = 30_000): Promise<{ co
 function safeResolve(p: string): string | null {
   const r = resolve(VM_ROOT, p || ".");
   if (r !== VM_ROOT && !r.startsWith(VM_ROOT + sep)) return null;
+  return r;
+}
+
+// ── 路径安全：仅允许项目工作区内访问（浏览器侧文件浏览用） ──
+function safeResolveWs(p: string): string | null {
+  const raw = (p || "").trim();
+  // 前端可能传来 "/" 或 "workspace_files" 作为根，统一归一到工作区根
+  const rel = raw === "" || raw === "/" || raw === WS_DIRNAME || raw === WS_DIRNAME + "/" ? "." : raw;
+  const r = resolve(WS_ROOT, rel);
+  if (r !== WS_ROOT && !r.startsWith(WS_ROOT + sep)) return null;
   return r;
 }
 
@@ -223,11 +241,11 @@ export const vmRoutes: FastifyPluginAsync = async (app) => {
     return { ok: true };
   });
 
-  // 列出目录（项目根内）
+  // 列出目录（项目工作区内：平台源码不可见）
   app.post("/vm/ls", async (req, reply) => {
     const body = req.body as { path?: string };
-    const dir = safeResolve(body?.path || ".");
-    if (!dir) return reply.code(403).send({ ok: false, error: "路径超出工作区范围" });
+    const dir = safeResolveWs(body?.path || "");
+    if (!dir) return reply.code(403).send({ ok: false, error: "路径超出项目工作区范围" });
     try {
       const entries: FsEntry[] = readdirSync(dir, { withFileTypes: true }).map((e): FsEntry => {
         const full = resolve(dir, e.name);
@@ -241,9 +259,13 @@ export const vmRoutes: FastifyPluginAsync = async (app) => {
           size,
         };
       }).sort((a, b) => (a.type === b.type ? a.name.localeCompare(b.name) : a.type === "dir" ? -1 : 1));
-      return { ok: true, path: dir, root: VM_ROOT, entries };
+      return { ok: true, path: dir, root: WS_ROOT, entries };
     } catch (e) {
-      return reply.code(500).send({ ok: false, error: (e as Error).message });
+      const err = e as NodeJS.ErrnoException;
+      if (err.code === "ENOENT" || err.code === "ENOTDIR") {
+        return reply.code(404).send({ ok: false, error: "目录不存在（不在项目工作区内）" });
+      }
+      return reply.code(500).send({ ok: false, error: err.message });
     }
   });
 

@@ -21,6 +21,9 @@ export interface LlmResponse {
   _audio_b64?: string;
   _audio_format?: string;
   _tool_rounds?: number;
+  _thinking_log?: { round: number; tool: string; thought: string }[];
+  /** 断点暂停标记：'max_rounds' 达轮数上限 / 'stall' 无进展熔断（有值表示未完成、待续轮） */
+  _stop_reason?: 'max_rounds' | 'stall';
 }
 
 // ── 模态分类常量（对齐 Python）──

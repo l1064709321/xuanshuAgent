@@ -1,11 +1,12 @@
 // ========== 对话 / TTS / 持久化 ==========
-import { state, CONV_KEY, META_KEY } from "./state.js";
+import { state, CONV_KEY, META_KEY, SESSION_KEY } from "./state.js";
 import { $, escapeHtml, showToast } from "./dom.js";
 import { postJSON } from "./api.js";
 import { buildModelChips } from "./models.js";
 import { showPermission } from "./permission.js";
 import { loadWorkspaceFiles, showFileContent } from "./files.js";
 import type { ChatResponse, ThinkingStep, RestoredMsg } from "./types.js";
+import { toSpeakable } from "./speakable.js";
 
 const TOOL_META: Record<string, { icon: string; tag: string; cls: string }> = {
   "anysearch": { icon: "🔍", tag: "搜索", cls: "tc-tag-search" },
@@ -211,7 +212,9 @@ export function toggleTTS(): void {
 }
 
 export async function readAloud(btn: HTMLElement): Promise<void> {
-  const text = decodeURIComponent((btn.dataset.text || "").replace(/\+/g, "%20"));
+  // 朗读对象是气泡里的正文：先剥掉 Markdown 语法与代码块本体，避免把 ``` 和代码逐字念出来
+  const raw = decodeURIComponent((btn.dataset.text || "").replace(/\+/g, "%20"));
+  const text = toSpeakable(raw);
   if (!text) return;
   if (state.ttsAudio) {
     state.ttsAudio.pause();
@@ -320,6 +323,9 @@ export function startVoiceInput(): void {
   }
 }
 
+// ── 历史携带方式（Phase 1 起已变更）──
+// 此前：前端从 DOM 抽取最近 24 轮文本回传（buildHistoryMessages，已移除）；
+// 现在：服务端按 session_id 从磁盘恢复结构化消息链，前端仅发送 session_id + msg。
 // ── 发送消息 ──
 export async function send(): Promise<void> {
   const raw = inpEl().value.trim();
@@ -354,11 +360,12 @@ export async function send(): Promise<void> {
     // 回退非流式
     const typingEl = addTyping();
     try {
-      const body: Record<string, string> = { msg: text };
+      const body: Record<string, unknown> = { msg: text, session_id: state.currentSessionId };
       if (img) body.image = img;
       const d = await postJSON<ChatResponse>("/api/chat", body);
       typingEl.remove();
       state.totalTokens += text.length;
+      if (d.session_id) { state.currentSessionId = d.session_id; localStorage.setItem(SESSION_KEY, d.session_id); }
       renderChatResponse(d);
     } catch (e) {
       typingEl.remove();
@@ -370,6 +377,223 @@ export async function send(): Promise<void> {
 }
 
 // ── SSE 流式对话：思考实时展示（无警号，正常推导过程） ──
+// ── 多 Agent 协同群聊：每个子 Agent 以独立消息块冒泡（名字行+思考过程+正文），样式对齐主 Agent ──
+interface SubAgentBox {
+  root: HTMLElement;        // .agent-msg.sub-agent-msg
+  thinkSlot: HTMLElement | null;
+  liveEl: HTMLElement | null;   // thinking-live（实时灰块），收尾后替换为 details
+  liveText: HTMLElement | null;
+  toolLog: HTMLElement | null;  // .agent-tool-log（工具调用过程）
+  replyEl: HTMLElement | null;  // .agent-sub-reply（最终汇报正文）
+  stateEl: HTMLElement | null;
+  thinkBtn: HTMLElement | null;
+  thinkRound: number;
+  hasReasoning: boolean;
+  /** 断点暂停信息（轮数上限 / 无进展熔断），由 markAgentPaused 写入、markAgentDone 渲染 */
+  paused?: { reason: string; rounds: number; detail: string };
+}
+const subAgentBoxes = new Map<string, SubAgentBox>();
+
+function agentFriendlyName(name: string): string {
+  return name;
+}
+
+/** 子 Agent 收到派发：以独立"群聊成员"身份在消息流冒泡 */
+function showAgentWorking(agent: string, task: string): void {
+  const key = agent;
+  const name = agentFriendlyName(agent);
+  const taskBrief = task.length > 80 ? task.slice(0, 80) + "…" : task;
+  const box: SubAgentBox = {
+    root: null as never, thinkSlot: null, liveEl: null, liveText: null,
+    toolLog: null, replyEl: null, stateEl: null, thinkBtn: null,
+    thinkRound: 0, hasReasoning: false,
+  };
+  const d = document.createElement("div");
+  d.className = "agent-msg sub-agent-msg";
+  const liveToggleHtml = buildThinkToggleHtml()
+    .replace('class="btn-think-toggle"', 'class="btn-think-toggle think-open"')
+    .replace('>▸<', '>▾<');
+  d.innerHTML =
+    '<div class="agent-label">' +
+    '<span class="agent-sub-tag">子任务</span>' +
+    '<span class="agent-work-avatar">' + name.charAt(0) + '</span>' +
+    '<span class="agent-name agent-work-name">@' + name + '</span>' +
+    '<span class="agent-work-state">工作中…</span>' + liveToggleHtml +
+    '</div>' +
+    '<div class="agent-think-slot"></div>' +
+    '<div class="bubble agent">' +
+    '<div class="agent-work-task">任务：' + escapeHtml(taskBrief) + "</div>" +
+    '<div class="agent-tool-log"></div>' +
+    '<div class="agent-sub-reply"></div>' +
+    "</div>";
+  box.root = d;
+  box.thinkSlot = d.querySelector(".agent-think-slot");
+  box.toolLog = d.querySelector(".agent-tool-log");
+  box.replyEl = d.querySelector(".agent-sub-reply");
+  box.stateEl = d.querySelector(".agent-work-state");
+  box.thinkBtn = d.querySelector(".btn-think-toggle");
+
+  // 实时思考灰块（与主 Agent 同一套 thinking-live）
+  const thinkEl = document.createElement("div");
+  thinkEl.className = "thinking-live";
+  thinkEl.innerHTML = '<div class="tc-live-header"><span class="tc-live-dot"></span><span>思考中</span></div><div class="tc-thought-live"></div>';
+  box.thinkSlot?.appendChild(thinkEl);
+  box.liveEl = thinkEl;
+  box.liveText = thinkEl.querySelector(".tc-thought-live");
+  // 思考中可点击折叠/展开实时面板
+  const liveBtn = box.thinkBtn as HTMLButtonElement | null;
+  liveBtn?.addEventListener("click", () => {
+    if (!thinkEl.isConnected) return;
+    const hidden = thinkEl.style.display === "none";
+    thinkEl.style.display = hidden ? "" : "none";
+    liveBtn.classList.toggle("think-open", hidden);
+    const arrow = liveBtn.querySelector(".btn-think-arrow") as HTMLElement | null;
+    if (arrow) arrow.textContent = hidden ? "▾" : "▸";
+  });
+  // 群聊位置：追加在会话流末尾（可能紧跟在派发方主消息之后）
+  convEl().appendChild(d);
+  subAgentBoxes.set(key, box);
+  scrollConvToBottom(true);
+}
+
+/** 子 Agent 思考链更新：实时灰块直接替换文本（多轮到达则展示最新一轮） */
+function appendAgentThink(agent: string, thought: string): void {
+  const box = subAgentBoxes.get(agent);
+  if (!box) return;
+  box.hasReasoning = true;
+  box.thinkRound += 1;
+  if (box.liveText) box.liveText.textContent = thought;
+  scrollConvToBottom(true);
+}
+
+/** 子 Agent 工具调用/结果：追加到正文顶部日志区 */
+function appendAgentLog(agent: string, type: "tool" | "tool_done", payload: { round?: number; tool?: string; args?: string; result?: string }): void {
+  const box = subAgentBoxes.get(agent);
+  if (!box || !box.toolLog) return;
+  const round = payload.round ? "第" + payload.round + "轮 " : "";
+  let row: HTMLElement;
+  if (type === "tool") {
+    row = document.createElement("div");
+    row.className = "awl-row awl-tool";
+    const argsBrief = (payload.args ?? "").length > 120 ? (payload.args ?? "").slice(0, 120) + "…" : (payload.args ?? "");
+    row.innerHTML = '<span class="awl-tag">工具</span>' + round + escapeHtml(payload.tool ?? "?") + '<span class="awl-args"> ' + escapeHtml(argsBrief) + "</span>";
+  } else {
+    row = document.createElement("div");
+    row.className = "awl-row awl-result";
+    const resultBrief = (payload.result ?? "").length > 180 ? (payload.result ?? "").slice(0, 180) + "…" : (payload.result ?? "");
+    row.innerHTML = '<span class="awl-tag">结果</span>' + round + escapeHtml(payload.tool ?? "") + " → " + escapeHtml(resultBrief);
+  }
+  box.toolLog.appendChild(row);
+  scrollConvToBottom(true);
+}
+
+/** 子 Agent 断点暂停（轮数上限 / 无进展熔断）：先挂状态，最终渲染交给 markAgentDone */
+function markAgentPaused(agent: string, reason: string, rounds: number, detail: string): void {
+  const box = subAgentBoxes.get(agent);
+  if (!box) return;
+  box.paused = { reason, rounds, detail };
+  if (box.stateEl) {
+    box.stateEl.textContent = reason === "stall" ? "⏸ 无进展熔断" : "⏸ 达轮数上限";
+    box.stateEl.classList.remove("done", "fail");
+    box.stateEl.classList.add("paused");
+  }
+  scrollConvToBottom(true);
+}
+
+/** 子 Agent 工作结束：状态更新 + 思考链折叠(与主 Agent 一致) + 最终汇报入正文 */
+function markAgentDone(agent: string, ok: boolean, summary: string): void {
+  const box = subAgentBoxes.get(agent);
+  if (!box || !box.root) return;
+  const paused = box.paused;
+  if (box.stateEl) {
+    if (paused) {
+      box.stateEl.textContent = paused.reason === "stall" ? "⏸ 无进展熔断" : "⏸ 达轮数上限";
+      box.stateEl.classList.remove("done", "fail");
+      box.stateEl.classList.add("paused");
+    } else {
+      box.stateEl.textContent = ok ? "✓ 完成" : "✗ 失败";
+      box.stateEl.classList.toggle("done", ok);
+      box.stateEl.classList.toggle("fail", !ok);
+    }
+  }
+  const nameEl = box.root.querySelector(".agent-name.agent-work-name") as HTMLElement | null;
+  if (!ok && !paused && nameEl) nameEl.classList.add("fail");
+
+  // 思考链收尾：thinking-live → 折叠 details（与主 Agent 同款灰块链）
+  if (box.liveEl && box.hasReasoning) {
+    const liveText = box.liveText?.textContent?.trim() ?? "";
+    if (liveText) {
+      const wrap = document.createElement("div");
+      wrap.innerHTML = buildThinkingChainHtml([{ round: 1, thought: liveText }]);
+      const details = wrap.firstElementChild as HTMLDetailsElement;
+      box.liveEl.replaceWith(details);
+      details.open = false;
+      // 复用主 Agent 的按钮↔思考链联动
+      const btn = box.thinkBtn as HTMLButtonElement | null;
+      if (btn) wireThinkToggle(box.root);
+    } else {
+      box.liveEl.remove();
+      const btn = box.thinkBtn as HTMLElement | null;
+      if (btn) btn.remove();
+    }
+  } else if (box.liveEl) {
+    box.liveEl.remove();
+    const btn = box.thinkBtn as HTMLElement | null;
+    if (btn) btn.remove();
+  }
+
+  // 最终汇报正文
+  if (box.replyEl) {
+    const brief = summary.length > 500 ? summary : summary;
+    if (paused) {
+      // 断点暂停：展示暂停说明 + 一键续轮（已完成的产物保留，接着做而不是从头重跑）
+      const title = paused.reason === "stall"
+        ? "已连续多轮无进展，自动熔断暂停"
+        : "已达到单次执行轮数上限，暂停待续轮";
+      const wrap = document.createElement("div");
+      wrap.style.cssText = "border-left:3px solid #d29922;background:rgba(210,153,34,.08);padding:10px 12px;border-radius:6px;margin:4px 0";
+      const tEl = document.createElement("div");
+      tEl.style.cssText = "font-weight:600;margin-bottom:4px";
+      tEl.textContent = title;
+      const dsc = document.createElement("div");
+      dsc.style.cssText = "font-size:12px;opacity:.8;margin-bottom:6px";
+      dsc.textContent = `${paused.detail || ""}（已执行 ${paused.rounds} 轮）`;
+      const hint = document.createElement("div");
+      hint.style.cssText = "font-size:12px;opacity:.8;margin-bottom:8px";
+      hint.textContent = "已完成的产物已保留，续轮会接着做，不会从头重写。";
+      const btn = document.createElement("button");
+      btn.className = "btn btn-primary";
+      btn.style.cssText = "font-size:12px;padding:4px 10px";
+      btn.textContent = "继续执行";
+      btn.addEventListener("click", () => {
+        btn.disabled = true;
+        const inp = inpEl();
+        inp.value = "继续";
+        void send();
+      });
+      wrap.append(tEl, dsc, hint, btn);
+      box.replyEl.appendChild(wrap);
+      if (brief.trim()) {
+        const det = document.createElement("details");
+        det.style.cssText = "margin-top:6px;font-size:12px;opacity:.85";
+        const sm = document.createElement("summary");
+        sm.textContent = "断点详情";
+        const pre = document.createElement("pre");
+        pre.style.cssText = "white-space:pre-wrap;margin:6px 0 0";
+        pre.textContent = brief.trim();
+        det.append(sm, pre);
+        box.replyEl.appendChild(det);
+      }
+    } else if (ok && brief.trim()) {
+      box.replyEl.innerHTML = renderMarkdown(brief.trim());
+    } else if (!ok && brief.trim()) {
+      box.replyEl.innerHTML = '<span style="color:#f85149">' + escapeHtml(brief) + "</span>";
+    }
+  }
+  subAgentBoxes.delete(agent);
+  scrollConvToBottom(true);
+}
+
 async function streamSend(text: string, img: string | null | undefined): Promise<boolean> {
   const typingEl = addTyping();
   // 外层 .agent-msg：三层分离 —— 名字行(玄姝+思考过程按钮) / 思考面板(灰块) / 正文气泡
@@ -435,7 +659,7 @@ async function streamSend(text: string, img: string | null | undefined): Promise
     const headers: Record<string, string> = { "Content-Type": "application/json" };
     const auth = state.authToken;
     if (auth) headers["Authorization"] = "Bearer " + auth;
-    const body: Record<string, string> = { msg: text, stream: "true" };
+    const body: Record<string, unknown> = { msg: text, stream: "true", session_id: state.currentSessionId };
     if (img) body.image = img;
     const r = await fetch(state.API + "/api/chat", { method: "POST", headers, body: JSON.stringify(body), signal: ctrl.signal });
     if (!r.ok || !r.body) { clearInterval(watchdog); return false; }
@@ -455,8 +679,56 @@ async function streamSend(text: string, img: string | null | undefined): Promise
         const payload = s.slice(5).trim();
         if (payload === "[DONE]") { void reader.cancel().catch(() => {}); break outer; }
         try {
-          const j = JSON.parse(payload) as { choices?: { delta?: { content?: string; reasoning_content?: string } }[]; error?: string };
+          const j = JSON.parse(payload) as {
+            type?: string;
+            session_id?: string;
+            agent?: string;
+            task?: string;
+            ok?: boolean;
+            summary?: string;
+            round?: number;
+            thought?: string;
+            tool?: string;
+            args?: string;
+            result?: string;
+            reason?: string;
+            detail?: string;
+            choices?: { delta?: { content?: string; reasoning_content?: string } }[];
+            error?: string;
+          };
           if (j.error) throw new Error(j.error);
+          // 服务端确认/分配会话 ID（Phase 1：写入本地并持久化，刷新后继续同一会话）
+          if (j.type === "session" && j.session_id) {
+            state.currentSessionId = j.session_id;
+            localStorage.setItem(SESSION_KEY, j.session_id);
+            continue;
+          }
+          // 多 Agent 协同事件：子 Agent 开始/完成真实工作
+          if (j.type === "agent_start" && j.agent) {
+            showAgentWorking(j.agent, j.task || "");
+            continue;
+          }
+          if (j.type === "agent_done" && j.agent) {
+            markAgentDone(j.agent, Boolean(j.ok), j.summary || "");
+            continue;
+          }
+          if (j.type === "agent_think" && j.agent) {
+            appendAgentThink(j.agent, j.thought || "");
+            continue;
+          }
+          if (j.type === "agent_tool" && j.agent) {
+            appendAgentLog(j.agent, "tool", { round: j.round, tool: j.tool, args: j.args || "" });
+            continue;
+          }
+          if (j.type === "agent_tool_done" && j.agent) {
+            appendAgentLog(j.agent, "tool_done", { round: j.round, tool: j.tool, result: j.result || "" });
+            continue;
+          }
+          if (j.type === "agent_paused" && j.agent) {
+            // 断点暂停：轮数上限 / 无进展熔断，等用户拍板是否续轮
+            markAgentPaused(j.agent, j.reason || "", Number(j.round || 0), j.detail || "");
+            continue;
+          }
           const delta = j.choices?.[0]?.delta;
           if (!delta) continue;
           if (delta.reasoning_content) reasoning += delta.reasoning_content;
@@ -484,7 +756,15 @@ async function streamSend(text: string, img: string | null | undefined): Promise
       if (btn) btn.remove();
     }
     // 收尾：剥离 [ASK:...] 标记后再渲染正文（问题由弹窗展示）
+    const hasAsk = /\[ASK:/.test(content);
     const cleanContent = content.replace(/\[ASK:[\s\S]*?\]/g, "").trim();
+    if (!cleanContent && !hasAsk) {
+      // 流式正常结束但模型只输出了思考链、未给正文（偶发）：移除半成品，
+      // 交由调用方回退非流式补答，避免界面停留在"思考完无答案"。
+      clearInterval(watchdog);
+      d.remove();
+      return false;
+    }
     replyEl.innerHTML = renderMarkdown(cleanContent) || "";
     const ttsBtn = d.querySelector(".btn-tts-read") as HTMLElement | null;
     if (ttsBtn && cleanContent) {
@@ -524,6 +804,11 @@ function renderChatResponse(d: ChatResponse): void {
     void handleAskIfAny(d.reply);
     return;
   }
+  if (!d.reply) {
+    // 模型未返回正文（含流式补答仍为空）：给出可见提示，避免"思考完无答案"的空界面
+    addBubble("system", "本次未生成正文内容，请重试或换个问法");
+    return;
+  }
   const thinkings = d.thinking || [];
   if (d.cmd) {
     addBubble("system", d.reply || "");
@@ -544,6 +829,13 @@ function renderChatResponse(d: ChatResponse): void {
   }
   state.totalTokens += d.reply ? d.reply.length : 0;
   updateTokenBadge();
+}
+
+// ── 空态欢迎区控制：一旦对话区出现真实消息即隐藏，避免 200px 空态区压顶导致消息无法置顶 ──
+function hideWelcomeIfHasMsgs(): void {
+  const welcome = $("#welcome");
+  if (!welcome || welcome.style.display === "none") return;
+  if (convEl().querySelector(".bubble")) welcome.style.display = "none";
 }
 
 export function addBubble(role: "user" | "agent" | "system", content: string, agentName?: string, thinkings?: ThinkingStep[]): void {
@@ -586,6 +878,9 @@ export function addBubble(role: "user" | "agent" | "system", content: string, ag
 // 超长内容（>3000字）由 autoLongMsgToTxt 转 txt 文件卡片展示，正文保持完整可读
 
 export function renderMarkdown(text: string): string {
+  // 消除回复正文的前导/尾随空白行：模型输出偶尔以换行开头，
+  // 否则渲染成 <br> 会把正文首行推离气泡顶端（用户反馈"没顶到气泡框顶端"）。
+  text = text.replace(/^\s+/, "").replace(/\s+$/, "");
   let html = escapeHtml(text);
   html = html.replace(/```(\w*)\n([\s\S]*?)```/g, (_, _lang: string, code: string) => {
     return '<pre class="code-block"><code>' + code.replace(/\n$/, "") + "</code></pre>";
@@ -642,19 +937,25 @@ export async function uploadFiles(): Promise<void> {
 }
 
 // ── 对话持久化 ──
-export function saveConv(): void {
+// opts.remote=false 时只写 localStorage，不回传服务端（用于"从服务端恢复"后落盘，避免把残缺快照覆盖回服务端）
+export function saveConv(opts: { remote?: boolean } = {}): void {
   const bubbles = convEl().querySelectorAll(".bubble");
-  const msgs: { r: string; a?: string; c: string }[] = [];
+  const msgs: { r: string; a?: string; c: string; t?: string }[] = [];
   bubbles.forEach(b => {
     if (b.classList.contains("user")) msgs.push({ r: "user", c: b.innerHTML });
     else if (b.classList.contains("agent")) {
       // 新结构：label 在 .agent-msg 顶层（.bubble.agent 之外），取 .agent-name 纯文本
       const msgWrap = b.closest(".agent-msg");
       const nameEl = msgWrap?.querySelector(".agent-name");
+      // 同时保存思考链 HTML（details.thinking-chain），供重新进入后恢复"思考过程"按钮
+      const thinkSlot = msgWrap?.querySelector(".agent-think-slot");
+      const thinkDetails = thinkSlot?.querySelector("details.thinking-chain");
+      const thinkHtml = thinkDetails ? thinkDetails.outerHTML : "";
       const content = b.querySelector("div:last-child");
       const txt = content ? content.textContent || "" : "";
-      if (!txt.trim()) return; // 跳过空气泡（脏数据）
-      msgs.push({ r: "agent", a: nameEl ? nameEl.textContent || "" : "", c: content ? content.innerHTML : "" });
+      // 仅当正文与思考链均为空才跳过（正文空但保留思考链的消息不应整条丢失）
+      if (!txt.trim() && !thinkHtml) return;
+      msgs.push({ r: "agent", a: nameEl ? nameEl.textContent || "" : "", c: content ? content.innerHTML : "", t: thinkHtml || undefined });
     } else if (b.classList.contains("system")) {
       const txt = b.textContent || "";
       if (!txt.trim()) return;
@@ -666,7 +967,9 @@ export function saveConv(): void {
     localStorage.setItem(CONV_KEY, JSON.stringify(msgs));
     localStorage.setItem(META_KEY, JSON.stringify(meta));
   } catch (e) { /* 存储满时忽略 */ }
-  fetch(state.API + "/api/context/save", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(msgs.slice(-60)) }).catch(() => { /* 忽略 */ });
+  if (opts.remote === false) return;
+  // 提交完整会话快照（对象包装，与服务端 { shared_msgs } 契约一致；服务端做字段归一化）
+  fetch(state.API + "/api/context/save", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ shared_msgs: msgs.slice(-60) }) }).catch(() => { /* 忽略 */ });
 }
 
 export function loadConv(): boolean {
@@ -675,6 +978,7 @@ export function loadConv(): boolean {
     if (!raw) return false;
     const msgs = JSON.parse(raw) as RestoredMsg[];
     msgs.forEach(m => renderRestoredMsg(m));
+    hideWelcomeIfHasMsgs();
     const meta = JSON.parse(localStorage.getItem(META_KEY) || "{}") as { model?: string; tokens?: number };
     if (meta.model) state.currentModel = meta.model;
     if (meta.tokens) state.totalTokens = meta.tokens;
@@ -692,14 +996,15 @@ export async function restoreFromServer(): Promise<boolean> {
   try {
     const resp = await fetch(state.API + "/api/context");
     const data = (await resp.json()) as {
-      ok?: boolean; shared_msgs?: { role: string; content: string; agent?: string }[];
+      ok?: boolean; shared_msgs?: { role: string; content: string; agent?: string; t?: string }[];
       model?: string; context_summary?: string;
     };
     if (!data.ok || !data.shared_msgs || !data.shared_msgs.length) return false;
     data.shared_msgs.forEach(m => {
-      if (m.role === "user") renderRestoredMsg({ r: "user", c: m.content });
-      else if (m.role === "assistant") renderRestoredMsg({ r: "agent", a: m.agent || "玄姝", c: m.content });
-      else if (m.role === "system") renderRestoredMsg({ r: "system", c: m.content });
+      const role = String(m.role || "").toLowerCase();
+      if (role === "user") renderRestoredMsg({ r: "user", c: m.content });
+      else if (role === "agent" || role === "assistant") renderRestoredMsg({ r: "agent", a: m.agent || "玄姝", c: m.content, t: m.t });
+      else if (role === "system") renderRestoredMsg({ r: "system", c: m.content });
     });
     if (data.model) state.currentModel = data.model;
     if (data.context_summary) {
@@ -711,22 +1016,29 @@ export async function restoreFromServer(): Promise<boolean> {
     updateTokenBadge();
     buildModelChips();
     scrollConvToBottom();
-    saveConv();
+    hideWelcomeIfHasMsgs();
+    // 仅回写 localStorage；服务端刚读过，无需回传，避免残缺快照覆盖导致数据丢失
+    saveConv({ remote: false });
     return true;
   } catch (e) { return false; }
 }
 
 export function renderRestoredMsg(m: RestoredMsg): void {
   const content = (m.c || "").trim();
-  if (!content) return; // 跳过空内容脏数据
+  const thinkHtml = (m.t || "").trim();
+  // 仅当正文与思考链均为空才跳过（正文空但保留思考链的消息仍可恢复按钮与内容）
+  if (!content && !(m.r === "agent" && thinkHtml)) return;
   const d = document.createElement("div");
   if (m.r === "agent") {
-    // 与新增消息一致的三层结构：label(顶层) / think-slot(空) / bubble.agent
+    // 与新增消息一致的三层结构：label(顶层) / think-slot / bubble.agent
+    // 历史消息若保存了思考链 HTML（m.t），恢复"思考过程"按钮与可展开内容
     d.className = "agent-msg";
     d.innerHTML = '<div class="agent-label"><span class="agent-name">' + m.a + '</span>' +
+      (thinkHtml ? buildThinkToggleHtml() : '') +
       '<button class="btn-tts-read" title="朗读" onclick="readAloud(this)" data-text="' + encodeURIComponent(content) + '">&#x1f50a;</button></div>' +
-      '<div class="agent-think-slot"></div>' +
+      '<div class="agent-think-slot">' + thinkHtml + "</div>" +
       '<div class="bubble agent"><div class="agent-body" style="line-height:1.7">' + content + "</div></div>";
+    if (thinkHtml) wireThinkToggle(d);
   } else {
     d.className = "bubble " + m.r;
     d.innerHTML = content;
@@ -743,6 +1055,10 @@ export function clearConv(): void {
   if (welcome) conv.appendChild(welcome);
   localStorage.removeItem(CONV_KEY);
   localStorage.removeItem(META_KEY);
+  // 清空会话后轮换新会话 ID：旧会话文件保留在服务端（可后续提供历史会话列表），新对话不再续写旧链
+  const id = "sess_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2, 10);
+  state.currentSessionId = id;
+  try { localStorage.setItem(SESSION_KEY, id); } catch { /* ignore */ }
 }
 
 export { showFileContent };

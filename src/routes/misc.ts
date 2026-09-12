@@ -14,6 +14,7 @@ import { mkdirSync, readFileSync, writeFileSync, existsSync, rmSync, readdirSync
 import { join, resolve, basename, dirname, relative, sep, extname } from 'node:path';
 import { getPool } from '../core/engine.js';
 import { getTokenStats } from '../core/tokenStats.js';
+import { getLimits, setLimits, resetLimits, DEFAULT_LIMITS, LIMITS_RANGE } from '../core/limits.js';
 import {
   MEM_ALLOWED_EXT,
   MEM_MAX_READ,
@@ -178,21 +179,67 @@ export const miscRoutes: FastifyPluginAsync = async (app) => {
   // ── Token 统计 ──
   app.get('/token-stats', async () => getTokenStats());
 
+  // ── 多轮执行限制（子 Agent 轮数上限 / 无进展熔断阈值，前端可调） ──
+  app.get('/exec/limits', async () => {
+    return { ok: true, limits: getLimits(), defaults: DEFAULT_LIMITS, range: LIMITS_RANGE };
+  });
+
+  app.post('/exec/limits', async (req) => {
+    const body = (req.body ?? {}) as { maxRounds?: unknown; stallRounds?: unknown; reset?: unknown };
+    const limits = body.reset === true
+      ? resetLimits()
+      : setLimits({
+        ...(body.maxRounds === undefined ? {} : { maxRounds: Number(body.maxRounds) }),
+        ...(body.stallRounds === undefined ? {} : { stallRounds: Number(body.stallRounds) }),
+      });
+    return { ok: true, limits };
+  });
+
   // ── 上下文记忆（最近对话持久化） ──
+  // 字段契约统一为 { role, content, agent?, t? }；兼容历史前端提交的裸数组与 { r, c, a, t } 形态。
+  type CtxMsg = { role: string; content: string; agent?: string; t?: string };
+  const normalizeMsg = (m: unknown): CtxMsg | null => {
+    if (!m || typeof m !== 'object') return null;
+    const o = m as Record<string, unknown>;
+    const role = String(o.role ?? o.r ?? '').trim();
+    const content = String(o.content ?? o.c ?? '');
+    if (!role || !content) return null;
+    const agent = o.agent ?? o.a;
+    const t = o.t;
+    return {
+      role,
+      content,
+      agent: agent === undefined || agent === null ? undefined : String(agent),
+      t: t === undefined || t === null ? undefined : String(t),
+    };
+  };
+
   app.get('/context', async () => {
     const data = readJson<{ shared_msgs?: unknown[]; model?: string; context_summary?: string }>(
       join(DATA_DIR, 'context.json'), {},
     );
-    return { ok: true, ...data };
+    const shared = (Array.isArray(data.shared_msgs) ? data.shared_msgs : [])
+      .map(normalizeMsg)
+      .filter((m): m is CtxMsg => m !== null);
+    return { ok: true, shared_msgs: shared, model: data.model, context_summary: data.context_summary };
   });
 
   app.post('/context/save', async (req) => {
-    const body = (req.body ?? {}) as { shared_msgs?: unknown[] };
+    const body = (req.body ?? {}) as unknown;
+    const rawIncoming = Array.isArray(body)
+      ? body
+      : ((body as { shared_msgs?: unknown }).shared_msgs ?? []);
+    const incoming = (Array.isArray(rawIncoming) ? rawIncoming : [])
+      .map(normalizeMsg)
+      .filter((m): m is CtxMsg => m !== null);
+    // 客户端提交的是完整会话快照，采用覆盖写入而非叠加，避免刷新后气泡重复累积
     const prev = readJson<{ shared_msgs?: unknown[] }>(join(DATA_DIR, 'context.json'), {});
-    const prevMsgs = Array.isArray(prev.shared_msgs) ? prev.shared_msgs : [];
-    const merged = [...prevMsgs, ...(Array.isArray(body.shared_msgs) ? body.shared_msgs : [])].slice(-120);
-    writeJson(join(DATA_DIR, 'context.json'), { shared_msgs: merged, at: Date.now() });
-    return { ok: true };
+    const prevNorm = (Array.isArray(prev.shared_msgs) ? prev.shared_msgs : [])
+      .map(normalizeMsg)
+      .filter((m): m is CtxMsg => m !== null);
+    const keep = incoming.length > 0 ? incoming : prevNorm;
+    writeJson(join(DATA_DIR, 'context.json'), { shared_msgs: keep.slice(-120), at: Date.now() });
+    return { ok: true, count: keep.length };
   });
 
   // ── 文件上传 ──

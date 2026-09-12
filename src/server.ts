@@ -4,6 +4,7 @@ import fastifyStatic from "@fastify/static";
 import { resolve } from "node:path";
 import { config } from "./config.js";
 import { logger } from "./core/logger.js";
+import { startLogCap } from "./core/logCap.js";
 import { healthRoutes } from "./routes/health.js";
 import { pingRoutes } from "./routes/ping.js";
 import { modelRoutes } from "./routes/models.js";
@@ -14,6 +15,7 @@ import { vm2Routes } from "./routes/vm2.js";
 import { miscRoutes } from "./routes/misc.js";
 import { ttsRoutes } from "./routes/tts.js";
 import { depsRoutes } from "./routes/deps.js";
+import { verifyRoutes } from "./routes/verify.js";
 
 async function main() {
   const app = Fastify({
@@ -60,6 +62,7 @@ async function main() {
   await app.register(miscRoutes, { prefix: "/api" });
   await app.register(ttsRoutes, { prefix: "/api" });
   await app.register(depsRoutes, { prefix: "/api" });
+  await app.register(verifyRoutes, { prefix: "/api" });
 
   // 统一错误处理
   app.setErrorHandler((err, _req, reply) => {
@@ -73,6 +76,9 @@ async function main() {
 
   await app.listen({ host: config.HOST, port: config.PORT });
   logger.info(`玄姝(TS) 已启动: http://${config.HOST}:${config.PORT}`);
+  // 日志体积上限：启动裁剪 + 周期巡检，避免 server_out.log / server_err.log 无限增长
+  startLogCap();
+  logger.info(`日志上限已启用: 单文件上限 ${process.env.XS_LOG_MAX_MB ?? 2}MB，超出保留尾部 ${process.env.XS_LOG_KEEP_KB ?? 256}KB`);
 }
 
 main().catch((err) => {

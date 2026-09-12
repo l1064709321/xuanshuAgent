@@ -227,12 +227,17 @@ async function renderFiles(body: HTMLElement): Promise<void> {
   const pathEl = body.querySelector('[data-role="path"]') as HTMLElement;
   const upBtn = body.querySelector('[data-act="up"]') as HTMLElement;
 
+  let curPath = "";    // 服务端返回的真实当前目录
+  let rootPath = "";   // 工作区根（不可再上溯）
+
   const load = async (path: string) => {
-    pathEl.textContent = path || "/";
     listEl.innerHTML = '<div class="vm-files-empty">加载中…</div>';
     try {
-      const d = await postJSON<{ ok: boolean; entries?: { name: string; path: string; type: "file" | "dir"; size: number }[]; error?: string }>("/api/vm/ls", { path });
-      if (!d.ok) { listEl.innerHTML = '<div class="vm-files-empty">' + (d.error || "加载失败") + "</div>"; return; }
+      const d = await postJSON<{ ok: boolean; path?: string; root?: string; entries?: { name: string; path: string; type: "file" | "dir"; size: number }[]; error?: string }>("/api/vm/ls", { path });
+      if (!d.ok) { pathEl.textContent = curPath || "/"; listEl.innerHTML = '<div class="vm-files-empty">' + (d.error || "加载失败") + "</div>"; return; }
+      curPath = d.path || curPath;
+      rootPath = d.root || rootPath;
+      pathEl.textContent = curPath && curPath !== rootPath ? curPath : "/";
       listEl.innerHTML = (d.entries || []).map((e) =>
         '<div class="vm-file-row" data-type="' + e.type + '" data-path="' + e.path.replace(/"/g, "&quot;") + '">' +
         '<span class="vm-file-ico">' + (e.type === "dir" ? "&#128193;" : "&#128196;") + "</span>" +
@@ -252,7 +257,7 @@ async function renderFiles(body: HTMLElement): Promise<void> {
   const openRow = (row: HTMLElement) => {
     const path = row.dataset.path || "";
     if (row.dataset.type === "dir") {
-      fileStack.push(pathEl.textContent || "/");
+      fileStack.push(curPath);
       void load(path);
     } else {
       const name = row.querySelector(".vm-file-name")?.textContent || path.split("/").pop() || "";
@@ -262,10 +267,11 @@ async function renderFiles(body: HTMLElement): Promise<void> {
   };
 
   upBtn.addEventListener("click", () => {
-    const cur = pathEl.textContent || "/";
-    const idx = cur.lastIndexOf("/");
-    if (idx <= 0) { fileStack = []; void load(""); }
-    else void load(cur.slice(0, idx));
+    fileStack = [];
+    // 已在工作区根：不再上溯（平台源码不可见）
+    if (!curPath || curPath === rootPath) { void load(""); return; }
+    const idx = curPath.lastIndexOf("/");
+    void load(idx > 0 ? curPath.slice(0, idx) : "");
   });
 
   void load("");

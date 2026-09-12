@@ -214,16 +214,24 @@ body::after {
   flex: 1;
 }
 .sidebar-close {
-  background: none;
-  border: none;
+  flex-shrink: 0;
+  width: 30px; height: 30px;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--border);
+  border-radius: 8px;
   color: var(--text-dim);
-  font-size: 20px;
+  font-size: 18px;
+  line-height: 1;
   cursor: pointer;
-  padding: 2px 6px;
-  border-radius: 4px;
   transition: all var(--transition);
 }
-.sidebar-close:hover { color: var(--text); background: rgba(255,255,255,0.05); }
+.sidebar-close:hover,
+.sidebar-close:active {
+  color: var(--text);
+  border-color: var(--neon-cyan);
+  background: rgba(0,240,255,0.08);
+}
 
 /* Sidebar Nav */
 .sidebar-nav {
@@ -304,14 +312,45 @@ body::after {
 
 /* Sidebar Section Label */
 .sidebar-section-label {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  width: 100%;
+  background: none;
+  border: 0;
+  border-top: 1px solid var(--border);
+  font-family: inherit;
   font-size: 10px;
   font-weight: 600;
   color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 1.5px;
   padding: 12px 16px 6px;
-  border-top: 1px solid var(--border);
   margin-top: 4px;
+  cursor: pointer;
+  user-select: none;
+  transition: color var(--transition);
+}
+.sidebar-section-label:hover {
+  color: var(--text-secondary);
+}
+.sidebar-section-label .sec-chev {
+  width: 11px;
+  height: 11px;
+  margin-left: auto;
+  flex-shrink: 0;
+  opacity: 0.7;
+  transition: transform 0.2s ease;
+}
+.sidebar-section-label[aria-expanded="false"] .sec-chev {
+  transform: rotate(-90deg);
+}
+/* 分区折叠容器：展开时 display:contents 保持原有 flex 布局，收起时整块隐藏 */
+.sidebar-sec-body {
+  display: contents;
+}
+.sidebar-sec-body.sec-collapsed {
+  display: none !important;
 }
 
 /* Sidebar File Tree */
@@ -1207,6 +1246,14 @@ body::after {
   position: relative;
 }
 
+/* ── 正文前导空行消除 ──
+   历史消息里可能固化了以 <br> 开头的正文（模型回复以换行开头）。
+   隐藏气泡内容顶部的连续前导 <br>，确保正文首行顶到气泡顶端。 */
+.bubble.agent .agent-body br:first-child,
+.bubble.agent .agent-body br:first-child + br {
+  display: none;
+}
+
 /* ── Agent 消息包装：思考面板与消息气泡视觉分离 ──
    .agent-msg 是外层（无气泡视觉），思考链/思考中面板独立于
    .bubble.agent 之外渲染，回复正文才在气泡框内。 */
@@ -1235,6 +1282,10 @@ body::after {
 }
 .agent-think-slot .thinking-chain[open] summary {
   display: flex;
+}
+/* 正文为空（仅保留思考链的消息，如询问/异常场景）不显示空心气泡 */
+.agent-msg .bubble.agent:has(.agent-body:empty) {
+  display: none;
 }
 .reply-text {
   font-size: 14px;
@@ -2209,6 +2260,20 @@ body::after {
     transform: translateX(0);
     box-shadow: 8px 0 30px rgba(0,0,0,0.3);
   }
+  /* 遮罩只覆盖侧栏右侧区域：.app 有 z-index:1 的层叠上下文，
+     侧栏(260px)被压在遮罩(z-index:25)之下会点不到，故遮罩左边界让开侧栏宽度 */
+  .mobile-overlay {
+    left: 260px;
+    right: 0; top: 0; bottom: 0;
+  }
+  /* 移动端：关闭按钮加大点击热区，保证"点开能关" */
+  .sidebar-close {
+    width: 38px; height: 38px;
+    font-size: 22px;
+    color: var(--text);
+    background: rgba(255,255,255,0.06);
+  }
+  .sidebar-header { position: sticky; top: 0; z-index: 2; background: var(--surface); }
   .mobile-overlay.show { display: block; }
   .bubble { max-width: 95%; }
   #conv { padding: 14px 12px 10px; gap: 8px; }
@@ -3170,3 +3235,73 @@ html[data-mode="light"][data-accent="leather"] {
   .skillmarket-card-actions { flex-direction: row; flex-wrap: wrap; }
   .skillmarket-newbtn { margin-left: 0; }
 }
+
+/* ── 多 Agent 协同群聊：子 Agent 独立消息块（对齐主 Agent 三层结构，群成员冒泡感） ── */
+.agent-msg.sub-agent-msg {
+  border-left: 3px solid rgba(123,92,255,0.6);
+  padding-left: 12px;
+  margin-left: 2px;
+  max-width: 94%;
+}
+.agent-msg.sub-agent-msg .agent-label {
+  gap: 8px;
+  margin-bottom: 6px;
+}
+.agent-msg.sub-agent-msg .agent-name {
+  color: #a79bff;
+  text-transform: none;
+  letter-spacing: 0.4px;
+  font-size: 12px;
+}
+.agent-sub-tag {
+  flex: none;
+  font-size: 10px;
+  line-height: 1;
+  padding: 3px 6px;
+  border-radius: 8px;
+  background: rgba(123,92,255,0.2);
+  color: #a79bff;
+}
+.agent-work-avatar {
+  width: 20px; height: 20px; border-radius: 50%;
+  background: linear-gradient(135deg,#4f8cff,#7b5cff);
+  color: #fff; font-size: 12px; font-weight: 600;
+  display: inline-flex; align-items: center; justify-content: center;
+  flex: none;
+}
+.agent-work-state { color: #8ab4ff; font-size: 12px; }
+.agent-work-state.done { color: #3fb950; }
+.agent-work-state.fail { color: #f85149; }
+.agent-work-state.paused { color: #d29922; }
+.agent-work-name.fail { color: #f85149; }
+.agent-work-task {
+  color: var(--text-muted, rgba(128,128,128,0.9));
+  font-size: 12px;
+  word-break: break-all;
+  border-bottom: 1px dashed var(--border, rgba(128,128,128,0.25));
+  padding-bottom: 4px;
+  margin-bottom: 2px;
+}
+.agent-tool-log {
+  display: flex; flex-direction: column; gap: 4px;
+  margin-top: 6px; padding-top: 6px;
+  border-top: 1px dashed var(--border, rgba(128,128,128,0.25));
+  font-size: 12px;
+  max-height: 200px; overflow-y: auto;
+}
+.agent-sub-reply {
+  margin-top: 6px;
+  font-size: 14px; line-height: 1.7;
+}
+.agent-sub-reply > :first-child { margin-top: 0; }
+.agent-sub-reply p { margin-bottom: 8px; }
+.awl-row { display: flex; gap: 6px; align-items: flex-start; word-break: break-all; }
+.awl-tag {
+  flex: none; min-width: 30px; text-align: center; padding: 0 4px;
+  border-radius: 4px; font-size: 11px; line-height: 16px; margin-top: 1px;
+}
+.awl-tool .awl-tag { background: rgba(79,140,255,0.18); color: #8ab4ff; }
+.awl-tool { color: #c9d7f2; }
+.awl-args { color: var(--text-muted, rgba(128,128,128,0.9)); }
+.awl-result .awl-tag { background: rgba(63,185,80,0.18); color: #3fb950; }
+.awl-result { color: var(--text-muted, rgba(128,128,128,0.9)); }

@@ -20,13 +20,17 @@ interface TimelinePoint {
 const byAgent = new Map<string, AgentTokenStat>();
 const timeline: TimelinePoint[] = [];
 const MAX_TIMELINE = 200;
+// 上游 usage 是否上报过缓存字段：未上报时命中率恒为 0 属于"无数据"，而非"真命中 0%"
+let cacheReported = false;
 
 export function recordTokens(
   agent: string,
   promptTokens: number,
   completionTokens: number,
   cachedTokens = 0,
+  cacheFieldReported = false,
 ): void {
+  if (cacheFieldReported) cacheReported = true;
   const key = agent || "主Agent";
   const cur = byAgent.get(key) ?? { calls: 0, prompt_tokens: 0, cached_tokens: 0, completion_tokens: 0 };
   cur.calls += 1;
@@ -42,6 +46,7 @@ export function recordTokens(
 export function getTokenStats(): {
   ok: boolean;
   hit_rate: number;
+  cache_reported: boolean;
   tokens_per_minute: number;
   total: { prompt_tokens: number; completion_tokens: number; calls: number; cached_tokens: number };
   by_agent: Record<string, AgentTokenStat>;
@@ -67,6 +72,7 @@ export function getTokenStats(): {
   return {
     ok: true,
     hit_rate: hitRate,
+    cache_reported: cacheReported,
     tokens_per_minute: Math.round(recentSum),
     total: { prompt_tokens: prompt, completion_tokens: completion, calls, cached_tokens: cached },
     by_agent: byAgentOut,

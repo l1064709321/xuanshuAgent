@@ -65,18 +65,22 @@ async function ddgSearch(query: string, max: number): Promise<SearchHit[]> {
   return hits.slice(0, max);
 }
 
-/** Bing 搜索解析（备选源） */
+/** Bing 搜索解析（备选源）— 适配新版结构：h2 class="" + b_caption p */
 async function bingSearch(query: string, max: number): Promise<SearchHit[]> {
   const html = await httpGet(`https://www.bing.com/search?q=${encodeURIComponent(query)}&setlang=zh-CN`);
   const hits: SearchHit[] = [];
-  const liRe = /<li class="b_algo"[\s\S]*?<h2><a[^>]*href="([^"]+)"[^>]*>(.*?)<\/a><\/h2>[\s\S]*?<p[^>]*>(.*?)<\/p>/g;
-  let m: RegExpExecArray | null;
-  while ((m = liRe.exec(html)) !== null && hits.length < max) {
-    hits.push({
-      title: m[2].replace(/<[^>]+>/g, '').trim(),
-      url: m[1],
-      snippet: m[3].replace(/<[^>]+>/g, '').trim(),
-    });
+  const blockRe = /<li class="b_algo"[\s\S]*?<\/li>/g;
+  let blk: RegExpExecArray | null;
+  while ((blk = blockRe.exec(html)) !== null && hits.length < max) {
+    const li = blk[0];
+    const am = li.match(/<h2[^>]*>[\s\S]*?<a[^>]*href="([^"]+)"[^>]*>([\s\S]*?)<\/a><\/h2>/);
+    if (!am) continue;
+    const url = am[1];
+    const title = am[2].replace(/<[^>]+>/g, '').trim();
+    if (!title) continue;
+    const pm = li.match(/<p[^>]*class="[^"]*(?:b_lineclamp|b_paractl|b_caption)[^"]*"[^>]*>([\s\S]*?)<\/p>/);
+    const snippet = pm ? pm[1].replace(/<[^>]+>/g, '').replace(/&ensp;/g, ' ').trim() : '';
+    hits.push({ title, url, snippet });
   }
   return hits.slice(0, max);
 }

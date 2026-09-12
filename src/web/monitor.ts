@@ -65,6 +65,7 @@ export function stopAutoRefresh(): void {
 interface TokenStatsResp {
   ok?: boolean;
   hit_rate?: number;
+  cache_reported?: boolean;
   tokens_per_minute?: number;
   total?: { prompt_tokens: number; completion_tokens: number; calls: number; cached_tokens?: number };
   by_agent?: Record<string, { calls: number; prompt_tokens: number; cached_tokens: number; completion_tokens: number }>;
@@ -82,21 +83,32 @@ export async function fetchTokenStats(): Promise<void> {
 }
 
 function renderMonitor(j: TokenStatsResp): void {
-  $("#mHitRate").textContent = (j.hit_rate ?? 0) + "%";
+  // 上游未上报缓存字段时，命中率并非"0%"，而是"无数据"，须显式区分避免误导
+  const cacheReported = j.cache_reported !== false;
+  const hitText = cacheReported ? (j.hit_rate ?? 0) + "%" : "未上报";
+  $("#mHitRate").textContent = hitText;
   const mainHit = document.getElementById("mHitRateMain");
-  if (mainHit) mainHit.textContent = (j.hit_rate ?? 0) + "%";
+  if (mainHit) mainHit.textContent = hitText;
+  const hint = document.getElementById("cacheHint");
+  if (hint) hint.style.display = cacheReported ? "none" : "block";
   const total = j.total || { prompt_tokens: 0, completion_tokens: 0, calls: 0 };
   const totalTk = total.prompt_tokens + total.completion_tokens;
   $("#mTotalTokens").textContent = totalTk > 1000 ? (totalTk / 1000).toFixed(1) + "k" : String(totalTk);
   $("#mRate").textContent = (j.tokens_per_minute ?? 0) + " tk/min";
   if (j.budget) {
-    $("#mBudget").textContent = (j.budget.remaining / 1000).toFixed(0) + "k";
-    const limit = j.budget.limit > 0 ? j.budget.limit : 1;
-    const pct = ((j.budget.used / limit) * 100).toFixed(1);
-    const usedK = (j.budget.used / 1000).toFixed(0);
-    const limitK = (j.budget.limit / 1000).toFixed(0);
-    $("#budgetBar").style.width = Math.min(Math.max(Number(pct), 0), 100) + "%";
-    $("#budgetLabel").textContent = usedK + "k / " + limitK + "k (" + (j.budget.limit > 0 ? pct + "%" : "0%") + ")";
+    if (j.budget.limit > 0) {
+      $("#mBudget").textContent = (j.budget.remaining / 1000).toFixed(0) + "k";
+      const limit = j.budget.limit;
+      const pct = ((j.budget.used / limit) * 100).toFixed(1);
+      const usedK = (j.budget.used / 1000).toFixed(0);
+      const limitK = (j.budget.limit / 1000).toFixed(0);
+      $("#budgetBar").style.width = Math.min(Math.max(Number(pct), 0), 100) + "%";
+      $("#budgetLabel").textContent = usedK + "k / " + limitK + "k (" + pct + "%)";
+    } else {
+      $("#mBudget").textContent = "未配置";
+      $("#budgetBar").style.width = "0%";
+      $("#budgetLabel").textContent = "未配置日预算";
+    }
   }
 
   const tb = $("#monitorTableBody");
@@ -108,10 +120,12 @@ function renderMonitor(j: TokenStatsResp): void {
   if (!hasData) return;
   tb.innerHTML = "";
   for (const [name, a] of Object.entries(agents)) {
-    const hitPct = a.prompt_tokens > 0 ? ((a.cached_tokens / a.prompt_tokens) * 100).toFixed(1) : "0.0";
+    const hitPct = a.prompt_tokens > 0 ? ((a.cached_tokens / a.prompt_tokens) * 100).toFixed(1) + "%" : "0.0%";
+    const cachedCell = cacheReported ? fmtTk(a.cached_tokens) : "—";
+    const hitCell = cacheReported ? hitPct : "—";
     tb.innerHTML += `<tr>
       <td>${escapeHtml(name)}</td><td>${a.calls}</td><td>${fmtTk(a.prompt_tokens)}</td>
-      <td>${fmtTk(a.cached_tokens)}</td><td>${fmtTk(a.completion_tokens)}</td><td>${hitPct}%</td>
+      <td>${cachedCell}</td><td>${fmtTk(a.completion_tokens)}</td><td>${hitCell}</td>
     </tr>`;
   }
   drawMonitorBar(j.timeline || []);

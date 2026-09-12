@@ -1,6 +1,6 @@
 // ========== 面板控制 / Hash 路由 ==========
 import { state, IS_MOBILE } from "./state.js";
-import { $ } from "./dom.js";
+import { $, showToast } from "./dom.js";
 import { closeMoreMenu } from "./menu.js";
 import { closeAvatarDrawer, loadDrawerMemList } from "./drawer.js";
 import { loadSkillMarket } from "./skills.js";
@@ -143,6 +143,86 @@ export function switchPanelTab(el: HTMLElement, tab: string): void {
     $("#tab-" + id).style.display = id === tab ? "" : "none";
   });
   if (tab === "workflow") { setTimeout(() => { void loadWorkflows(); }, 100); }
+  if (tab === "tools") { void loadExecLimits(); }
+}
+
+// ── 多轮执行限制（子 Agent 轮数上限 / 无进展熔断阈值，后端持久化）──
+const LIMITS_LS_KEY = "xs.exec.limits";
+
+/** 读取后端当前限制并回填输入框；后端不可达时回退本地缓存/默认值 */
+export async function loadExecLimits(silent = false): Promise<void> {
+  const maxEl = $("#execMaxRounds") as HTMLInputElement | null;
+  const stallEl = $("#execStallRounds") as HTMLInputElement | null;
+  const statusEl = $("#execLimitsStatus") as HTMLElement | null;
+  if (!maxEl || !stallEl) return;
+  try {
+    const r = await fetch(state.API + "/api/exec/limits");
+    const j = (await r.json()) as { limits?: { maxRounds?: number; stallRounds?: number } };
+    const lim = j.limits ?? {};
+    maxEl.value = String(lim.maxRounds ?? 500);
+    stallEl.value = String(lim.stallRounds ?? 5);
+    try { localStorage.setItem(LIMITS_LS_KEY, JSON.stringify({ maxRounds: Number(maxEl.value), stallRounds: Number(stallEl.value) })); } catch { /* 忽略 */ }
+    if (statusEl && !silent) statusEl.textContent = "";
+  } catch {
+    let cached: { maxRounds?: number; stallRounds?: number } = {};
+    try { cached = JSON.parse(localStorage.getItem(LIMITS_LS_KEY) || "{}") as typeof cached; } catch { cached = {}; }
+    maxEl.value = String(cached.maxRounds ?? 500);
+    stallEl.value = String(cached.stallRounds ?? 5);
+    if (statusEl && !silent) statusEl.textContent = "读取失败，已回退默认值";
+  }
+}
+
+/** 保存限制到后端（越界值由后端按区间收敛） */
+export async function saveExecLimits(): Promise<void> {
+  const maxEl = $("#execMaxRounds") as HTMLInputElement | null;
+  const stallEl = $("#execStallRounds") as HTMLInputElement | null;
+  const statusEl = $("#execLimitsStatus") as HTMLElement | null;
+  if (!maxEl || !stallEl) return;
+  const maxRounds = Math.floor(Number(maxEl.value));
+  const stallRounds = Math.floor(Number(stallEl.value));
+  if (!Number.isFinite(maxRounds) || !Number.isFinite(stallRounds) || maxRounds < 1 || stallRounds < 1) {
+    if (statusEl) statusEl.textContent = "请填写 ≥ 1 的整数";
+    return;
+  }
+  if (statusEl) statusEl.textContent = "保存中…";
+  try {
+    const r = await fetch(state.API + "/api/exec/limits", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ maxRounds, stallRounds }),
+    });
+    const j = (await r.json()) as { limits?: { maxRounds?: number; stallRounds?: number } };
+    const lim = j.limits ?? { maxRounds, stallRounds };
+    maxEl.value = String(lim.maxRounds ?? maxRounds);
+    stallEl.value = String(lim.stallRounds ?? stallRounds);
+    try { localStorage.setItem(LIMITS_LS_KEY, JSON.stringify({ maxRounds: Number(maxEl.value), stallRounds: Number(stallEl.value) })); } catch { /* 忽略 */ }
+    if (statusEl) statusEl.textContent = "已保存";
+    showToast("执行限制已保存");
+  } catch {
+    if (statusEl) statusEl.textContent = "保存失败（后端不可达）";
+  }
+}
+
+/** 恢复默认（500 轮 / 5 轮） */
+export async function resetExecLimits(): Promise<void> {
+  try {
+    const r = await fetch(state.API + "/api/exec/limits", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ reset: true }),
+    });
+    const j = (await r.json()) as { limits?: { maxRounds?: number; stallRounds?: number } };
+    const maxEl = $("#execMaxRounds") as HTMLInputElement | null;
+    const stallEl = $("#execStallRounds") as HTMLInputElement | null;
+    if (maxEl) maxEl.value = String(j.limits?.maxRounds ?? 500);
+    if (stallEl) stallEl.value = String(j.limits?.stallRounds ?? 5);
+    const statusEl = $("#execLimitsStatus") as HTMLElement | null;
+    if (statusEl) statusEl.textContent = "已恢复默认";
+    showToast("已恢复默认：500 轮 / 5 轮");
+  } catch {
+    const statusEl = $("#execLimitsStatus") as HTMLElement | null;
+    if (statusEl) statusEl.textContent = "恢复失败（后端不可达）";
+  }
 }
 
 export function initRouter(): void {

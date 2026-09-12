@@ -9,13 +9,28 @@ function resolveApi(): string {
   return localStorage.getItem("xuanshu_api") || DEFAULT_API;
 }
 
+// ── 会话 ID（Phase 1：服务端按 session_id 持久化消息链）──
+// 刷新/重开页面后复用同一 ID，让服务端继续从磁盘恢复上下文；
+// clearConv 清空会话时轮换新 ID。
+export const SESSION_KEY = "xuan_session";
+
+function resolveSessionId(): string {
+  try {
+    const cur = localStorage.getItem(SESSION_KEY);
+    if (cur && /^[A-Za-z0-9_-]{1,128}$/.test(cur)) return cur;
+  } catch { /* 存储不可用时走新建 */ }
+  const id = "sess_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2, 10);
+  try { localStorage.setItem(SESSION_KEY, id); } catch { /* ignore */ }
+  return id;
+}
+
 export const state = {
   API: resolveApi(),
   currentModel: "agnes-2.0-flash",
   hasKey: false,
   savedKey: "",
   totalTokens: 0,
-  currentSessionId: "sess_" + Date.now(),
+  currentSessionId: resolveSessionId(),
   pendingImage: null as string | null,
   authToken: localStorage.getItem("xuanshu_token") || "",
 

@@ -26,6 +26,7 @@
     "start": "node dist/server.js",
     "build": "tsc",
     "typecheck": "tsc --noEmit",
+    "test:verifier": "tsx src/scripts/test_verifier.ts",
     "pack": "npm run build && npm pack"
   },
   "engines": {

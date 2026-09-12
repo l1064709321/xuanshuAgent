@@ -16,6 +16,7 @@ export interface ChatResponse {
   reply?: string;
   agent?: string;
   dispatched_to?: string;
+  session_id?: string;
   thinking?: ThinkingStep[];
   cmd?: boolean;
   model?: string;
@@ -77,6 +78,8 @@ export interface RestoredMsg {
   r: 'user' | 'agent' | 'system';
   a?: string;
   c: string;
+  /** 思考链 HTML（agent-think-slot 内 details.thinking-chain），用于重新进入页面后恢复"思考过程"按钮与内容 */
+  t?: string;
 }
 
 export interface TokenStats {

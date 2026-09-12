@@ -234,6 +234,29 @@ curl http://localhost:8901/api/deps
 
 返回各依赖项在线状态与耗时，用于排查"服务时连时断"等环境问题。
 
+### 辅助验收（Verifier）
+
+子 Agent 交付后由独立的「审核Agent / 小核」复核，只采信实测证据（真跑代码、真查磁盘、真抽帧比对、真探链接），不采信口头声明。开关：Agent 注册表的 `self_verify`、调用方 `opts.verify`，以及环境变量 `XS_VERIFY=0` 全局关闭；`maxRepair` 控制返修轮数。
+
+验收能力按当前环境自动降级，**未验项会在结论中显式列出，禁止把"没法验"当成"通过"**：
+
+| 维度 | 依赖 | 缺失时的行为 |
+|------|------|------|
+| 产物真实性 | 无 | 磁盘不存在/0 字节 → 判不通过 |
+| 代码可运行 | Python（沙箱） | 沙箱缺依赖时降级本地复跑并声明隔离性下降 |
+| 媒体真实性 | ffmpeg/ffprobe | 无 ffmpeg 且任务要求文案 → 判不通过（无法核验） |
+| 画面文字 | tesseract 或 rapidocr | 两者皆无 → 判不通过；有 OCR 但画面无文字且无语音可核 → 判不通过 |
+| 语音内容 | whisper-cli / faster-whisper | 缺失时仅做画面侧核验并声明 |
+| 引用可达性 | 网络 | 无网络时声明未验 |
+
+画面文字 OCR 默认回退 Python `rapidocr-onnxruntime`（wheels 自带中文模型，无需系统 tesseract）；安装见 `requirements.txt`，注意用 `opencv-python-headless`，`opencv-python` 依赖 `libGL.so.1` 会在容器内 ImportError。
+
+自测（13 条用例，含编造产物/编造运行结果/静帧冒充/文案缺失与错版等负样本，以及真实交付正样本）：
+
+```bash
+npm run test:verifier
+```
+
 ### Git 安装（无 sudo 环境）
 
 受限服务器无 sudo 权限时用 rpm2cpio 装 git：

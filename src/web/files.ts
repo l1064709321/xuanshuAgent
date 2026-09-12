@@ -20,7 +20,7 @@ export async function loadWorkspaceFiles(): Promise<void> {
         ? '<div class="ft-item ft-dir">' + ICO_DIR + ' <span class="ft-name">' + escapeHtml(e.name) + "</span></div>"
         : '<div class="ft-item ft-file" onclick="openFileInViewer(\'' + e.path.replace(/'/g, "\\'") + '\',\'' + e.name.replace(/'/g, "\\'") + '\')">' +
         ICO_FILE + ' <span class="ft-name">' + escapeHtml(e.name) + "</span><span class=\"ft-size\">" + formatSize(e.size) + "</span></div>"
-    ).join("") || '<div class="file-tree-loading">暂无上传文件，点击输入框旁的 + 上传</div>';
+    ).join("") || '<div class="file-tree-loading">暂无项目文件，点击输入框旁的 + 上传</div>';
   } catch (e) {
     $("#sidebarFileTree").innerHTML = '<div class="file-tree-loading">文件服务未启动</div>';
   }

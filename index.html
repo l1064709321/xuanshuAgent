@@ -15,13 +15,15 @@
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 
-<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;500;600;700&family=DM+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=20260902i">
+<!-- 非阻塞加载：Google Fonts 在部分网络（如境内移动网络）不可达，作为渲染阻塞样式表会拖住首屏，改为异步加载 + noscript 兜底 -->
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;500;600;700&family=DM+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+<noscript><link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;500;600;700&family=DM+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"></noscript>
+<link rel="stylesheet" href="style.css?v=20260911c">
 </head>
 
 <body>
 
-<a href="#msg-input" class="skip-link">璺冲埌输入妗?/a>
+<a href="#msg-input" class="skip-link">跳到输入框</a>
 
 
 
@@ -209,7 +211,7 @@
       <div class="sidebar-avatar" id="sidebarAvatar" onclick="openAvatarDrawer()" title="个人档案">玄</div>
       <span class="sidebar-logo">玄姝</span>
 
-      <button class="sidebar-close" onclick="toggleLeft()" title="收起侧栏">&times;</button>
+      <button class="sidebar-close" onclick="collapseLeft()" title="关闭侧栏" aria-label="关闭侧栏">&times;</button>
 
     </div>
 
@@ -233,33 +235,47 @@
 
     </nav>
 
-    <div class="sidebar-section-label">会话</div>
+    <button class="sidebar-section-label" type="button" data-sec="sessions" aria-expanded="true">会话<svg class="sec-chev" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 6.5l4 4 4-4"/></svg></button>
 
+    <div class="sidebar-sec-body" data-sec-body="sessions">
     <div class="sidebar-sessions" id="sessionList">
 
       <div class="session-item active" tabindex="0" role="button" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click()}">当前对话</div>
 
     </div>
-    <div class="sidebar-section-label"><svg class="mi" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M1.5 3.5h4l1.6 2h7.4a1 1 0 0 1 1 1v6a1 1 0 0 1-1 1h-13a1 1 0 0 1-1-1v-8a1 1 0 0 1 1-1z"/></svg> 文件</div>
+    </div>
+
+    <button class="sidebar-section-label" type="button" data-sec="files" aria-expanded="false"><svg class="mi" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M1.5 3.5h4l1.6 2h7.4a1 1 0 0 1 1 1v6a1 1 0 0 1-1 1h-13a1 1 0 0 1-1-1v-8a1 1 0 0 1 1-1z"/></svg> 文件<svg class="sec-chev" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 6.5l4 4 4-4"/></svg></button>
+
+    <div class="sidebar-sec-body" data-sec-body="files">
     <div class="sidebar-file-tree" id="sidebarFileTree">
 
       <div class="file-tree-loading">加载中…</div>
 
     </div>
-    <div class="sidebar-section-label"><svg class="mi" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M2 2.5A1.5 1.5 0 0 1 3.5 1H13a1 1 0 0 1 1 1v11a1 1 0 0 1-1 1H3.5A1.5 1.5 0 0 0 2 14.5v-12zM3.5 2.5V13H13V2.5H3.5z"/></svg> 记忆</div>
+    </div>
+
+    <button class="sidebar-section-label" type="button" data-sec="memory" aria-expanded="false"><svg class="mi" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M2 2.5A1.5 1.5 0 0 1 3.5 1H13a1 1 0 0 1 1 1v11a1 1 0 0 1-1 1H3.5A1.5 1.5 0 0 0 2 14.5v-12zM3.5 2.5V13H13V2.5H3.5z"/></svg> 记忆<svg class="sec-chev" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 6.5l4 4 4-4"/></svg></button>
+
+    <div class="sidebar-sec-body" data-sec-body="memory">
     <div class="sidebar-mem-tree" id="sidebarMemTree">
 
       <div class="file-tree-loading">加载中…</div>
 
     </div>
     <div class="mem-tree-tip">点击文件阅读（记忆由 Agent 管理）</div>
-    <div class="sidebar-section-label"><svg class="mi" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M9 1L2.5 9H7l-1 6 6.5-8H8l1-6z"/></svg> 技能市场</div>
+    </div>
+
+    <button class="sidebar-section-label" type="button" data-sec="skills" aria-expanded="false"><svg class="mi" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M9 1L2.5 9H7l-1 6 6.5-8H8l1-6z"/></svg> 技能市场<svg class="sec-chev" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 6.5l4 4 4-4"/></svg></button>
+
+    <div class="sidebar-sec-body" data-sec-body="skills">
     <div class="sidebar-skill-market" id="sidebarSkillMarket">
 
       <div class="file-tree-loading">加载中…</div>
 
     </div>
-    
+    </div>
+
   </aside>
 
 
@@ -386,6 +402,9 @@
             <div class="monitor-card-label">预算剩余</div>
             <div class="monitor-card-value" id="mBudget">--</div>
           </div>
+        </div>
+        <div id="cacheHint" style="display:none;font-size:11px;line-height:1.5;color:var(--text-muted);padding:6px 10px;background:rgba(255,255,255,0.03);border-radius:6px;margin:6px 0">
+          上游接口未在 usage 中返回缓存字段（如 prompt_tokens_details.cached_tokens），命中率与缓存列无法统计，故显示「未上报」；非面板故障。
         </div>
         <div class="settings-section">
           <div class="settings-section-title">Token 细分</div>
@@ -702,6 +721,42 @@
 
 
       <div class="panel-content" id="tab-tools" style="display:none">
+
+        <div class="panel-section">
+
+          <div class="section-title">任务执行（多轮协同）</div>
+
+          <div class="form-group">
+
+            <label for="execMaxRounds" class="form-label">单次执行轮数上限</label>
+
+            <input id="execMaxRounds" type="number" class="form-input" min="1" max="5000" step="1" placeholder="500">
+
+            <div style="font-size:12px;color:var(--text-muted);margin-top:4px">达到上限不判失败：自动暂停并询问是否续轮（默认 500）</div>
+
+          </div>
+
+          <div class="form-group">
+
+            <label for="execStallRounds" class="form-label">无进展熔断阈值（连续轮数）</label>
+
+            <input id="execStallRounds" type="number" class="form-input" min="1" max="200" step="1" placeholder="5">
+
+            <div style="font-size:12px;color:var(--text-muted);margin-top:4px">连续 N 轮产物无变化则暂停请示，避免空转（默认 5）</div>
+
+          </div>
+
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+
+            <button class="btn btn-primary" onclick="saveExecLimits()">保存</button>
+
+            <button class="btn btn-ghost" onclick="resetExecLimits()">恢复默认</button>
+
+            <span id="execLimitsStatus" style="font-size:12px;color:var(--text-muted)"></span>
+
+          </div>
+
+        </div>
 
         <div class="panel-section">
 
@@ -1095,7 +1150,7 @@
 
 </div>
 
-<script type="module" src="./dist/web/main.js?v=20260902i"></script>
+<script type="module" src="./dist/web/main.js?v=20260911c"></script>
 </body>
 
 </html>
